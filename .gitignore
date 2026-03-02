@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Data and logs (not committed)
+backend/data/raw/
+backend/data/processed/
+backend/data/cache/
+backend/logs/*.log*
+!backend/data/**/.gitkeep
+!backend/logs/.gitkeep
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Node (frontend)
+node_modules/
+frontend/dist/
+frontend/src-tauri/target/
+package-lock.json
+bun.lockb
+
+# Claude Code
+.claude/
+
+# AI development guide (not for public repo)
+CLAUDE.md
