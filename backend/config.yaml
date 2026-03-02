@@ -1,0 +1,59 @@
+app:
+  name: AlphaLab
+  version: 0.1.0
+  debug: true
+
+data:
+  cache_dir: "data/cache"
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  default_interval: "1d"
+  max_retries: 3
+  cache_expiry_hours: 24
+  max_cache_age_days: 7
+
+backtest:
+  initial_capital: 100000.0
+  commission: 0.0           # Modern brokers charge $0
+  slippage: 0.05            # 0.05% price impact
+  max_position_size_percent: 20
+  cash_reserve_percent: 5
+  risk_free_rate: 0.04      # 4% annual (10-year Treasury approx)
+
+strategies:
+  ma_crossover:
+    short_window: 50
+    long_window: 200
+    volume_confirmation: true
+    min_separation_pct: 0.0
+    cooldown_days: 5
+  rsi_mean_reversion:
+    rsi_period: 14
+    oversold: 30
+    overbought: 70
+    use_adx_filter: false
+    stop_loss_atr_mult: 2.5
+    max_holding_days: 40
+  momentum_breakout:
+    lookback: 20
+    volume_surge_pct: 150
+    stop_loss_atr_mult: 2.0
+    trailing_stop_atr_mult: 3.0
+    cooldown_days: 3
+
+api:
+  host: "127.0.0.1"
+  port: 5000
+  rate_limit: 100
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:5173"
+    - "http://localhost:8080"
+    - "http://localhost:1420"
+
+logging:
+  level: "INFO"
+  file: "logs/alphalab.log"
+  max_bytes: 10485760       # 10MB
+  backup_count: 5
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
