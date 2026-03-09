@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { BarChart3, GitCompare, Database, LayoutDashboard, Activity } from "lucide-react";
+import { BarChart3, GitCompare, Database, LayoutDashboard, Activity, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBacktestStore } from "@/stores/backtestStore";
 
@@ -8,6 +8,7 @@ const navItems = [
   { to: "/backtest", label: "Backtest", icon: BarChart3 },
   { to: "/compare", label: "Compare", icon: GitCompare },
   { to: "/data", label: "Data", icon: Database },
+  { to: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function Header() {

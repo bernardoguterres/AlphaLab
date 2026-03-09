@@ -2,7 +2,9 @@ import { useState } from "react";
 import { compareStrategies, fetchData } from "@/services/api";
 import type { StrategyType, BacktestResult } from "@/types";
 import { STRATEGY_INFO } from "@/types";
-import { EquityChart } from "@/components/charts/EquityChart";
+import { OverlayEquityChart } from "@/components/comparison/OverlayEquityChart";
+import { CorrelationMatrix } from "@/components/comparison/CorrelationMatrix";
+import { BestStrategySummary } from "@/components/comparison/BestStrategySummary";
 import { MetricCard } from "@/components/metrics/MetricCard";
 import { formatPercent, formatNumber, pnlColor, strategyDisplayName } from "@/utils/formatters";
 import { Button } from "@/components/ui/button";
@@ -17,7 +19,8 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
 } from "recharts";
 
-const CHART_COLORS = ["hsl(217 91% 60%)", "hsl(160 84% 39%)", "hsl(25 95% 53%)"];
+// Colorblind-friendly palette
+const CHART_COLORS = ["#2563eb", "#dc2626", "#16a34a", "#ca8a04", "#9333ea"];
 
 export default function Compare() {
   const [ticker, setTicker] = useState("AAPL");
@@ -136,6 +139,21 @@ export default function Compare() {
       {/* Results */}
       {resultEntries.length > 0 && (
         <>
+          {/* Best Strategy Summary */}
+          <BestStrategySummary results={results!} />
+
+          {/* Overlay Equity Chart */}
+          <div className="card-elevated p-4">
+            <h3 className="text-sm font-semibold mb-3">Equity Curves (Normalized to % Returns)</h3>
+            <OverlayEquityChart results={results!} />
+          </div>
+
+          {/* Correlation Matrix */}
+          <div className="card-elevated p-4">
+            <h3 className="text-sm font-semibold mb-3">Return Correlation Matrix</h3>
+            <CorrelationMatrix results={results!} />
+          </div>
+
           {/* Comparison Table */}
           <div className="card-elevated overflow-hidden">
             <table className="w-full text-sm">

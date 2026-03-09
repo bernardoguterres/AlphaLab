@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Backtest from "./pages/Backtest";
 import Compare from "./pages/Compare";
 import DataManager from "./pages/DataManager";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ function AppContent() {
         <Route path="/backtest" element={<Backtest />} />
         <Route path="/compare" element={<Compare />} />
         <Route path="/data" element={<DataManager />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </div>

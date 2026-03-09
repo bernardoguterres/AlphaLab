@@ -1,0 +1,14 @@
+{
+  "telegram": {
+    "enabled": true,
+    "alert_trades": true,
+    "alert_daily_summary": false,
+    "alert_errors": true,
+    "alert_drawdown": true,
+    "alert_signals": false,
+    "drawdown_threshold_pct": 7.5
+  },
+  "alpaca": {
+    "paper_trading": false
+  }
+}

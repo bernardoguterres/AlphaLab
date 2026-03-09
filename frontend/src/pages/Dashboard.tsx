@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBacktestStore } from "@/stores/backtestStore";
 import { MetricCard } from "@/components/metrics/MetricCard";
+import { ExportButton } from "@/components/export/ExportButton";
 import { formatPercent, formatNumber, strategyDisplayName, formatDate, pnlColor } from "@/utils/formatters";
 import { BarChart3, Database, TrendingUp, Clock, ArrowRight, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -94,6 +95,7 @@ export default function Dashboard() {
                   <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Sharpe</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Max DD</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Trades</th>
+                  <th className="px-4 py-2 text-center text-xs font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -115,6 +117,16 @@ export default function Dashboard() {
                     <td className="px-4 py-2 text-right font-mono-numbers">{formatNumber(item.sharpe_ratio)}</td>
                     <td className="px-4 py-2 text-right font-mono-numbers text-loss">{formatPercent(item.max_drawdown)}</td>
                     <td className="px-4 py-2 text-right font-mono-numbers">{item.total_trades}</td>
+                    <td className="px-4 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                      <ExportButton
+                        backtestId={item.result.backtest_id || item.id}
+                        strategyName={item.strategy}
+                        ticker={item.ticker}
+                        variant="ghost"
+                        size="icon"
+                        showLabel={false}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -93,6 +93,74 @@ Signals are generated at each bar's close and executed on the next bar's open.
 
 ---
 
+## 4. Bollinger Band Breakout
+
+**File:** `strategies/implementations/bollinger_breakout.py`
+
+**Logic:** Buy when price closes above the upper Bollinger Band for N consecutive bars with volume confirmation. Sell when price closes below the lower band. Exit positions when price returns to the middle band (SMA). Designed to catch strong directional moves that break out of normal volatility ranges.
+
+**Parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `bb_period` | 20 | Period for Bollinger Band calculation (SMA) |
+| `bb_std_dev` | 2.0 | Standard deviation multiplier for bands |
+| `confirmation_bars` | 2 | Consecutive closes outside bands required |
+| `volume_filter` | true | Only trade with volume confirmation |
+| `volume_threshold` | 1.5 | Required volume as multiple of 20-day average |
+| `cooldown_days` | 3 | Minimum days between signals |
+
+**Technical Details:**
+- Upper Band = SMA + (Std Dev × Rolling Std)
+- Lower Band = SMA - (Std Dev × Rolling Std)
+- Middle Band = SMA (exit signal)
+- State machine tracks position: no position → long/short → exit
+- Volume confirmation requires volume > threshold × 20-day average volume
+
+**When to use:**
+- Volatile stocks with strong directional moves
+- Markets breaking out of consolidation patterns
+- When seeking mean-reversion exits (middle band)
+
+**Strengths:** Catches strong breakouts early, built-in exit strategy at middle band, confirmation bars reduce false signals.
+**Weaknesses:** Can generate whipsaws in choppy markets, requires volatility to generate signals.
+
+---
+
+## 5. VWAP Mean Reversion
+
+**File:** `strategies/implementations/vwap_reversion.py`
+
+**Logic:** Buy when price deviates below VWAP by N standard deviations AND RSI is oversold. Sell when price exceeds VWAP by N standard deviations AND RSI is overbought. Exit positions when price returns to VWAP. Uses rolling VWAP calculation based on typical price and volume.
+
+**Parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `vwap_period` | 20 | Rolling window for VWAP calculation |
+| `deviation_threshold` | 2.0 | Number of standard deviations for entry signal |
+| `rsi_period` | 14 | RSI calculation period |
+| `oversold` | 30 | RSI threshold for buy signals |
+| `overbought` | 70 | RSI threshold for sell signals |
+| `cooldown_days` | 3 | Minimum days between signals |
+
+**Technical Details:**
+- VWAP = Σ(Typical Price × Volume) / Σ(Volume) over rolling window
+- Typical Price = (High + Low + Close) / 3
+- Deviation Bands = VWAP ± (Threshold × Std Dev of price from VWAP)
+- State machine: no position → long/short → exit at VWAP
+- Requires both price deviation AND RSI confirmation for entry
+
+**When to use:**
+- Liquid stocks with high trading volume
+- Mean-reverting markets with clear VWAP support/resistance
+- Intraday or daily timeframes where volume is significant
+
+**Strengths:** VWAP is widely watched by institutional traders, volume-weighted calculation reduces noise, dual confirmation (price + RSI) reduces false signals.
+**Weaknesses:** Less effective in low-volume stocks, requires sufficient data for VWAP calculation, lagging indicator in fast-moving markets.
+
+---
+
 ## Adding a New Strategy
 
 1. Create `backend/src/strategies/implementations/your_strategy.py`

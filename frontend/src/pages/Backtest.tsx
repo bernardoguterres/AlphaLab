@@ -1,13 +1,18 @@
 import { useState } from "react";
 import { useBacktestStore } from "@/stores/backtestStore";
 import { runBacktest, fetchData } from "@/services/api";
-import type { StrategyType, StrategyParams, BacktestResult, MACrossoverParams, RSIMeanReversionParams, MomentumBreakoutParams } from "@/types";
-import { STRATEGY_INFO, DEFAULT_PARAMS } from "@/types";
+import type { StrategyType, StrategyParams, BacktestResult, MACrossoverParams, RSIMeanReversionParams, MomentumBreakoutParams, BollingerBreakoutParams, VWAPReversionParams, RiskSettings } from "@/types";
+import { STRATEGY_INFO, DEFAULT_PARAMS, DEFAULT_RISK_SETTINGS } from "@/types";
 import { MetricCard } from "@/components/metrics/MetricCard";
 import { MetricsTabs } from "@/components/metrics/MetricsTabs";
 import { EquityChart } from "@/components/charts/EquityChart";
 import { DrawdownChart } from "@/components/charts/DrawdownChart";
+import { MonthlyReturnsHeatmap } from "@/components/charts/MonthlyReturnsHeatmap";
 import { TradeTable } from "@/components/charts/TradeTable";
+import { ExportButton } from "@/components/export/ExportButton";
+import { RiskSettingsPanel } from "@/components/backtest/RiskSettingsPanel";
+import { BatchBacktest } from "@/components/backtest/BatchBacktest";
+import ParameterOptimize from "@/components/backtest/ParameterOptimize";
 import { formatPercent, formatCurrency, formatNumber, pnlColor, qualityColor, strategyDisplayName } from "@/utils/formatters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +21,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Loader2, TrendingUp, TrendingDown, BarChart3, Target, Percent, Activity, ChevronDown, Download, Save } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, BarChart3, Target, Percent, Activity, ChevronDown, Save } from "lucide-react";
 
 export default function Backtest() {
   const { currentResult, setCurrentResult, addToHistory } = useBacktestStore();
@@ -33,6 +39,7 @@ export default function Backtest() {
   const [initialCapital, setInitialCapital] = useState(100000);
   const [positionSizing, setPositionSizing] = useState<"equal_weight" | "risk_parity" | "volatility_weighted">("equal_weight");
   const [monteCarloRuns, setMonteCarloRuns] = useState(0);
+  const [riskSettings, setRiskSettings] = useState<RiskSettings>(DEFAULT_RISK_SETTINGS);
 
   // UI state
   const [isFetching, setIsFetching] = useState(false);
@@ -81,6 +88,7 @@ export default function Backtest() {
         params: currentParams,
         position_sizing: positionSizing,
         monte_carlo_runs: monteCarloRuns,
+        risk_settings: riskSettings,
       });
       setCurrentResult(result);
       toast.success("Backtest completed!");
@@ -107,19 +115,19 @@ export default function Backtest() {
     toast.success("Saved to history!");
   };
 
-  const handleExportJSON = () => {
-    if (!currentResult) return;
-    const blob = new Blob([JSON.stringify(currentResult, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `backtest_${ticker}_${strategy}_${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  // Removed handleExportJSON - now using ExportButton component
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">
+    <div className="h-[calc(100vh-3.5rem)] overflow-hidden p-4">
+      <Tabs defaultValue="single" className="h-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="single">Single Backtest</TabsTrigger>
+          <TabsTrigger value="batch">Batch Backtest</TabsTrigger>
+          <TabsTrigger value="optimize">Optimize Parameters</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="single" className="h-[calc(100%-3rem)] overflow-hidden">
+          <div className="flex h-full overflow-hidden">
       {/* Left Panel - Configuration */}
       <div className="w-[380px] shrink-0 border-r border-border overflow-y-auto p-5 space-y-5">
         <h2 className="font-display text-lg font-bold">Configuration</h2>
@@ -205,6 +213,17 @@ export default function Backtest() {
           {strategy === "momentum_breakout" && (
             <MomentumBreakoutForm params={currentParams as MomentumBreakoutParams} onChange={updateParam} />
           )}
+          {strategy === "bollinger_breakout" && (
+            <BollingerBreakoutForm params={currentParams as BollingerBreakoutParams} onChange={updateParam} />
+          )}
+          {strategy === "vwap_reversion" && (
+            <VWAPReversionForm params={currentParams as VWAPReversionParams} onChange={updateParam} />
+          )}
+        </section>
+
+        {/* Risk Settings */}
+        <section className="space-y-2">
+          <RiskSettingsPanel settings={riskSettings} onChange={setRiskSettings} />
         </section>
 
         {/* Advanced Settings */}
@@ -274,9 +293,14 @@ export default function Backtest() {
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSaveToHistory}>
                   <Save className="h-3 w-3" /> Save
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportJSON}>
-                  <Download className="h-3 w-3" /> Export JSON
-                </Button>
+                <ExportButton
+                  backtestId={currentResult.backtest_id || ""}
+                  strategyName={strategy}
+                  ticker={ticker}
+                  variant="outline"
+                  size="sm"
+                  showLabel={true}
+                />
               </div>
             </div>
 
@@ -295,19 +319,35 @@ export default function Backtest() {
               <MetricCard label="Total Trades" value={currentResult.total_trades.toString()} />
             </div>
 
-            {/* Equity Curve */}
+            {/* Performance Visualizations */}
             <div className="card-elevated p-4">
-              <h3 className="text-sm font-semibold mb-3">Equity Curve</h3>
-              <EquityChart
-                data={currentResult.equity_curve}
-                benchmarkData={currentResult.benchmark?.equity_curve}
-              />
-            </div>
+              <Tabs defaultValue="equity" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="equity">Equity Curve</TabsTrigger>
+                  <TabsTrigger value="drawdown">Drawdown</TabsTrigger>
+                  <TabsTrigger value="monthly">Monthly Returns</TabsTrigger>
+                  <TabsTrigger value="trades">Trade Log</TabsTrigger>
+                </TabsList>
 
-            {/* Drawdown */}
-            <div className="card-elevated p-4">
-              <h3 className="text-sm font-semibold mb-3">Drawdown</h3>
-              <DrawdownChart equityCurve={currentResult.equity_curve} />
+                <TabsContent value="equity" className="mt-4">
+                  <EquityChart
+                    data={currentResult.equity_curve}
+                    benchmarkData={currentResult.benchmark?.equity_curve}
+                  />
+                </TabsContent>
+
+                <TabsContent value="drawdown" className="mt-4">
+                  <DrawdownChart equityCurve={currentResult.equity_curve} />
+                </TabsContent>
+
+                <TabsContent value="monthly" className="mt-4">
+                  <MonthlyReturnsHeatmap equityCurve={currentResult.equity_curve} />
+                </TabsContent>
+
+                <TabsContent value="trades" className="mt-4">
+                  <TradeTable trades={currentResult.trades} />
+                </TabsContent>
+              </Tabs>
             </div>
 
             {/* Detailed Metrics */}
@@ -330,14 +370,32 @@ export default function Backtest() {
               </div>
             )}
 
-            {/* Trade List */}
-            <div className="card-elevated p-4">
-              <h3 className="text-sm font-semibold mb-3">Trade List</h3>
-              <TradeTable trades={currentResult.trades} />
-            </div>
           </>
         )}
       </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="batch" className="h-[calc(100%-3rem)] overflow-y-auto">
+          <BatchBacktest />
+        </TabsContent>
+
+        <TabsContent value="optimize" className="h-[calc(100%-3rem)] overflow-y-auto">
+          <ParameterOptimize
+            ticker={ticker}
+            strategy={strategy}
+            startDate={startDate}
+            endDate={endDate}
+            initialCapital={initialCapital}
+            onApplyParams={(newParams) => {
+              setParams((prev) => ({
+                ...prev,
+                [strategy]: { ...prev[strategy], ...newParams },
+              }));
+            }}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -391,6 +449,34 @@ function MomentumBreakoutForm({ params, onChange }: { params: MomentumBreakoutPa
       <ParamSlider label="Volume Surge %" value={params.volume_surge_pct} onChange={(v) => onChange("volume_surge_pct", v)} min={100} max={300} />
       <ParamSlider label="RSI Min" value={params.rsi_min} onChange={(v) => onChange("rsi_min", v)} min={40} max={60} />
       <ParamSlider label="Stop Loss ATR Mult" value={params.stop_loss_atr_mult} onChange={(v) => onChange("stop_loss_atr_mult", v)} min={1} max={5} step={0.1} />
+    </div>
+  );
+}
+
+function BollingerBreakoutForm({ params, onChange }: { params: BollingerBreakoutParams; onChange: (k: string, v: number | boolean) => void }) {
+  return (
+    <div className="space-y-3">
+      <ParamSlider label="BB Period" value={params.bb_period} onChange={(v) => onChange("bb_period", v)} min={5} max={100} />
+      <ParamSlider label="Std Dev" value={params.bb_std_dev} onChange={(v) => onChange("bb_std_dev", v)} min={0.5} max={4} step={0.1} />
+      <ParamSlider label="Confirmation Bars" value={params.confirmation_bars} onChange={(v) => onChange("confirmation_bars", v)} min={1} max={5} />
+      <ParamCheckbox label="Volume Filter" checked={params.volume_filter} onChange={(v) => onChange("volume_filter", v)} />
+      {params.volume_filter && (
+        <ParamSlider label="Volume Threshold" value={params.volume_threshold} onChange={(v) => onChange("volume_threshold", v)} min={1} max={3} step={0.1} />
+      )}
+      <ParamSlider label="Cooldown Days" value={params.cooldown_days} onChange={(v) => onChange("cooldown_days", v)} min={0} max={10} />
+    </div>
+  );
+}
+
+function VWAPReversionForm({ params, onChange }: { params: VWAPReversionParams; onChange: (k: string, v: number) => void }) {
+  return (
+    <div className="space-y-3">
+      <ParamSlider label="VWAP Period" value={params.vwap_period} onChange={(v) => onChange("vwap_period", v)} min={5} max={50} />
+      <ParamSlider label="Deviation Threshold" value={params.deviation_threshold} onChange={(v) => onChange("deviation_threshold", v)} min={0.5} max={5} step={0.1} />
+      <ParamSlider label="RSI Period" value={params.rsi_period} onChange={(v) => onChange("rsi_period", v)} min={5} max={30} />
+      <ParamSlider label="Oversold" value={params.oversold} onChange={(v) => onChange("oversold", v)} min={10} max={40} />
+      <ParamSlider label="Overbought" value={params.overbought} onChange={(v) => onChange("overbought", v)} min={60} max={90} />
+      <ParamSlider label="Cooldown Days" value={params.cooldown_days} onChange={(v) => onChange("cooldown_days", v)} min={0} max={10} />
     </div>
   );
 }
