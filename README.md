@@ -6,6 +6,82 @@ Desktop application for backtesting algorithmic trading strategies with producti
 
 Most backtesting tools either oversimplify execution (ignoring slippage, commissions, and position limits) or require expensive subscriptions. AlphaLab provides institutional-quality backtesting with realistic execution modeling, 30+ performance metrics, and Monte Carlo analysis — all running locally on your machine with free Yahoo Finance data.
 
+## AlphaLab + AlphaLive: The Complete Trading System
+
+AlphaLab is your **strategy development platform**. It works together with **AlphaLive** (separate repository) to provide a complete end-to-end algorithmic trading system.
+
+### The Two Platforms
+
+| Platform | Purpose | When to Run |
+|----------|---------|-------------|
+| **AlphaLab** (this repo) | Strategy development & backtesting | As needed (not 24/7) |
+| **AlphaLive** ([separate repo](https://github.com/yourusername/AlphaLive)) | Live trading execution | 24/7 during trading hours |
+
+### How They Work Together
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  AlphaLab (Development) - Run locally as needed              │
+│                                                              │
+│  1. Develop strategy logic                                  │
+│  2. Backtest on 5 years of historical data                  │
+│  3. Optimize parameters (walk-forward validation)           │
+│  4. Export as JSON                                          │
+└──────────────────────────────────────────────────────────────┘
+                          ↓
+                   strategy.json
+                          ↓
+┌──────────────────────────────────────────────────────────────┐
+│  AlphaLive (Execution) - Run 24/7 on Railway or locally     │
+│                                                              │
+│  5. Load strategy JSON                                      │
+│  6. Connect to Alpaca broker (paper or live)                │
+│  7. Generate buy/sell signals in real-time                  │
+│  8. Execute trades automatically                            │
+│  9. Monitor positions (stop loss, take profit)              │
+│  10. Send Telegram alerts                                   │
+└──────────────────────────────────────────────────────────────┘
+                          ↓
+                  Live trading results
+                          ↓
+┌──────────────────────────────────────────────────────────────┐
+│  Back to AlphaLab - Monthly re-backtesting                  │
+│                                                              │
+│  11. Compare live results vs backtest expectations          │
+│  12. If performance degrades: re-optimize                   │
+│  13. Export updated strategy → deploy to AlphaLive          │
+└──────────────────────────────────────────────────────────────┘
+                          │
+                          └─────► (loop back to step 1)
+```
+
+### What You Need
+
+**For strategy development** (this is AlphaLab):
+- Run locally on your computer
+- No cloud deployment needed
+- Use when developing new strategies or re-backtesting
+
+**For live trading** (requires AlphaLive):
+- Clone [AlphaLive repository](https://github.com/yourusername/AlphaLive)
+- Deploy to Railway (~$5-20/month) or run locally 24/7
+- Connect to Alpaca Markets (free paper trading account)
+- Optional: Telegram bot for real-time trade alerts
+
+### Export to AlphaLive
+
+After backtesting a strategy in AlphaLab:
+
+1. Click **"Export to AlphaLive"** button in the UI
+2. Save the JSON file to AlphaLive's `configs/` directory
+3. Deploy AlphaLive with the strategy JSON
+4. Follow AlphaLive's deployment phases:
+   - Week 1: Dry run (no orders, test signal generation)
+   - Weeks 2-5: Paper trading (fake money, test execution)
+   - Week 6+: Live trading (real money, start small)
+
+**Important**: AlphaLab backtests show what *could have* happened. AlphaLive executes real trades. Always test thoroughly with paper trading before risking real money.
+
 ## Features
 
 - **Market Data Pipeline** — Fetch, validate, and cache stock data from Yahoo Finance with automatic retry and quality scoring
@@ -117,7 +193,7 @@ npm run test
 | GET | `/api/metrics/<id>` | Retrieve backtest results |
 | POST | `/api/compare` | Compare multiple strategies |
 
-See [docs/API.md](docs/API.md) for full endpoint documentation with request/response schemas and curl examples.
+For full API documentation, see the [Flask routes source code](backend/src/api/routes.py).
 
 ### Example: Run a Backtest
 
@@ -135,15 +211,38 @@ curl -X POST http://127.0.0.1:5000/api/strategies/backtest \
 
 ## Available Strategies
 
-| Strategy | Description | Key Parameters |
-|----------|-------------|----------------|
-| `ma_crossover` | Buy/sell on moving average crossovers (Golden/Death Cross) | `short_window`, `long_window`, `cooldown_days` |
-| `rsi_mean_reversion` | Buy oversold, sell overbought with BB/ADX confirmation | `oversold`, `overbought`, `adx_threshold` |
-| `momentum_breakout` | Enter on price breakout with volume surge | `lookback`, `volume_surge_pct`, `stop_loss_atr_mult` |
-| `bollinger_breakout` | Volatility breakout on Bollinger Band breaks | `bb_period`, `bb_std_dev`, `confirmation_bars`, `volume_filter` |
-| `vwap_reversion` | Mean reversion from VWAP with RSI filter | `vwap_period`, `deviation_threshold`, `oversold`, `overbought` |
+### 1. Moving Average Crossover (`ma_crossover`)
+**Trend-following strategy.** Buy when a short-period MA crosses above a long-period MA (Golden Cross), sell on reverse (Death Cross). Best for trending markets with sustained directional moves. Works well on daily/weekly timeframes. **Avg return: +13.8%** (21/30 stocks tested, 2020-2024).
 
-See [docs/STRATEGIES.md](docs/STRATEGIES.md) for detailed strategy documentation.
+**Key params:** `short_window` (default 50), `long_window` (default 200), `volume_confirmation`, `cooldown_days`
+
+---
+
+### 2. RSI Mean Reversion (`rsi_mean_reversion`)
+**State-aware mean reversion.** Buy when RSI drops below oversold threshold, sell when above overbought threshold. Uses Bollinger Band confirmation and optional ADX trend filter. Includes stop-loss (2.5×ATR) and max 40-day hold. **Avg return: +3.2%**, best for capital preservation in choppy markets.
+
+**Key params:** `rsi_period` (14), `oversold` (30), `overbought` (70), `use_bb_confirmation`, `use_adx_filter`
+
+---
+
+### 3. Momentum Breakout (`momentum_breakout`)
+**Breakout strategy with risk management.** Buy when price breaks above N-day high with volume surge (>150% avg) + RSI confirmation. Sell on N-day low. Uses trailing stops (3×ATR). **Avg return: +7.6%** (18/21 profitable). Most active strategy.
+
+**Key params:** `lookback` (20), `volume_surge_pct` (150), `rsi_min` (50), `stop_loss_atr_mult`
+
+---
+
+### 4. Bollinger Band Breakout (`bollinger_breakout`)
+**Volatility breakout with confirmation.** Buy when price closes above upper BB for N consecutive bars, sell on lower BB breach. Exits at middle band (SMA). Optional volume filter (1.5× 20-day avg). Best for volatile stocks breaking consolidation.
+
+**Key params:** `bb_period` (20), `bb_std_dev` (2.0), `confirmation_bars` (2), `volume_filter`
+
+---
+
+### 5. VWAP Mean Reversion (`vwap_reversion`)
+**Volume-weighted mean reversion.** Buy when price deviates below VWAP by N std devs + RSI oversold. Sell when above VWAP + RSI overbought. Exit at VWAP. Best for liquid stocks with strong volume patterns. Uses rolling VWAP based on typical price × volume.
+
+**Key params:** `vwap_period` (20), `deviation_threshold` (2.0), `oversold` (30), `overbought` (70)
 
 ## Project Structure
 
@@ -190,15 +289,11 @@ AlphaLab/
 
 **Getting Started:**
 - [SETUP.md](SETUP.md) — Installation and setup instructions
-- [TAURI_SETUP.md](TAURI_SETUP.md) — Desktop app rebuild guide
-- [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute to the project
+- [Metrics Guide](docs/METRICS_GUIDE.md) — What each metric means (Sharpe, Sortino, drawdown, etc.)
+- [Strategy Export Schema](docs/STRATEGY_SCHEMA.md) — JSON schema for AlphaLive integration
 
-**Technical Docs:**
-- [API Reference](docs/API.md) — All endpoints with schemas and examples
-- [Architecture](docs/ARCHITECTURE.md) — System design and data flow
-- [Strategies](docs/STRATEGIES.md) — Strategy details and how to add new ones
-- [Metrics Guide](docs/METRICS_GUIDE.md) — What each metric means
-- [Troubleshooting](docs/TROUBLESHOOTING.md) — Common issues and FAQ
+**For Contributors:**
+- [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute to the project
 
 ## Configuration
 
@@ -418,6 +513,70 @@ Before submitting, ensure:
 - **Indicators:** 50+
 - **Metrics:** 30+
 - **Desktop Installer:** 5.5MB
+
+---
+
+## Troubleshooting
+
+### Backend won't start: "ModuleNotFoundError: No module named 'src'"
+**Solution:** You're running from the wrong directory or virtualenv isn't activated.
+```bash
+cd backend
+source venv/bin/activate
+python run.py
+```
+
+### yfinance download fails or returns empty data
+**Causes:**
+- Invalid ticker symbol (check it exists on Yahoo Finance)
+- Network connectivity issue
+- Rate limit hit (~2000 requests/hour max)
+- Date range too old (before stock's IPO)
+
+**Solution:** DataFetcher retries 3 times automatically. If still failing, verify the ticker manually at `finance.yahoo.com`.
+
+### Feature engineering produces all NaN values
+**Cause:** Not enough data for indicator lookback periods. A 200-day SMA needs 200+ data points.
+
+**Solution:** Fetch at least 1 year of daily data (252+ rows). For all indicators to be populated, fetch 2+ years.
+
+### Backtest returns 0 trades
+**Possible causes:**
+- Insufficient capital for position sizing
+- Data doesn't meet strategy requirements (missing indicators)
+- Date range too short for strategy parameters (e.g., 50/200 SMA crossover needs 200+ days)
+
+**Debug:** Check `backend/logs/alphalab.log` for rejected orders or missing columns.
+
+### Data quality score too low (< 0.9)
+**Cause:** DataValidator detected issues:
+- Many missing trading days (stock halted/delisted)
+- Extreme price movements flagged as outliers (could be legitimate for biotech/penny stocks)
+- Corrupt data from Yahoo Finance
+
+**Solution:** Try a different date range or check if the stock had unusual events (splits, halts) during that period.
+
+---
+
+## FAQ
+
+**Q: Can I use this for real trading?**
+A: AlphaLab is designed for backtesting and research. For live trading, use **AlphaLive** (separate repository) which connects to Alpaca Markets and handles real-time execution. Always start with paper trading before risking real money.
+
+**Q: Why is TA-Lib not used?**
+A: The Python `ta-lib` package requires a system-level C library that's difficult to install on some platforms. AlphaLab uses manual implementations and `stockstats` instead, which produce equivalent results for the indicators implemented.
+
+**Q: Can I add crypto/forex data?**
+A: yfinance supports some crypto (e.g., `BTC-USD`) and forex pairs. The system hasn't been tested extensively with these, but the data pipeline should work. Feature engineering may need adjustment for 24/7 markets.
+
+**Q: How do I add a custom strategy?**
+A: See "Adding a New Strategy" section above. Create a file in `backend/src/strategies/implementations/`, inherit from `BaseStrategy`, implement the required methods, and register it in the API.
+
+**Q: Why does my strategy show negative Sharpe ratio?**
+A: Negative Sharpe means the strategy lost money on a risk-adjusted basis (returns below risk-free rate). This isn't a bug—it means the strategy isn't profitable. Try different parameters, a different stock, or a different strategy.
+
+**Q: How accurate are the backtest results?**
+A: AlphaLab uses next-bar execution (no look-ahead bias), realistic slippage (0.05%), and configurable commissions to model real-world conditions. However, backtests can't predict future market conditions. Always validate strategies with walk-forward testing and paper trading before going live.
 
 ---
 
