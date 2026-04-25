@@ -47,3 +47,5 @@ bun.lockb
 
 # AI development guide (not for public repo)
 CLAUDE.md
+data/
+logs/
