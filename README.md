@@ -6,6 +6,30 @@ Desktop application for backtesting algorithmic trading strategies with producti
 
 Most backtesting tools either oversimplify execution (ignoring slippage, commissions, and position limits) or require expensive subscriptions. AlphaLab provides institutional-quality backtesting with realistic execution modeling, 30+ performance metrics, and Monte Carlo analysis — all running locally on your machine with free Yahoo Finance data.
 
+## Architecture
+
+```mermaid
+flowchart TD
+    A[User: Define Strategy Parameters] --> B[React Frontend<br/>localhost:8080]
+    B --> C[Flask REST API<br/>localhost:5000]
+    C --> D[Data Fetcher<br/>Yahoo Finance]
+    D --> E[Data Validator<br/>Quality Scoring]
+    E --> F[Feature Engineer<br/>50+ Indicators]
+    F --> G[Strategy Engine<br/>5 Built-in Strategies]
+    G --> H[Backtest Engine<br/>Next-bar Execution]
+    H --> I[Portfolio Manager<br/>Slippage + Commission]
+    I --> J[Metrics Calculator<br/>30+ Metrics]
+    J --> K[Results Dashboard<br/>Charts + Tables]
+    K --> L{Export Strategy?}
+    L -->|Yes| M[Strategy JSON Export]
+    M --> N[AlphaLive Deployment]
+    L -->|No| O[Compare Strategies]
+    O --> B
+    
+    style M fill:#4ade80
+    style N fill:#fbbf24
+```
+
 ## AlphaLab + AlphaLive: The Complete Trading System
 
 AlphaLab is your **strategy development platform**. It works together with **AlphaLive** (separate repository) to provide a complete end-to-end algorithmic trading system.
@@ -86,11 +110,12 @@ After backtesting a strategy in AlphaLab:
 
 - **Market Data Pipeline** — Fetch, validate, and cache stock data from Yahoo Finance with automatic retry and quality scoring
 - **50+ Technical Indicators** — SMA, EMA, MACD, RSI, Bollinger Bands, ATR, OBV, Fibonacci levels, and more
-- **5 Built-in Strategies** — Moving Average Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion
+- **8 Built-in Strategies** — MA Crossover, RSI Mean Reversion (3 variants), Momentum Breakout, Bollinger Breakout, VWAP Reversion
 - **Realistic Backtesting** — Next-bar execution (no look-ahead bias), configurable slippage and commissions, position limits
 - **30+ Performance Metrics** — Sharpe, Sortino, Calmar, max drawdown, VaR, win rate, profit factor, benchmark comparison
 - **Monte Carlo Simulation** — Randomized entry timing to assess outcome distributions
 - **Walk-Forward Validation** — Rolling train/test splits to detect overfitting
+- **Comprehensive Backtesting Tools** — Batch runner, results visualization, strategy comparison across 5 years of data
 - **REST API** — Flask endpoints with Pydantic validation for frontend integration
 
 ## Tech Stack
@@ -244,6 +269,38 @@ curl -X POST http://127.0.0.1:5000/api/strategies/backtest \
 
 **Key params:** `vwap_period` (20), `deviation_threshold` (2.0), `oversold` (30), `overbought` (70)
 
+---
+
+### 6. RSI Simple (`rsi_simple`)
+**Relaxed RSI mean reversion.** Buy when RSI < 40 (vs traditional 30), sell when RSI > 60 (vs traditional 70). Designed for higher signal frequency—generates 10× more signals than conservative 30/70 thresholds. **Backtest: 70.6% win rate, Sharpe 2.73** on SPY 15Min. Best for markets in strong trends where traditional oversold/overbought rarely triggers.
+
+**Key params:** `rsi_period` (14), `oversold` (40), `overbought` (60)
+
+**Recommended timeframe:** 15Min for intraday signals (2-5 signals/day)
+
+---
+
+### 7. Bollinger RSI Combo (`bollinger_rsi_combo`)
+**Dual confirmation strategy.** Entry requires BOTH price ≤ BB lower band AND RSI < 45. Exit when price ≥ BB middle OR RSI > 55. Combines mean reversion (Bollinger) with momentum confirmation (RSI). **Backtest: 87.5% win rate, Sharpe 2.49** on SPY 15Min—highest win rate of all strategies. More selective than pure RSI (1-3 signals/day vs 2-5).
+
+**Key params:** `bb_period` (20), `bb_std_dev` (2.0), `rsi_period` (14), `rsi_entry` (45), `rsi_exit` (55)
+
+**Recommended timeframe:** 15Min for precision entries, Daily for swing trading
+
+---
+
+### 8. Trend Adaptive RSI (`trend_adaptive_rsi`)
+**Market regime-aware RSI.** Adjusts entry/exit thresholds based on detected market regime:
+- **Uptrend** (SMA20 > SMA50): Buy RSI 45, Sell 65 — buys dips in uptrend
+- **Downtrend** (SMA20 < SMA50): Buy RSI 35, Sell 55 — standard mean reversion  
+- **Range** (close to SMAs): Buy RSI 35, Sell 65 — wide range for choppy markets
+
+**Backtest: 72.7% win rate, Sharpe 3.96** on SPY 1Hour—best risk-adjusted returns. Adapts to changing market conditions automatically. 1-2 signals/day.
+
+**Key params:** `rsi_period` (14), `trend_sma_fast` (20), `trend_sma_slow` (50)
+
+**Recommended timeframe:** 1Hour for regime stability, Daily for longer-term trends
+
 ## Project Structure
 
 ```
@@ -251,14 +308,16 @@ AlphaLab/
 ├── backend/                    # Flask REST API (Python)
 │   ├── src/
 │   │   ├── data/              # Fetching, validation, feature engineering
-│   │   ├── strategies/        # BaseStrategy + 5 implementations
+│   │   ├── strategies/        # BaseStrategy + 8 implementations
 │   │   ├── backtest/          # Engine, portfolio, metrics, orders
 │   │   ├── api/               # Flask routes + Pydantic validators
 │   │   └── utils/             # Logger, config, exceptions
 │   ├── tests/                 # 81 pytest tests
 │   ├── config.yaml
 │   ├── requirements.txt
-│   └── run.py
+│   ├── run.py
+│   ├── backtest_runner.py     # Batch backtest tool (tests all strategies)
+│   └── backtest_results.json  # 5-year backtest results (12 strategy-ticker combos)
 ├── frontend/                   # React UI (TypeScript + Vite + Tauri)
 │   ├── src/
 │   │   ├── pages/             # Dashboard, Backtest, Compare, DataManager
