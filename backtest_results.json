@@ -1,0 +1,197 @@
+{
+  "timestamp": "2026-04-25T15:13:26.936765",
+  "results": [
+    {
+      "strategy": "RSI_Simple",
+      "ticker": "SPY",
+      "signals": "632",
+      "metrics": {
+        "total_trades": 17,
+        "wins": "12",
+        "losses": "5",
+        "win_rate_pct": 70.58823529411765,
+        "avg_win_pct": 3.2764560666974654,
+        "avg_loss_pct": -1.2552353848458542,
+        "total_return_pct": 33.04129587614032,
+        "sharpe_approx": 2.729040150740272
+      },
+      "passed": false
+    },
+    {
+      "strategy": "Bollinger_RSI_Combo",
+      "ticker": "SPY",
+      "signals": "48",
+      "metrics": {
+        "total_trades": 24,
+        "wins": "21",
+        "losses": "3",
+        "win_rate_pct": 87.5,
+        "avg_win_pct": 2.1710793557805927,
+        "avg_loss_pct": -2.726106729793493,
+        "total_return_pct": 37.41434628201197,
+        "sharpe_approx": 2.492601011812319
+      },
+      "passed": false
+    },
+    {
+      "strategy": "Trend_Adaptive_RSI",
+      "ticker": "SPY",
+      "signals": "22",
+      "metrics": {
+        "total_trades": 11,
+        "wins": "8",
+        "losses": "3",
+        "win_rate_pct": 72.72727272727273,
+        "avg_win_pct": 5.461032164666804,
+        "avg_loss_pct": -1.750995220462075,
+        "total_return_pct": 38.435271655948206,
+        "sharpe_approx": 3.96462769598663
+      },
+      "passed": false
+    },
+    {
+      "strategy": "RSI_Simple",
+      "ticker": "QQQ",
+      "signals": "629",
+      "metrics": {
+        "total_trades": 14,
+        "wins": "10",
+        "losses": "4",
+        "win_rate_pct": 71.42857142857143,
+        "avg_win_pct": 4.204089956876929,
+        "avg_loss_pct": -4.377725233100707,
+        "total_return_pct": 24.52999863636647,
+        "sharpe_approx": 1.6366514774490053
+      },
+      "passed": false
+    },
+    {
+      "strategy": "Bollinger_RSI_Combo",
+      "ticker": "QQQ",
+      "signals": "38",
+      "metrics": {
+        "total_trades": 19,
+        "wins": "13",
+        "losses": "6",
+        "win_rate_pct": 68.42105263157895,
+        "avg_win_pct": 2.524571857445532,
+        "avg_loss_pct": -2.6283980472530164,
+        "total_return_pct": 17.04904586327381,
+        "sharpe_approx": 0.9034713051995839
+      },
+      "passed": false
+    },
+    {
+      "strategy": "Trend_Adaptive_RSI",
+      "ticker": "QQQ",
+      "signals": "20",
+      "metrics": {
+        "total_trades": 10,
+        "wins": "7",
+        "losses": "3",
+        "win_rate_pct": 70.0,
+        "avg_win_pct": 6.262642809887953,
+        "avg_loss_pct": -7.458462144808425,
+        "total_return_pct": 21.4631132347904,
+        "sharpe_approx": 1.4745709574759895
+      },
+      "passed": false
+    },
+    {
+      "strategy": "RSI_Simple",
+      "ticker": "AAPL",
+      "signals": "636",
+      "metrics": {
+        "total_trades": 17,
+        "wins": "12",
+        "losses": "5",
+        "win_rate_pct": 70.58823529411765,
+        "avg_win_pct": 4.908571798841939,
+        "avg_loss_pct": -5.572142972666873,
+        "total_return_pct": 31.042146722768898,
+        "sharpe_approx": 1.2494699258220796
+      },
+      "passed": false
+    },
+    {
+      "strategy": "Bollinger_RSI_Combo",
+      "ticker": "AAPL",
+      "signals": "42",
+      "metrics": {
+        "total_trades": 21,
+        "wins": "16",
+        "losses": "5",
+        "win_rate_pct": 76.19047619047619,
+        "avg_win_pct": 3.523052799455957,
+        "avg_loss_pct": -3.2194520436836513,
+        "total_return_pct": 40.271584572877046,
+        "sharpe_approx": 1.7461744329748774
+      },
+      "passed": false
+    },
+    {
+      "strategy": "Trend_Adaptive_RSI",
+      "ticker": "AAPL",
+      "signals": "22",
+      "metrics": {
+        "total_trades": 11,
+        "wins": "6",
+        "losses": "5",
+        "win_rate_pct": 54.54545454545454,
+        "avg_win_pct": 8.720013880046523,
+        "avg_loss_pct": -3.9272057768294806,
+        "total_return_pct": 32.68405439613173,
+        "sharpe_approx": 1.9364420916365948
+      },
+      "passed": false
+    },
+    {
+      "strategy": "RSI_Simple",
+      "ticker": "MSFT",
+      "signals": "590",
+      "metrics": {
+        "total_trades": 16,
+        "wins": "12",
+        "losses": "4",
+        "win_rate_pct": 75.0,
+        "avg_win_pct": 5.504227551250083,
+        "avg_loss_pct": -6.645509638511172,
+        "total_return_pct": 39.468692060956315,
+        "sharpe_approx": 1.4252701367464953
+      },
+      "passed": false
+    },
+    {
+      "strategy": "Bollinger_RSI_Combo",
+      "ticker": "MSFT",
+      "signals": "48",
+      "metrics": {
+        "total_trades": 24,
+        "wins": "17",
+        "losses": "7",
+        "win_rate_pct": 70.83333333333334,
+        "avg_win_pct": 5.2554483839682975,
+        "avg_loss_pct": -2.64639430555614,
+        "total_return_pct": 70.81786238856807,
+        "sharpe_approx": 1.9836492958905139
+      },
+      "passed": false
+    },
+    {
+      "strategy": "Trend_Adaptive_RSI",
+      "ticker": "MSFT",
+      "signals": "24",
+      "metrics": {
+        "total_trades": 12,
+        "wins": "8",
+        "losses": "4",
+        "win_rate_pct": 66.66666666666666,
+        "avg_win_pct": 10.208412728777539,
+        "avg_loss_pct": -8.957455481099228,
+        "total_return_pct": 45.83747990582339,
+        "sharpe_approx": 1.579449993419766
+      },
+      "passed": false
+    }
+  ]
+}
