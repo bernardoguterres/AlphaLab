@@ -187,7 +187,7 @@ class FeatureEngineer:
         df["Williams_R"] = -100 * (high14 - close) / denom
 
         # Rate of Change
-        df["ROC_10"] = close.pct_change(periods=10) * 100
+        df["ROC_10"] = close.pct_change(periods=10, fill_method=None) * 100
 
         # Chande Momentum Oscillator (9-day)
         period = 9
@@ -286,7 +286,7 @@ class FeatureEngineer:
         close = df["Close"]
 
         # Returns
-        df["Return"] = close.pct_change()
+        df["Return"] = close.pct_change(fill_method=None)
         df["Log_Return"] = np.log(close / close.shift(1))
 
         # Rolling stats
@@ -300,7 +300,7 @@ class FeatureEngineer:
 
         # Beta and correlation vs benchmark
         if benchmark is not None and "Close" in benchmark.columns and len(benchmark) > 60:
-            bench_ret = benchmark["Close"].pct_change().reindex(df.index)
+            bench_ret = benchmark["Close"].pct_change(fill_method=None).reindex(df.index)
             df["Benchmark_Return"] = bench_ret
             rolling_cov = df["Return"].rolling(60, min_periods=60).cov(bench_ret)
             rolling_var = bench_ret.rolling(60, min_periods=60).var()
