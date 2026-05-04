@@ -144,7 +144,7 @@ class GreenblattWeeklyParams(BaseModel):
     """Greenblatt Weekly strategy parameters. Designed for weekly bars."""
 
     fast_sma: int = Field(default=10, ge=2, le=50, description="Fast SMA period (weeks)")
-    slow_sma: int = Field(default=40, ge=5, le=200, description="Slow SMA period (weeks)")
+    slow_sma: int = Field(default=50, ge=5, le=200, description="Slow SMA period (weeks)")
     rsi_period: int = Field(default=14, ge=2, le=50, description="RSI period (weeks)")
     rsi_oversold: int = Field(default=35, ge=10, le=49, description="RSI entry threshold")
     rsi_overbought: int = Field(default=65, ge=51, le=90, description="RSI exit threshold")

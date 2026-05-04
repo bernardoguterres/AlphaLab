@@ -32,7 +32,7 @@ class GreenblattWeekly(BaseStrategy):
     def validate_params(self):
         p = self.params
         p.setdefault("fast_sma", 10)           # weeks
-        p.setdefault("slow_sma", 40)           # weeks (~10 months)
+        p.setdefault("slow_sma", 50)           # weeks (~1 year) — matches FeatureEngineer output
         p.setdefault("rsi_period", 14)
         p.setdefault("rsi_oversold", 35)
         p.setdefault("rsi_overbought", 65)
