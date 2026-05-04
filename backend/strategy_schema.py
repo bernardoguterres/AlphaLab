@@ -141,15 +141,21 @@ class VWAPReversionParams(BaseModel):
 
 
 class GreenblattWeeklyParams(BaseModel):
-    """Greenblatt Weekly strategy parameters. Designed for weekly bars."""
+    """Greenblatt Weekly strategy parameters. Designed for weekly bars.
+
+    Default behaviour: hold for at least 52 weeks, exit only on a 20% trailing
+    drawdown from peak. RSI/SMA exits are opt-in via the exit_* flags.
+    """
 
     fast_sma: int = Field(default=10, ge=2, le=50, description="Fast SMA period (weeks)")
     slow_sma: int = Field(default=50, ge=5, le=200, description="Slow SMA period (weeks)")
     rsi_period: int = Field(default=14, ge=2, le=50, description="RSI period (weeks)")
     rsi_oversold: int = Field(default=35, ge=10, le=49, description="RSI entry threshold")
-    rsi_overbought: int = Field(default=65, ge=51, le=90, description="RSI exit threshold")
-    min_hold_bars: int = Field(default=12, ge=1, le=104, description="Minimum hold in bars (weeks)")
-    stop_loss_atr_mult: float = Field(default=2.0, ge=0.5, le=10.0, description="Stop-loss distance (× weekly ATR)")
+    rsi_overbought: int = Field(default=65, ge=51, le=90, description="RSI exit threshold (used if exit_rsi_overbought=True)")
+    min_hold_bars: int = Field(default=52, ge=1, le=260, description="Minimum hold in bars (weeks). Default 52 ≈ 1 year.")
+    trailing_stop_pct: float = Field(default=0.20, ge=0.05, le=0.50, description="Exit when price drops this % below position peak (default 20%)")
+    exit_rsi_overbought: bool = Field(default=False, description="Exit when RSI > rsi_overbought after min_hold_bars (off by default)")
+    exit_sma_cross: bool = Field(default=False, description="Exit on SMA death-cross after min_hold_bars (off by default)")
 
     @model_validator(mode="after")
     def validate_sma_and_rsi(self):

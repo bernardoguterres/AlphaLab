@@ -76,6 +76,7 @@ class BacktestEngine:
         end_date: str = None,
         position_sizing: str = "equal_weight",
         monte_carlo_runs: int = 0,
+        max_drawdown_pct: float = None,
     ) -> BacktestResults:
         """Run a full backtest simulation.
 
@@ -105,7 +106,8 @@ class BacktestEngine:
         signals = strategy.generate_signals(df)
 
         # Run core simulation
-        portfolio, trades = self._simulate(df, signals, capital, position_sizing)
+        portfolio, trades = self._simulate(df, signals, capital, position_sizing,
+                                           max_drawdown_pct=max_drawdown_pct)
 
         results = BacktestResults(
             strategy_name=strategy.name,
@@ -181,13 +183,17 @@ class BacktestEngine:
         signals: pd.DataFrame,
         capital: float,
         sizing: str,
+        max_drawdown_pct: float = None,
     ) -> tuple[Portfolio, list]:
         """Bar-by-bar simulation executing signals on next bar's open."""
-        portfolio = Portfolio(
+        portfolio_kwargs = dict(
             initial_capital=capital,
             commission_rate=self.commission,
             slippage_pct=self.slippage,
         )
+        if max_drawdown_pct is not None:
+            portfolio_kwargs["max_drawdown_pct"] = max_drawdown_pct
+        portfolio = Portfolio(**portfolio_kwargs)
 
         pending_signal = None  # Signal from previous bar to execute on this bar's open
 
