@@ -140,12 +140,33 @@ class VWAPReversionParams(BaseModel):
 # ============================================================================
 
 
+class GreenblattWeeklyParams(BaseModel):
+    """Greenblatt Weekly strategy parameters. Designed for weekly bars."""
+
+    fast_sma: int = Field(default=10, ge=2, le=50, description="Fast SMA period (weeks)")
+    slow_sma: int = Field(default=40, ge=5, le=200, description="Slow SMA period (weeks)")
+    rsi_period: int = Field(default=14, ge=2, le=50, description="RSI period (weeks)")
+    rsi_oversold: int = Field(default=35, ge=10, le=49, description="RSI entry threshold")
+    rsi_overbought: int = Field(default=65, ge=51, le=90, description="RSI exit threshold")
+    min_hold_bars: int = Field(default=12, ge=1, le=104, description="Minimum hold in bars (weeks)")
+    stop_loss_atr_mult: float = Field(default=2.0, ge=0.5, le=10.0, description="Stop-loss distance (× weekly ATR)")
+
+    @model_validator(mode="after")
+    def validate_sma_and_rsi(self):
+        if self.fast_sma >= self.slow_sma:
+            raise ValueError("fast_sma must be < slow_sma")
+        if self.rsi_oversold >= self.rsi_overbought:
+            raise ValueError("rsi_oversold must be < rsi_overbought")
+        return self
+
+
 StrategyName = Literal[
     "ma_crossover",
     "rsi_mean_reversion",
     "momentum_breakout",
     "bollinger_breakout",
     "vwap_reversion",
+    "greenblatt_weekly",
 ]
 
 StrategyParamsUnion = Union[
@@ -154,6 +175,7 @@ StrategyParamsUnion = Union[
     MomentumBreakoutParams,
     BollingerBreakoutParams,
     VWAPReversionParams,
+    GreenblattWeeklyParams,
 ]
 
 

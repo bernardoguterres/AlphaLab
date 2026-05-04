@@ -8,3 +8,6 @@ from .vwap_reversion import VWAPReversion
 from .rsi_simple import RSISimple
 from .bollinger_rsi_combo import BollingerRSICombo
 from .trend_adaptive_rsi import TrendAdaptiveRSI
+
+# Value factor strategies (weekly timeframe, weeks/months holding)
+from .greenblatt_weekly import GreenblattWeekly
