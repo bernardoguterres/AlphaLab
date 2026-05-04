@@ -110,7 +110,8 @@ After backtesting a strategy in AlphaLab:
 
 - **Market Data Pipeline** — Fetch, validate, and cache stock data from Yahoo Finance with automatic retry and quality scoring
 - **50+ Technical Indicators** — SMA, EMA, MACD, RSI, Bollinger Bands, ATR, OBV, Fibonacci levels, and more
-- **8 Built-in Strategies** — MA Crossover, RSI Mean Reversion (3 variants), Momentum Breakout, Bollinger Breakout, VWAP Reversion
+- **9 Built-in Strategies** — MA Crossover, RSI Mean Reversion (3 variants), Momentum Breakout, Bollinger Breakout, VWAP Reversion, plus **GreenblattWeekly** (value factor, weekly bars)
+- **Fundamental Screener** — Greenblatt Magic Formula ranking (earnings yield + ROE) via free yfinance data, exportable candidate list for weekly strategy backtests
 - **Realistic Backtesting** — Next-bar execution (no look-ahead bias), configurable slippage and commissions, position limits
 - **30+ Performance Metrics** — Sharpe, Sortino, Calmar, max drawdown, VaR, win rate, profit factor, benchmark comparison
 - **Monte Carlo Simulation** — Randomized entry timing to assess outcome distributions
@@ -196,7 +197,7 @@ cd frontend && npm run tauri:dev     # Desktop → native app window
 ### Run Tests
 
 ```bash
-# Backend tests (81 tests)
+# Backend tests (229 tests)
 cd backend
 source venv/bin/activate
 pytest tests/ -v
@@ -217,6 +218,7 @@ npm run test
 | POST | `/api/strategies/optimize` | Grid search for best parameters |
 | GET | `/api/metrics/<id>` | Retrieve backtest results |
 | POST | `/api/compare` | Compare multiple strategies |
+| POST | `/api/screener/greenblatt` | Greenblatt Magic Formula screen (pass `{"tickers":[...], "top_n":20}`) |
 
 For full API documentation, see the [Flask routes source code](backend/src/api/routes.py).
 
@@ -272,7 +274,9 @@ curl -X POST http://127.0.0.1:5000/api/strategies/backtest \
 ---
 
 ### 6. RSI Simple (`rsi_simple`)
-**Relaxed RSI mean reversion.** Buy when RSI < 40 (vs traditional 30), sell when RSI > 60 (vs traditional 70). Designed for higher signal frequency—generates 10× more signals than conservative 30/70 thresholds. **Backtest: 70.6% win rate, Sharpe 2.73** on SPY 15Min. Best for markets in strong trends where traditional oversold/overbought rarely triggers.
+**Relaxed RSI mean reversion.** Buy when RSI < 40 (vs traditional 30), sell when RSI > 60 (vs traditional 70). Designed for higher signal frequency—generates 10× more signals than conservative 30/70 thresholds. Best for markets in strong trends where traditional oversold/overbought rarely triggers.
+
+> ⚠️ **Not walk-forward validated.** In-sample figures have been removed. Run walk-forward validation before deploying.
 
 **Key params:** `rsi_period` (14), `oversold` (40), `overbought` (60)
 
@@ -281,7 +285,9 @@ curl -X POST http://127.0.0.1:5000/api/strategies/backtest \
 ---
 
 ### 7. Bollinger RSI Combo (`bollinger_rsi_combo`)
-**Dual confirmation strategy.** Entry requires BOTH price ≤ BB lower band AND RSI < 45. Exit when price ≥ BB middle OR RSI > 55. Combines mean reversion (Bollinger) with momentum confirmation (RSI). **Backtest: 87.5% win rate, Sharpe 2.49** on SPY 15Min—highest win rate of all strategies. More selective than pure RSI (1-3 signals/day vs 2-5).
+**Dual confirmation strategy.** Entry requires BOTH price ≤ BB lower band AND RSI < 45. Exit when price ≥ BB middle OR RSI > 55. Combines mean reversion (Bollinger) with momentum confirmation (RSI). More selective than pure RSI (1-3 signals/day vs 2-5).
+
+> ⚠️ **Not walk-forward validated.** In-sample figures have been removed. Run walk-forward validation before deploying.
 
 **Key params:** `bb_period` (20), `bb_std_dev` (2.0), `rsi_period` (14), `rsi_entry` (45), `rsi_exit` (55)
 
@@ -295,11 +301,37 @@ curl -X POST http://127.0.0.1:5000/api/strategies/backtest \
 - **Downtrend** (SMA20 < SMA50): Buy RSI 35, Sell 55 — standard mean reversion  
 - **Range** (close to SMAs): Buy RSI 35, Sell 65 — wide range for choppy markets
 
-**Backtest: 72.7% win rate, Sharpe 3.96** on SPY 1Hour—best risk-adjusted returns. Adapts to changing market conditions automatically. 1-2 signals/day.
+Adapts to changing market conditions automatically. 1-2 signals/day.
 
 **Key params:** `rsi_period` (14), `trend_sma_fast` (20), `trend_sma_slow` (50)
 
 **Recommended timeframe:** 1Hour for regime stability, Daily for longer-term trends
+
+> ⚠️ **Not walk-forward validated.** In-sample figures have been removed. Run walk-forward validation before deploying.
+
+---
+
+### 9. Greenblatt Weekly (`greenblatt_weekly`) — value factor, weekly bars
+
+**Designed for weeks-to-months holding periods.** Use after running the Greenblatt screener (`POST /api/screener/greenblatt`) to identify quality candidates. Entry timing on weekly bars only.
+
+**Entry** (either condition):
+- Weekly RSI < 35 (oversold on weekly timeframe = much stronger signal than daily)
+- 10-week SMA crosses above 40-week SMA (weekly golden cross)
+
+**Exit** (after minimum hold of 12 weeks):
+- Weekly RSI > 65, or 10w/40w SMA death-cross
+- Stop-loss: `stop_loss_atr_mult × weekly ATR` below entry price (always immediate)
+
+**Key params:** `fast_sma` (10w), `slow_sma` (40w), `rsi_oversold` (35), `rsi_overbought` (65), `min_hold_bars` (12 weeks), `stop_loss_atr_mult` (2.0)
+
+**Recommended timeframe:** `1wk` (weekly bars via yfinance interval parameter)
+
+**Workflow:**
+1. Run `POST /api/screener/greenblatt` with your target universe
+2. Take top 15–20 candidates by combined rank
+3. Batch backtest with `strategy=greenblatt_weekly`, `interval=1wk`
+4. Export candidates with walk-forward Sharpe > 0.8 → AlphaLive
 
 ## Project Structure
 
@@ -402,7 +434,7 @@ python run.py
 1. Create a new branch: `git checkout -b feature/your-feature-name`
 2. Make your changes
 3. Run tests: `pytest tests/ -v`
-4. Ensure all 81 tests pass
+4. Ensure all 229 tests pass
 
 **Code style:**
 - Follow PEP 8
