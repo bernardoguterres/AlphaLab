@@ -646,7 +646,7 @@ If adding new strategy with new optional fields:
 ## Support
 
 For questions or issues:
-- **AlphaLab Issues:** https://github.com/yourusername/alphalab/issues
-- **Schema Discussions:** https://github.com/yourusername/alphalab/discussions
+- **AlphaLab Issues:** https://github.com/bernardoguterres/AlphaLab/issues
+- **Schema Discussions:** https://github.com/bernardoguterres/AlphaLab/discussions
 
 **Last Updated:** 2026-03-08
