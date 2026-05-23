@@ -49,3 +49,6 @@ bun.lockb
 CLAUDE.md
 data/
 logs/
+
+# Backtest output artifacts — regenerate locally, don't commit
+backtest_results.json

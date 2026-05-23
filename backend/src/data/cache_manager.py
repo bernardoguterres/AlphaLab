@@ -26,8 +26,23 @@ class CacheManager:
 
     def _load_meta(self) -> dict:
         if self._meta_path.exists():
-            with open(self._meta_path) as f:
-                return json.load(f)
+            try:
+                with open(self._meta_path) as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, OSError) as exc:
+                logger.warning(
+                    "Cache metadata at %s is corrupt or unreadable (%s) — "
+                    "starting with empty cache. Run clear_expired() to clean up.",
+                    self._meta_path,
+                    exc,
+                )
+                # Rename the corrupt file rather than silently deleting it
+                corrupt_path = self._meta_path.with_suffix(".json.corrupt")
+                try:
+                    self._meta_path.rename(corrupt_path)
+                    logger.info("Corrupt metadata saved to %s", corrupt_path)
+                except OSError:
+                    pass
         return {}
 
     def _save_meta(self):
