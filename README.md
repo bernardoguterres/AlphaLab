@@ -39,7 +39,7 @@ AlphaLab is your **strategy development platform**. It works together with **Alp
 | Platform | Purpose | When to Run |
 |----------|---------|-------------|
 | **AlphaLab** (this repo) | Strategy development & backtesting | As needed (not 24/7) |
-| **AlphaLive** ([separate repo](https://github.com/yourusername/AlphaLive)) | Live trading execution | 24/7 during trading hours |
+| **AlphaLive** ([separate repo](https://github.com/bernardoguterres/AlphaLive)) | Live trading execution | 24/7 during trading hours |
 
 ### How They Work Together
 
@@ -87,7 +87,7 @@ AlphaLab is your **strategy development platform**. It works together with **Alp
 - Use when developing new strategies or re-backtesting
 
 **For live trading** (requires AlphaLive):
-- Clone [AlphaLive repository](https://github.com/yourusername/AlphaLive)
+- Clone [AlphaLive repository](https://github.com/bernardoguterres/AlphaLive)
 - Deploy to Railway (~$5-20/month) or run locally 24/7
 - Connect to Alpaca Markets (free paper trading account)
 - Optional: Telegram bot for real-time trade alerts
