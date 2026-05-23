@@ -15,11 +15,11 @@ flowchart TD
     C --> D[Data Fetcher<br/>Yahoo Finance]
     D --> E[Data Validator<br/>Quality Scoring]
     E --> F[Feature Engineer<br/>50+ Indicators]
-    F --> G[Strategy Engine<br/>5 Built-in Strategies]
+    F --> G[Strategy Engine<br/>6 Built-in Strategies]
     G --> H[Backtest Engine<br/>Next-bar Execution]
     H --> I[Portfolio Manager<br/>Slippage + Commission]
     I --> J[Metrics Calculator<br/>30+ Metrics]
-    J --> K[Results Dashboard<br/>Charts + Tables]
+    J --> K[Results Dashboard<br/>Charts + Tables + Screener]
     K --> L{Export Strategy?}
     L -->|Yes| M[Strategy JSON Export]
     M --> N[AlphaLive Deployment]
@@ -123,7 +123,7 @@ AlphaLab is the development platform in a three-repo algorithmic trading system:
 
 - **Market Data Pipeline** — Fetch, validate, and cache stock data from Yahoo Finance with automatic retry and quality scoring
 - **50+ Technical Indicators** — SMA, EMA, MACD, RSI, Bollinger Bands, ATR, OBV, Fibonacci levels, and more
-- **9 Built-in Strategies** — MA Crossover, RSI Mean Reversion (3 variants), Momentum Breakout, Bollinger Breakout, VWAP Reversion, plus **GreenblattWeekly** (value factor, weekly bars)
+- **6 Built-in Strategies** — MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, plus **GreenblattWeekly** (value factor, weekly bars via Greenblatt Magic Formula screening)
 - **Fundamental Screener** — Greenblatt Magic Formula ranking (earnings yield + ROE) via free yfinance data, exportable candidate list for weekly strategy backtests
 - **Realistic Backtesting** — Next-bar execution (no look-ahead bias), configurable slippage and commissions, position limits
 - **30+ Performance Metrics** — Sharpe, Sortino, Calmar, max drawdown, VaR, win rate, profit factor, benchmark comparison
@@ -210,7 +210,7 @@ cd frontend && npm run tauri:dev     # Desktop → native app window
 ### Run Tests
 
 ```bash
-# Backend tests (229 tests)
+# Backend tests (233 tests)
 cd backend
 source venv/bin/activate
 pytest tests/ -v
@@ -353,7 +353,7 @@ AlphaLab/
 ├── backend/                    # Flask REST API (Python)
 │   ├── src/
 │   │   ├── data/              # Fetching, validation, feature engineering
-│   │   ├── strategies/        # BaseStrategy + 8 implementations
+│   │   ├── strategies/        # BaseStrategy + 6 implementations
 │   │   ├── backtest/          # Engine, portfolio, metrics, orders
 │   │   ├── api/               # Flask routes + Pydantic validators
 │   │   └── utils/             # Logger, config, exceptions
@@ -449,7 +449,7 @@ python run.py
 1. Create a new branch: `git checkout -b feature/your-feature-name`
 2. Make your changes
 3. Run tests: `pytest tests/ -v`
-4. Ensure all 229 tests pass
+4. Ensure all 233 tests pass
 
 **Code style:**
 - Follow PEP 8
@@ -584,9 +584,9 @@ Before submitting, ensure:
 
 #### Backend
 - ✅ Flask REST API (127.0.0.1:5000)
-- ✅ 120+ passing tests
-- ✅ 9 API endpoints with Pydantic validation
-- ✅ 5 trading strategies (MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion)
+- ✅ 233 passing tests
+- ✅ 14 API endpoints with Pydantic validation
+- ✅ 6 trading strategies (MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, GreenblattWeekly)
 - ✅ 50+ technical indicators
 - ✅ 30+ performance metrics
 - ✅ Data caching with parquet
@@ -613,9 +613,9 @@ Before submitting, ensure:
 
 - **Backend Code:** Python, Flask
 - **Frontend Code:** TypeScript, React
-- **Total Tests:** 120+ (all passing)
-- **API Endpoints:** 9
-- **Strategies:** 5
+- **Total Tests:** 233 (all passing)
+- **API Endpoints:** 14
+- **Strategies:** 6
 - **Indicators:** 50+
 - **Metrics:** 30+
 - **Desktop Installer:** 5.5MB
