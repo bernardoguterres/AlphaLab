@@ -34,12 +34,13 @@ flowchart TD
 
 AlphaLab is your **strategy development platform**. It works together with **AlphaLive** (separate repository) to provide a complete end-to-end algorithmic trading system.
 
-### The Two Platforms
+### The Three Repositories
 
-| Platform | Purpose | When to Run |
-|----------|---------|-------------|
-| **AlphaLab** (this repo) | Strategy development & backtesting | As needed (not 24/7) |
-| **AlphaLive** ([separate repo](https://github.com/bernardoguterres/AlphaLive)) | Live trading execution | 24/7 during trading hours |
+| Repo | Purpose | When to Run |
+|------|---------|-------------|
+| **[AlphaLab](https://github.com/bernardoguterres/AlphaLab)** (this repo) | Strategy development & backtesting | As needed (not 24/7) |
+| **[AlphaLive](https://github.com/bernardoguterres/AlphaLive)** | Live trading execution | 24/7 during trading hours |
+| **[AlphaSignal](https://github.com/bernardoguterres/AlphaSignal)** | Financial RAG — sentiment signals from SEC filings | Optional enrichment layer |
 
 ### How They Work Together
 
