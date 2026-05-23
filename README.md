@@ -107,6 +107,18 @@ After backtesting a strategy in AlphaLab:
 
 **Important**: AlphaLab backtests show what *could have* happened. AlphaLive executes real trades. Always test thoroughly with paper trading before risking real money.
 
+## Ecosystem
+
+AlphaLab is the development platform in a three-repo algorithmic trading system:
+
+| Repo | Role |
+|------|------|
+| **[AlphaLab](https://github.com/bernardoguterres/AlphaLab)** (this repo) | Backtest strategies, optimise parameters, export to AlphaLive |
+| **[AlphaLive](https://github.com/bernardoguterres/AlphaLive)** | 24/7 execution engine — loads strategy JSON and trades automatically via Alpaca |
+| **[AlphaSignal](https://github.com/bernardoguterres/AlphaSignal)** | Financial RAG layer — ingests SEC EDGAR filings and news, exposes sentiment signals via REST API |
+
+**AlphaSignal as a signal source:** AlphaSignal's `/sentiment/{ticker}` endpoint returns 5-day and 20-day rolling sentiment scores derived from SEC 10-K/10-Q filings and financial news. These can be consumed as strategy features during backtesting in AlphaLab — for example, suppressing a buy signal when the 20-day sentiment trend is strongly negative, or weighting position size by sentiment confidence. AlphaSignal runs as a separate service; AlphaLab queries it over HTTP and degrades gracefully if it's unavailable.
+
 ## Features
 
 - **Market Data Pipeline** — Fetch, validate, and cache stock data from Yahoo Finance with automatic retry and quality scoring
