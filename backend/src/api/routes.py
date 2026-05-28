@@ -34,6 +34,8 @@ from ..strategies.implementations import (
     BollingerBreakout,
     VWAPReversion,
     GreenblattWeekly,
+    BollingerRSICombo,
+    TrendAdaptiveRSI,
 )
 from ..screener import FundamentalScreener
 from ..backtest.engine import BacktestEngine
@@ -60,10 +62,12 @@ logger = setup_logger("alphalab.api")
 STRATEGY_MAP = {
     "ma_crossover": MovingAverageCrossover,
     "rsi_mean_reversion": RSIMeanReversion,
-    "greenblatt_weekly": GreenblattWeekly,
     "momentum_breakout": MomentumBreakout,
     "bollinger_breakout": BollingerBreakout,
     "vwap_reversion": VWAPReversion,
+    "bollinger_rsi_combo": BollingerRSICombo,
+    "trend_adaptive_rsi": TrendAdaptiveRSI,
+    "greenblatt_weekly": GreenblattWeekly,
 }
 
 # In-memory store for backtest results (swap for DB in production)

@@ -119,7 +119,7 @@ class BacktestRequest(BaseModel):
     @field_validator("strategy")
     @classmethod
     def validate_strategy(cls, v):
-        allowed = ("ma_crossover", "rsi_mean_reversion", "momentum_breakout", "bollinger_breakout", "vwap_reversion")
+        allowed = ("ma_crossover", "rsi_mean_reversion", "momentum_breakout", "bollinger_breakout", "vwap_reversion", "greenblatt_weekly", "bollinger_rsi_combo", "trend_adaptive_rsi")
         if v not in allowed:
             raise ValueError(f"Strategy must be one of: {', '.join(allowed)}")
         return v
@@ -153,7 +153,7 @@ class OptimizeRequest(BaseModel):
     @field_validator("strategy")
     @classmethod
     def validate_strategy(cls, v):
-        allowed = ("ma_crossover", "rsi_mean_reversion", "momentum_breakout", "bollinger_breakout", "vwap_reversion")
+        allowed = ("ma_crossover", "rsi_mean_reversion", "momentum_breakout", "bollinger_breakout", "vwap_reversion", "greenblatt_weekly", "bollinger_rsi_combo", "trend_adaptive_rsi")
         if v not in allowed:
             raise ValueError(f"Strategy must be one of: {', '.join(allowed)}")
         return v
@@ -194,7 +194,7 @@ class HeatmapRequest(BaseModel):
     @field_validator("strategy")
     @classmethod
     def validate_strategy(cls, v):
-        allowed = ("ma_crossover", "rsi_mean_reversion", "momentum_breakout", "bollinger_breakout", "vwap_reversion")
+        allowed = ("ma_crossover", "rsi_mean_reversion", "momentum_breakout", "bollinger_breakout", "vwap_reversion", "greenblatt_weekly", "bollinger_rsi_combo", "trend_adaptive_rsi")
         if v not in allowed:
             raise ValueError(f"Strategy must be one of: {', '.join(allowed)}")
         return v
@@ -252,7 +252,7 @@ class BatchBacktestRequest(BaseModel):
     @field_validator("strategy")
     @classmethod
     def validate_strategy(cls, v):
-        allowed = ("ma_crossover", "rsi_mean_reversion", "momentum_breakout", "bollinger_breakout", "vwap_reversion")
+        allowed = ("ma_crossover", "rsi_mean_reversion", "momentum_breakout", "bollinger_breakout", "vwap_reversion", "greenblatt_weekly", "bollinger_rsi_combo", "trend_adaptive_rsi")
         if v not in allowed:
             raise ValueError(f"Strategy must be one of: {', '.join(allowed)}")
         return v
