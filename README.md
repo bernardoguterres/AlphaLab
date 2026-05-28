@@ -15,7 +15,7 @@ flowchart TD
     C --> D[Data Fetcher<br/>Yahoo Finance]
     D --> E[Data Validator<br/>Quality Scoring]
     E --> F[Feature Engineer<br/>50+ Indicators]
-    F --> G[Strategy Engine<br/>6 Built-in Strategies]
+    F --> G[Strategy Engine<br/>8 Built-in Strategies]
     G --> H[Backtest Engine<br/>Next-bar Execution]
     H --> I[Portfolio Manager<br/>Slippage + Commission]
     I --> J[Metrics Calculator<br/>30+ Metrics]
@@ -117,13 +117,13 @@ AlphaLab is the development platform in a three-repo algorithmic trading system:
 | **[AlphaLive](https://github.com/bernardoguterres/AlphaLive)** | 24/7 execution engine — loads strategy JSON and trades automatically via Alpaca |
 | **[AlphaSignal](https://github.com/bernardoguterres/AlphaSignal)** | Financial RAG layer — ingests SEC EDGAR filings and news, exposes sentiment signals via REST API |
 
-**AlphaSignal as a signal source:** AlphaSignal's `/sentiment/{ticker}` endpoint returns 5-day and 20-day rolling sentiment scores derived from SEC 10-K/10-Q filings and financial news. These can be consumed as strategy features during backtesting in AlphaLab — for example, suppressing a buy signal when the 20-day sentiment trend is strongly negative, or weighting position size by sentiment confidence. AlphaSignal runs as a separate service; AlphaLab queries it over HTTP and degrades gracefully if it's unavailable.
+**AlphaSignal as a signal source:** AlphaSignal's `/sentiment/{ticker}` endpoint returns sentiment scores derived from SEC 10-K/10-Q filings and financial news. These can be consumed as strategy features during backtesting in AlphaLab — for example, suppressing a buy signal when sentiment is strongly negative, or weighting position size by sentiment confidence. AlphaSignal runs as a separate service; AlphaLab queries it over HTTP and degrades gracefully if it's unavailable.
 
 ## Features
 
 - **Market Data Pipeline** — Fetch, validate, and cache stock data from Yahoo Finance with automatic retry and quality scoring
 - **50+ Technical Indicators** — SMA, EMA, MACD, RSI, Bollinger Bands, ATR, OBV, Fibonacci levels, and more
-- **6 Built-in Strategies** — MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, plus **GreenblattWeekly** (value factor, weekly bars via Greenblatt Magic Formula screening)
+- **8 Built-in Strategies** — MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, Bollinger RSI Combo, Trend Adaptive RSI, plus **GreenblattWeekly** (value factor, weekly bars via Greenblatt Magic Formula screening)
 - **Fundamental Screener** — Greenblatt Magic Formula ranking (earnings yield + ROE) via free yfinance data, exportable candidate list for weekly strategy backtests
 - **Realistic Backtesting** — Next-bar execution (no look-ahead bias), configurable slippage and commissions, position limits
 - **30+ Performance Metrics** — Sharpe, Sortino, Calmar, max drawdown, VaR, win rate, profit factor, benchmark comparison
@@ -286,57 +286,42 @@ curl -X POST http://127.0.0.1:5000/api/strategies/backtest \
 
 ---
 
-### 6. RSI Simple (`rsi_simple`)
-**Relaxed RSI mean reversion.** Buy when RSI < 40 (vs traditional 30), sell when RSI > 60 (vs traditional 70). Designed for higher signal frequency—generates 10× more signals than conservative 30/70 thresholds. Best for markets in strong trends where traditional oversold/overbought rarely triggers.
+### 6. Bollinger RSI Combo (`bollinger_rsi_combo`)
+**Dual confirmation mean reversion.** Entry requires BOTH price ≤ BB lower band AND RSI < oversold threshold (default 45). Exit when price ≥ BB middle band OR RSI > overbought threshold (default 55). More selective than pure RSI — catches bounces off dynamic support with momentum confirmation.
 
-> ⚠️ **Not walk-forward validated.** In-sample figures have been removed. Run walk-forward validation before deploying.
+**Key params:** `bb_period` (20), `bb_std` (2.0), `rsi_period` (14), `rsi_oversold` (45), `rsi_overbought` (55), `exit_at_middle` (true)
 
-**Key params:** `rsi_period` (14), `oversold` (40), `overbought` (60)
-
-**Recommended timeframe:** 15Min for intraday signals (2-5 signals/day)
+**Recommended timeframe:** 15Min for intraday (1-3 signals/day), Daily for swing trading
 
 ---
 
-### 7. Bollinger RSI Combo (`bollinger_rsi_combo`)
-**Dual confirmation strategy.** Entry requires BOTH price ≤ BB lower band AND RSI < 45. Exit when price ≥ BB middle OR RSI > 55. Combines mean reversion (Bollinger) with momentum confirmation (RSI). More selective than pure RSI (1-3 signals/day vs 2-5).
+### 7. Trend Adaptive RSI (`trend_adaptive_rsi`)
+**Market regime-aware RSI.** Detects trend using SMA(50) slope and adjusts entry/exit thresholds accordingly:
+- **Uptrend** (price > SMA, SMA rising): Buy RSI 45, Sell 65 — buys dips rather than waiting for extreme oversold
+- **Downtrend** (price < SMA, SMA falling): Buy RSI 35, Sell 55 — fades bounces
+- **Range**: Buy RSI 35, Sell 65 — standard mean reversion
 
-> ⚠️ **Not walk-forward validated.** In-sample figures have been removed. Run walk-forward validation before deploying.
+Trades in all market conditions instead of going quiet during trends.
 
-**Key params:** `bb_period` (20), `bb_std_dev` (2.0), `rsi_period` (14), `rsi_entry` (45), `rsi_exit` (55)
-
-**Recommended timeframe:** 15Min for precision entries, Daily for swing trading
-
----
-
-### 8. Trend Adaptive RSI (`trend_adaptive_rsi`)
-**Market regime-aware RSI.** Adjusts entry/exit thresholds based on detected market regime:
-- **Uptrend** (SMA20 > SMA50): Buy RSI 45, Sell 65 — buys dips in uptrend
-- **Downtrend** (SMA20 < SMA50): Buy RSI 35, Sell 55 — standard mean reversion  
-- **Range** (close to SMAs): Buy RSI 35, Sell 65 — wide range for choppy markets
-
-Adapts to changing market conditions automatically. 1-2 signals/day.
-
-**Key params:** `rsi_period` (14), `trend_sma_fast` (20), `trend_sma_slow` (50)
+**Key params:** `rsi_period` (14), `trend_sma` (50), `trend_lookback` (5), `uptrend_buy` (45), `uptrend_sell` (65), `downtrend_buy` (35), `downtrend_sell` (55), `range_buy` (35), `range_sell` (65)
 
 **Recommended timeframe:** 1Hour for regime stability, Daily for longer-term trends
 
-> ⚠️ **Not walk-forward validated.** In-sample figures have been removed. Run walk-forward validation before deploying.
-
 ---
 
-### 9. Greenblatt Weekly (`greenblatt_weekly`) — value factor, weekly bars
+### 8. Greenblatt Weekly (`greenblatt_weekly`) — value factor, weekly bars
 
-**Designed for weeks-to-months holding periods.** Use after running the Greenblatt screener (`POST /api/screener/greenblatt`) to identify quality candidates. Entry timing on weekly bars only.
+**Designed for ~1 year holding periods.** Use after running the Greenblatt screener (`POST /api/screener/greenblatt`) to identify quality candidates. Entry timing on weekly bars only.
 
 **Entry** (either condition):
 - Weekly RSI < 35 (oversold on weekly timeframe = much stronger signal than daily)
-- 10-week SMA crosses above 40-week SMA (weekly golden cross)
+- 10-week SMA crosses above 50-week SMA (weekly golden cross)
 
-**Exit** (after minimum hold of 12 weeks):
-- Weekly RSI > 65, or 10w/40w SMA death-cross
-- Stop-loss: `stop_loss_atr_mult × weekly ATR` below entry price (always immediate)
+**Exit:**
+- **Default (always active):** Price drops 20% below position peak — trailing stop fires immediately, bypasses minimum hold
+- **Opt-in (disabled by default):** Weekly RSI > 65, or 10w/50w SMA death-cross — only fires after minimum hold elapsed
 
-**Key params:** `fast_sma` (10w), `slow_sma` (40w), `rsi_oversold` (35), `rsi_overbought` (65), `min_hold_bars` (12 weeks), `stop_loss_atr_mult` (2.0)
+**Key params:** `fast_sma` (10w), `slow_sma` (50w), `rsi_oversold` (35), `rsi_overbought` (65), `min_hold_bars` (52 weeks), `trailing_stop_pct` (0.20)
 
 **Recommended timeframe:** `1wk` (weekly bars via yfinance interval parameter)
 
@@ -584,9 +569,9 @@ Before submitting, ensure:
 
 #### Backend
 - ✅ Flask REST API (127.0.0.1:5000)
-- ✅ 233 passing tests
+- ✅ 233 tests (230 passing, 3 skipped)
 - ✅ 14 API endpoints with Pydantic validation
-- ✅ 6 trading strategies (MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, GreenblattWeekly)
+- ✅ 8 trading strategies (MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, Bollinger RSI Combo, Trend Adaptive RSI, GreenblattWeekly)
 - ✅ 50+ technical indicators
 - ✅ 30+ performance metrics
 - ✅ Data caching with parquet
@@ -615,7 +600,7 @@ Before submitting, ensure:
 - **Frontend Code:** TypeScript, React
 - **Total Tests:** 233 (all passing)
 - **API Endpoints:** 14
-- **Strategies:** 6
+- **Strategies:** 8
 - **Indicators:** 50+
 - **Metrics:** 30+
 - **Desktop Installer:** 5.5MB

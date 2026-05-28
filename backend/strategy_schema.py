@@ -166,6 +166,47 @@ class GreenblattWeeklyParams(BaseModel):
         return self
 
 
+class BollingerRSIComboParams(BaseModel):
+    """Bollinger Bands + RSI combination strategy parameters."""
+
+    bb_period: int = Field(default=20, ge=5, le=100, description="Bollinger Bands period")
+    bb_std: float = Field(default=2.0, ge=0.5, le=5.0, description="Bollinger Bands standard deviation multiplier")
+    rsi_period: int = Field(default=14, ge=2, le=50, description="RSI period")
+    rsi_oversold: int = Field(default=45, ge=10, le=50, description="RSI entry threshold (relaxed vs standard 30)")
+    rsi_overbought: int = Field(default=55, ge=50, le=90, description="RSI exit threshold (relaxed vs standard 70)")
+    exit_at_middle: bool = Field(default=True, description="Exit when price reaches BB middle band")
+
+    @model_validator(mode="after")
+    def validate_rsi_levels(self):
+        if self.rsi_oversold >= self.rsi_overbought:
+            raise ValueError("rsi_oversold must be < rsi_overbought")
+        return self
+
+
+class TrendAdaptiveRSIParams(BaseModel):
+    """Trend-adaptive RSI strategy parameters. Adjusts thresholds by market regime."""
+
+    rsi_period: int = Field(default=14, ge=2, le=50, description="RSI period")
+    trend_sma: int = Field(default=50, ge=10, le=200, description="SMA period for trend detection")
+    trend_lookback: int = Field(default=5, ge=1, le=20, description="Bars to confirm trend direction")
+    uptrend_buy: int = Field(default=45, ge=20, le=60, description="RSI entry threshold in uptrend")
+    uptrend_sell: int = Field(default=65, ge=55, le=90, description="RSI exit threshold in uptrend")
+    downtrend_buy: int = Field(default=35, ge=10, le=50, description="RSI entry threshold in downtrend")
+    downtrend_sell: int = Field(default=55, ge=45, le=80, description="RSI exit threshold in downtrend")
+    range_buy: int = Field(default=35, ge=10, le=50, description="RSI entry threshold in range")
+    range_sell: int = Field(default=65, ge=50, le=90, description="RSI exit threshold in range")
+
+    @model_validator(mode="after")
+    def validate_thresholds(self):
+        if self.uptrend_buy >= self.uptrend_sell:
+            raise ValueError("uptrend_buy must be < uptrend_sell")
+        if self.downtrend_buy >= self.downtrend_sell:
+            raise ValueError("downtrend_buy must be < downtrend_sell")
+        if self.range_buy >= self.range_sell:
+            raise ValueError("range_buy must be < range_sell")
+        return self
+
+
 StrategyName = Literal[
     "ma_crossover",
     "rsi_mean_reversion",
@@ -173,6 +214,8 @@ StrategyName = Literal[
     "bollinger_breakout",
     "vwap_reversion",
     "greenblatt_weekly",
+    "bollinger_rsi_combo",
+    "trend_adaptive_rsi",
 ]
 
 StrategyParamsUnion = Union[
@@ -182,6 +225,8 @@ StrategyParamsUnion = Union[
     BollingerBreakoutParams,
     VWAPReversionParams,
     GreenblattWeeklyParams,
+    BollingerRSIComboParams,
+    TrendAdaptiveRSIParams,
 ]
 
 
