@@ -77,10 +77,9 @@ _results_store: dict[str, dict] = {}
 def create_app() -> Flask:
     """Create and configure the Flask application."""
     config = load_config()
-    api_cfg = config.get("api", {})
 
     app = Flask(__name__)
-    CORS(app, origins=config.get("api", {}).get("cors_origins", ["*"]))
+    CORS(app, origins=config.api.cors_origins)
 
     # ------------------------------------------------------------------
     # Middleware
@@ -120,7 +119,7 @@ def create_app() -> Flask:
 
     @app.route("/api/health")
     def health():
-        return jsonify({"status": "ok", "version": config["app"]["version"]})
+        return jsonify({"status": "ok", "version": config.app.version})
 
     # ------------------------------------------------------------------
     # Data endpoints
@@ -554,7 +553,7 @@ def create_app() -> Flask:
 
             # Initialize optimizer
             config = load_config()
-            risk_free_rate = config.get("backtest", {}).get("risk_free_rate", 0.04)
+            risk_free_rate = config.backtest.risk_free_rate
             optimizer = PortfolioOptimizer(returns_matrix, risk_free_rate)
 
             # Optimize
@@ -973,7 +972,11 @@ def _build_export_json(
         "metadata": {
             "exported_from": "AlphaLab",
             "exported_at": datetime.now(timezone.utc).isoformat(),
-            "alphalab_version": config.get("app", {}).get("version", "0.1.0"),
+            "alphalab_version": (
+                config.app.version
+                if hasattr(config, "app")
+                else config.get("app", {}).get("version", "0.1.0")
+            ),
             "backtest_id": backtest_id,
             "backtest_period": {
                 "start": start_date,
