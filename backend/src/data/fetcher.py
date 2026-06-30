@@ -43,10 +43,9 @@ class DataFetcher:
         cache_expiry_hours: float = 24,
     ):
         config = load_config()
-        data_cfg = config.get("data", {})
         self.max_retries = max_retries
         self.cache = CacheManager(
-            cache_dir=cache_dir or data_cfg.get("cache_dir", "data/cache"),
+            cache_dir=cache_dir or config.data.cache_dir,
             expiry_hours=cache_expiry_hours,
         )
         self._validated_tickers: dict[str, bool] = {}

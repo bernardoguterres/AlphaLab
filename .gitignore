@@ -47,8 +47,8 @@ bun.lockb
 
 # AI development guide (not for public repo)
 CLAUDE.md
-data/
-logs/
+/data/
+/logs/
 
 # Backtest output artifacts — regenerate locally, don't commit
 backtest_results.json

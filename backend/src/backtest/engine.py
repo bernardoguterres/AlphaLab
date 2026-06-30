@@ -62,10 +62,9 @@ class BacktestEngine:
 
     def __init__(self):
         config = load_config()
-        bt_cfg = config.get("backtest", {})
-        self.default_capital = bt_cfg.get("initial_capital", 100_000)
-        self.commission = bt_cfg.get("commission", 0.0)
-        self.slippage = bt_cfg.get("slippage", 0.05)
+        self.default_capital = config.backtest.initial_capital
+        self.commission = config.backtest.commission
+        self.slippage = config.backtest.slippage
 
     def run_backtest(
         self,
