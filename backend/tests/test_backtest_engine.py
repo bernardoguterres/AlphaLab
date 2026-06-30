@@ -11,26 +11,11 @@ from src.backtest.engine import BacktestEngine
 from src.backtest.portfolio import Portfolio
 from src.backtest.order import Order, OrderSide, OrderType, OrderStatus
 from src.strategies.implementations.moving_average_crossover import MovingAverageCrossover
-from src.data.processor import FeatureEngineer
+from helpers import make_featured_data as _make_featured_data_base
 
 
 def _make_featured_data(n=500, seed=42):
-    rng = np.random.RandomState(seed)
-    dates = pd.bdate_range("2021-01-01", periods=n)
-    close = 100 + rng.randn(n).cumsum() * 0.3
-    close = np.maximum(close, 10)
-    high = close + rng.uniform(0, 2, n)
-    low = close - rng.uniform(0, 2, n)
-    opn = close + rng.uniform(-0.5, 0.5, n)
-    high = np.maximum(high, np.maximum(opn, close))
-    low = np.minimum(low, np.minimum(opn, close))
-    volume = rng.randint(1_000_000, 10_000_000, n).astype(float)
-    df = pd.DataFrame(
-        {"Open": opn, "High": high, "Low": low, "Close": close, "Volume": volume},
-        index=dates,
-    )
-    fe = FeatureEngineer()
-    result = fe.process(df)
+    result = _make_featured_data_base(n=n, seed=seed)
     result.attrs["ticker"] = "TEST"
     return result
 
