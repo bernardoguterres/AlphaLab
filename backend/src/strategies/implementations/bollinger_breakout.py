@@ -73,18 +73,9 @@ class BollingerBreakout(BaseStrategy):
         below_lower = close < lower_band
         at_middle = (close >= sma * 0.99) & (close <= sma * 1.01)  # Within 1% of SMA
 
-        # Calculate consecutive closes above/below
-        # This is the critical part for avoiding look-ahead bias
-        consecutive_above = pd.Series(0, index=data.index)
-        consecutive_below = pd.Series(0, index=data.index)
-
-        for i in range(confirmation, len(data)):
-            # Check if the last N bars (including current) are all above upper band
-            if above_upper.iloc[i - confirmation + 1 : i + 1].all():
-                consecutive_above.iloc[i] = confirmation
-            # Check if the last N bars (including current) are all below lower band
-            if below_lower.iloc[i - confirmation + 1 : i + 1].all():
-                consecutive_below.iloc[i] = confirmation
+        # Vectorized consecutive-bar check (replaces O(n·m) slice loop)
+        consecutive_above = above_upper.rolling(confirmation).sum() >= confirmation
+        consecutive_below = below_lower.rolling(confirmation).sum() >= confirmation
 
         # Volume filter (optional)
         vol_ok = pd.Series(True, index=data.index)
@@ -99,7 +90,7 @@ class BollingerBreakout(BaseStrategy):
             # Entry signals (only if no position)
             if current_position == 0:
                 # BUY signal: consecutive closes above upper band + volume
-                if consecutive_above.iloc[i] >= confirmation and vol_ok.iloc[i]:
+                if consecutive_above.iloc[i] and vol_ok.iloc[i]:
                     signals.iloc[i, signals.columns.get_loc("signal")] = 1
                     signals.iloc[i, signals.columns.get_loc("reason")] = (
                         f"{confirmation} closes above upper BB"
@@ -114,7 +105,7 @@ class BollingerBreakout(BaseStrategy):
                     position.iloc[i:] = 1  # Enter long position
 
                 # SELL signal: consecutive closes below lower band + volume
-                elif consecutive_below.iloc[i] >= confirmation and vol_ok.iloc[i]:
+                elif consecutive_below.iloc[i] and vol_ok.iloc[i]:
                     signals.iloc[i, signals.columns.get_loc("signal")] = -1
                     signals.iloc[i, signals.columns.get_loc("reason")] = (
                         f"{confirmation} closes below lower BB"
