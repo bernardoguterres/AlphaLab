@@ -171,7 +171,6 @@ def create_app() -> Flask:
     def run_backtest():
         body = BacktestRequest(**request.get_json(force=True))
 
-        # Fetch and process data
         try:
             raw = fetcher.fetch(body.ticker, body.start_date, body.end_date)
         except DataFetchError as e:
@@ -195,7 +194,6 @@ def create_app() -> Flask:
         featured = processor.process(cleaned)
         featured.attrs["ticker"] = body.ticker
 
-        # Build strategy
         strategy_cls = STRATEGY_MAP.get(body.strategy)
         if not strategy_cls:
             return (
@@ -207,7 +205,6 @@ def create_app() -> Flask:
 
         strategy = strategy_cls(body.params or {})
 
-        # Run backtest
         engine = BacktestEngine()
         results = engine.run_backtest(
             strategy=strategy,
@@ -219,7 +216,6 @@ def create_app() -> Flask:
             monte_carlo_runs=body.monte_carlo_runs,
         )
 
-        # Calculate metrics
         metrics_calc = PerformanceMetrics()
         metrics = metrics_calc.calculate_all(results.equity_curve, results.trades)
         results.metrics = metrics
@@ -255,7 +251,6 @@ def create_app() -> Flask:
         """
         body = OptimizeRequest(**request.get_json(force=True))
 
-        # Fetch and process data
         try:
             raw = fetcher.fetch(body.ticker, body.start_date, body.end_date)
         except DataFetchError as e:
@@ -278,12 +273,10 @@ def create_app() -> Flask:
         featured = processor.process(cleaned)
         featured.attrs["ticker"] = body.ticker
 
-        # Get strategy class
         strategy_cls = STRATEGY_MAP.get(body.strategy)
         if not strategy_cls:
             return jsonify({"status": "error", "message": "Unknown strategy"}), 400
 
-        # Initialize optimizer
         param_optimizer = ParameterOptimizer()
         engine = BacktestEngine()
         metrics_calc = PerformanceMetrics()
@@ -318,7 +311,6 @@ def create_app() -> Flask:
         """
         body = HeatmapRequest(**request.get_json(force=True))
 
-        # Fetch and process data
         try:
             raw = fetcher.fetch(body.ticker, body.start_date, body.end_date)
         except DataFetchError as e:
@@ -341,7 +333,6 @@ def create_app() -> Flask:
         featured = processor.process(cleaned)
         featured.attrs["ticker"] = body.ticker
 
-        # Get strategy class
         strategy_cls = STRATEGY_MAP.get(body.strategy)
         if not strategy_cls:
             return jsonify({"status": "error", "message": "Unknown strategy"}), 400
@@ -372,7 +363,6 @@ def create_app() -> Flask:
                 400,
             )
 
-        # Initialize optimizer
         param_optimizer = ParameterOptimizer()
         engine = BacktestEngine()
         metrics_calc = PerformanceMetrics()
@@ -474,7 +464,6 @@ def create_app() -> Flask:
         engine = BacktestEngine()
         metrics_calc = PerformanceMetrics()
 
-        # Get strategy class
         strategy_cls = STRATEGY_MAP.get(body.strategy)
         if not strategy_cls:
             return (
@@ -511,10 +500,7 @@ def create_app() -> Flask:
                 featured = processor.process(cleaned)
                 featured.attrs["ticker"] = ticker
 
-                # Build strategy
                 strategy = strategy_cls(body.params or {})
-
-                # Run backtest
                 backtest_result = engine.run_backtest(
                     strategy=strategy,
                     data=featured,
@@ -522,10 +508,8 @@ def create_app() -> Flask:
                     start_date=body.start_date,
                     end_date=body.end_date,
                     position_sizing=body.position_sizing,
-                    monte_carlo_runs=0,  # Skip Monte Carlo for batch
+                    monte_carlo_runs=0,
                 )
-
-                # Calculate metrics
                 metrics = metrics_calc.calculate_all(
                     backtest_result.equity_curve, backtest_result.trades
                 )
@@ -621,7 +605,6 @@ def create_app() -> Flask:
             # Build returns matrix from stored backtests
             returns_matrix, labels = build_returns_matrix(strategies, backtest_results)
 
-            # Initialize optimizer
             config = load_config()
             risk_free_rate = config.backtest.risk_free_rate
             optimizer = PortfolioOptimizer(returns_matrix, risk_free_rate)
@@ -1018,13 +1001,6 @@ def _build_export_json(
 
     Maps backtest results to the StrategyExportSchema format.
     """
-    # Map strategy name format
-    strategy_name_map = {
-        "ma_crossover": "ma_crossover",
-        "rsi_mean_reversion": "rsi_mean_reversion",
-        "momentum_breakout": "momentum_breakout",
-    }
-
     # Extract metrics
     metrics = results.get("metrics", {})
 
@@ -1088,7 +1064,7 @@ def _build_export_json(
     export = {
         "schema_version": "1.0",
         "strategy": {
-            "name": strategy_name_map.get(strategy_name, strategy_name),
+            "name": strategy_name,
             "parameters": params,
             "description": f"{strategy_name.replace('_', ' ').title()} strategy for {ticker}",
         },
