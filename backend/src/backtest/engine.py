@@ -140,49 +140,6 @@ class BacktestEngine:
         )
         return results
 
-    def walk_forward(
-        self,
-        strategy_class,
-        strategy_params: dict,
-        data: pd.DataFrame,
-        train_pct: float = 0.7,
-        n_splits: int = 3,
-        initial_capital: float = None,
-    ) -> list[BacktestResults]:
-        """Rolling walk-forward validation.
-
-        Splits data into n_splits windows, trains on train_pct of each,
-        tests on the remainder.
-        """
-        capital = initial_capital or self.default_capital
-        n = len(data)
-        split_size = n // n_splits
-        results = []
-
-        for i in range(n_splits):
-            start = i * split_size
-            end = min(start + split_size, n)
-            window = data.iloc[start:end]
-
-            train_end = int(len(window) * train_pct)
-            test_data = window.iloc[train_end:]
-
-            if len(test_data) < 10:
-                continue
-
-            strategy = strategy_class(strategy_params)
-            r = self.run_backtest(strategy, test_data, initial_capital=capital)
-            r.walk_forward = [
-                {
-                    "split": i,
-                    "test_start": str(test_data.index[0]),
-                    "test_end": str(test_data.index[-1]),
-                }
-            ]
-            results.append(r)
-
-        return results
-
     # ------------------------------------------------------------------
     # Core simulation loop
     # ------------------------------------------------------------------
