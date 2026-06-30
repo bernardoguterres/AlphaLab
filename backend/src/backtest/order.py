@@ -3,7 +3,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 
 class OrderType(Enum):
@@ -31,11 +30,11 @@ class Order:
     shares: int
     order_type: OrderType = OrderType.MARKET
     status: OrderStatus = OrderStatus.PENDING
-    filled_price: Optional[float] = None
+    filled_price: float | None = None
     commission: float = 0.0
     slippage: float = 0.0
-    timestamp: Optional[datetime] = None
-    filled_timestamp: Optional[datetime] = None
+    timestamp: datetime | None = None
+    filled_timestamp: datetime | None = None
     reason: str = ""
 
     @property

@@ -1,7 +1,6 @@
 """Portfolio management with realistic order execution and risk controls."""
 
 from datetime import datetime
-from typing import Optional
 
 import numpy as np
 
@@ -54,7 +53,7 @@ class Portfolio:
         self,
         order: Order,
         current_prices: dict[str, float],
-        timestamp: Optional[datetime] = None,
+        timestamp: datetime | None = None,
     ) -> Order:
         """Process an order and update portfolio state.
 
@@ -226,7 +225,7 @@ class Portfolio:
 
     def _get_execution_price(
         self, order: Order, market_price: float
-    ) -> Optional[float]:
+    ) -> float | None:
         return market_price
 
     def _check_drawdown_halt(self, current_value: float):

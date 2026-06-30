@@ -1,7 +1,6 @@
 """Backtest engine with realistic execution, walk-forward testing, and Monte Carlo."""
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -24,11 +23,11 @@ class BacktestResults:
     final_value: float = 0.0
     equity_curve: list[dict] = field(default_factory=list)
     trades: list[dict] = field(default_factory=list)
-    signals: Optional[pd.DataFrame] = None
-    metrics: Optional[dict] = None
-    monte_carlo: Optional[dict] = None
-    walk_forward: Optional[list[dict]] = None
-    benchmark: Optional[dict] = None
+    signals: pd.DataFrame | None = None
+    metrics: dict | None = None
+    monte_carlo: dict | None = None
+    walk_forward: list[dict] | None = None
+    benchmark: dict | None = None
 
     @property
     def total_return_pct(self) -> float:
@@ -343,7 +342,7 @@ class BacktestEngine:
 
     @staticmethod
     def _filter_dates(
-        data: pd.DataFrame, start: Optional[str], end: Optional[str]
+        data: pd.DataFrame, start: str | None, end: str | None
     ) -> pd.DataFrame:
         df = data.copy()
         if start:

@@ -2,7 +2,6 @@
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Tuple, Optional
 from itertools import product
 
 from ..utils.logger import setup_logger
@@ -17,14 +16,14 @@ class ParameterOptimizer:
         self,
         strategy_class,
         data: pd.DataFrame,
-        param_grid: Dict[str, List],
+        param_grid: dict[str, list],
         initial_capital: float,
         engine,
         metrics_calc,
         optimization_target: str = "sharpe_ratio",
         walk_forward: bool = False,
         n_folds: int = 5,
-    ) -> Dict:
+    ) -> dict:
         """Run parameter grid search.
 
         Args:
@@ -76,13 +75,13 @@ class ParameterOptimizer:
         self,
         strategy_class,
         data: pd.DataFrame,
-        param_names: List[str],
-        combinations: List[Tuple],
+        param_names: list[str],
+        combinations: list[tuple],
         initial_capital: float,
         engine,
         metrics_calc,
         optimization_target: str,
-    ) -> Dict:
+    ) -> dict:
         """Simple grid search without walk-forward."""
         results = []
 
@@ -144,14 +143,14 @@ class ParameterOptimizer:
         self,
         strategy_class,
         data: pd.DataFrame,
-        param_names: List[str],
-        combinations: List[Tuple],
+        param_names: list[str],
+        combinations: list[tuple],
         initial_capital: float,
         engine,
         metrics_calc,
         optimization_target: str,
         n_folds: int,
-    ) -> Dict:
+    ) -> dict:
         """Walk-forward optimization to prevent overfitting."""
         # Create time-based folds
         folds = self._create_folds(data, n_folds)
@@ -246,7 +245,7 @@ class ParameterOptimizer:
 
     def _create_folds(
         self, data: pd.DataFrame, n_folds: int
-    ) -> List[Tuple[pd.DataFrame, pd.DataFrame]]:
+    ) -> list[tuple[pd.DataFrame, pd.DataFrame]]:
         """Create time-based train/test folds.
 
         Each fold uses progressively more data for training and tests on the next segment.
@@ -268,7 +267,7 @@ class ParameterOptimizer:
 
         return folds
 
-    def _extract_metric(self, metrics: Dict, backtest_result, target: str) -> float:
+    def _extract_metric(self, metrics: dict, backtest_result, target: str) -> float:
         """Extract target metric from results."""
         if target == "total_return_pct":
             return backtest_result.total_return_pct
@@ -286,14 +285,14 @@ class ParameterOptimizer:
         strategy_class,
         data: pd.DataFrame,
         param1_name: str,
-        param1_values: List[float],
+        param1_values: list[float],
         param2_name: str,
-        param2_values: List[float],
-        fixed_params: Dict,
+        param2_values: list[float],
+        fixed_params: dict,
         initial_capital: float,
         engine,
         metrics_calc,
-    ) -> Dict:
+    ) -> dict:
         """Generate 2D heatmap data for parameter visualization.
 
         Args:
