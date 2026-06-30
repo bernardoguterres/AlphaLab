@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.api.routes import create_app
@@ -14,13 +15,16 @@ from src.api.routes import create_app
 def _mock_fetch_response(ticker):
     """Generate mock fetch response for a ticker."""
     dates = pd.bdate_range("2020-01-01", periods=100)
-    data = pd.DataFrame({
-        "Open": 100 + np.random.randn(100).cumsum(),
-        "High": 105 + np.random.randn(100).cumsum(),
-        "Low": 95 + np.random.randn(100).cumsum(),
-        "Close": 100 + np.random.randn(100).cumsum(),
-        "Volume": np.random.randint(1_000_000, 10_000_000, 100).astype(float),
-    }, index=dates)
+    data = pd.DataFrame(
+        {
+            "Open": 100 + np.random.randn(100).cumsum(),
+            "High": 105 + np.random.randn(100).cumsum(),
+            "Low": 95 + np.random.randn(100).cumsum(),
+            "Close": 100 + np.random.randn(100).cumsum(),
+            "Volume": np.random.randint(1_000_000, 10_000_000, 100).astype(float),
+        },
+        index=dates,
+    )
 
     return {
         "data": data,
@@ -31,7 +35,7 @@ def _mock_fetch_response(ticker):
             "quality_score": 0.95,
             "start_date": "2020-01-01",
             "end_date": "2020-05-15",
-        }
+        },
     }
 
 
@@ -49,7 +53,9 @@ class TestBatchBacktest:
         # Mock fetcher
         mock_fetcher = MagicMock()
         mock_fetcher_cls.return_value = mock_fetcher
-        mock_fetcher.fetch.side_effect = lambda ticker, *args, **kwargs: _mock_fetch_response(ticker)
+        mock_fetcher.fetch.side_effect = (
+            lambda ticker, *args, **kwargs: _mock_fetch_response(ticker)
+        )
 
         payload = {
             "tickers": ["AAPL", "MSFT", "GOOGL"],
@@ -57,13 +63,13 @@ class TestBatchBacktest:
             "start_date": "2020-01-01",
             "end_date": "2020-05-01",
             "initial_capital": 100000,
-            "params": {"short_window": 10, "long_window": 30}
+            "params": {"short_window": 10, "long_window": 30},
         }
 
         response = self.client.post(
             "/api/strategies/batch-backtest",
             data=json.dumps(payload),
-            content_type="application/json"
+            content_type="application/json",
         )
 
         assert response.status_code == 200
@@ -104,7 +110,7 @@ class TestBatchBacktest:
         response = self.client.post(
             "/api/strategies/batch-backtest",
             data=json.dumps(payload),
-            content_type="application/json"
+            content_type="application/json",
         )
 
         assert response.status_code == 422
@@ -123,7 +129,7 @@ class TestBatchBacktest:
         response = self.client.post(
             "/api/strategies/batch-backtest",
             data=json.dumps(payload),
-            content_type="application/json"
+            content_type="application/json",
         )
 
         assert response.status_code == 422
@@ -143,7 +149,7 @@ class TestBatchBacktest:
         response = self.client.post(
             "/api/strategies/batch-backtest",
             data=json.dumps(payload),
-            content_type="application/json"
+            content_type="application/json",
         )
 
         assert response.status_code == 422
@@ -160,6 +166,7 @@ class TestBatchBacktest:
         def fetch_side_effect(ticker, *args, **kwargs):
             if ticker == "MSFT":
                 from src.data.fetcher import DataFetchError
+
                 raise DataFetchError(f"Failed to fetch {ticker}")
             return _mock_fetch_response(ticker)
 
@@ -176,7 +183,7 @@ class TestBatchBacktest:
         response = self.client.post(
             "/api/strategies/batch-backtest",
             data=json.dumps(payload),
-            content_type="application/json"
+            content_type="application/json",
         )
 
         assert response.status_code == 200

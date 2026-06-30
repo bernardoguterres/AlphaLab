@@ -69,8 +69,10 @@ class TestGreenblattWeekly(unittest.TestCase):
         if len(buys) >= 2:
             indices = buys.index.tolist()
             for i in range(len(indices) - 1):
-                between = signals.loc[indices[i]:indices[i + 1], "signal"]
-                self.assertIn(-1, between.values, "BUY followed by BUY with no SELL between")
+                between = signals.loc[indices[i] : indices[i + 1], "signal"]
+                self.assertIn(
+                    -1, between.values, "BUY followed by BUY with no SELL between"
+                )
 
     def test_no_sell_without_position(self):
         signals = self._run(_make_weekly_data())
@@ -91,7 +93,9 @@ class TestGreenblattWeekly(unittest.TestCase):
         peak = data["Close"].iloc[80]
         data.loc[data.index[100], "Close"] = peak * 0.65
 
-        signals = self._run(data, params={"min_hold_bars": 1, "trailing_stop_pct": 0.20})
+        signals = self._run(
+            data, params={"min_hold_bars": 1, "trailing_stop_pct": 0.20}
+        )
         sells = signals[signals["signal"] == -1]
         stop_sells = sells[sells["reason"].str.contains("Trailing stop", na=False)]
         self.assertGreater(len(stop_sells), 0, "Trailing stop should have fired")
@@ -119,7 +123,9 @@ class TestGreenblattWeekly(unittest.TestCase):
 
         signals = self._run(data, params={"min_hold_bars": 1})
         cross_exits = signals[signals["reason"].str.contains("death-cross", na=False)]
-        self.assertEqual(len(cross_exits), 0, "SMA death-cross exit should be disabled by default")
+        self.assertEqual(
+            len(cross_exits), 0, "SMA death-cross exit should be disabled by default"
+        )
 
     def test_rsi_exit_fires_when_enabled(self):
         """RSI exit SHOULD fire when exit_rsi_overbought=True and min_hold met."""
@@ -128,11 +134,14 @@ class TestGreenblattWeekly(unittest.TestCase):
         for i in range(75, 90):
             data.loc[data.index[i], "RSI"] = 80.0
 
-        signals = self._run(data, params={
-            "min_hold_bars": 10,
-            "exit_rsi_overbought": True,
-            "trailing_stop_pct": 0.50,  # loose stop so RSI fires first
-        })
+        signals = self._run(
+            data,
+            params={
+                "min_hold_bars": 10,
+                "exit_rsi_overbought": True,
+                "trailing_stop_pct": 0.50,  # loose stop so RSI fires first
+            },
+        )
         rsi_exits = signals[signals["reason"].str.contains("overbought", na=False)]
         self.assertGreater(len(rsi_exits), 0, "RSI exit should fire when enabled")
 

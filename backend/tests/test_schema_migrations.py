@@ -177,7 +177,10 @@ class TestMigrationLogging:
         migrate_schema(config)
 
         # Should log migration info
-        assert any("Migrating schema from version 1.0" in record.message for record in caplog.records)
+        assert any(
+            "Migrating schema from version 1.0" in record.message
+            for record in caplog.records
+        )
 
     def test_missing_safety_limits_logs_warning(self, caplog):
         """Test that missing safety_limits logs warning."""
@@ -190,7 +193,10 @@ class TestMigrationLogging:
         migrate_schema(config)
 
         # Should log warning about adding defaults
-        assert any("Adding default safety_limits" in record.message for record in caplog.records)
+        assert any(
+            "Adding default safety_limits" in record.message
+            for record in caplog.records
+        )
 
 
 class TestCreateMinimalConfig:

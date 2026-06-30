@@ -85,9 +85,7 @@ def load_config(config_path: str = None) -> AppConfig:
         return _config
 
     if config_path is None:
-        config_path = os.path.join(
-            os.path.dirname(__file__), "..", "..", "config.yaml"
-        )
+        config_path = os.path.join(os.path.dirname(__file__), "..", "..", "config.yaml")
 
     config_path = Path(config_path).resolve()
     if not config_path.exists():

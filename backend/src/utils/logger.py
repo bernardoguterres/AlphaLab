@@ -8,9 +8,7 @@ import yaml
 def setup_logger(name: str = "alphalab", config_path: str = None) -> logging.Logger:
     """Configure and return a logger instance with file and console handlers."""
     if config_path is None:
-        config_path = os.path.join(
-            os.path.dirname(__file__), "..", "..", "config.yaml"
-        )
+        config_path = os.path.join(os.path.dirname(__file__), "..", "..", "config.yaml")
 
     log_config = {
         "level": "INFO",

@@ -58,7 +58,11 @@ class PortfolioOptimizer:
         # Calculate portfolio metrics
         portfolio_return = np.dot(weights, self.mean_returns)
         portfolio_std = np.sqrt(np.dot(weights.T, np.dot(self.cov_matrix, weights)))
-        sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_std if portfolio_std > 0 else 0
+        sharpe_ratio = (
+            (portfolio_return - self.risk_free_rate) / portfolio_std
+            if portfolio_std > 0
+            else 0
+        )
 
         return {
             "optimal_weights": weights.tolist(),
@@ -92,14 +96,22 @@ class PortfolioOptimizer:
             try:
                 weights = self._min_variance(max_weight, min_weight, target_return)
                 portfolio_return = np.dot(weights, self.mean_returns)
-                portfolio_std = np.sqrt(np.dot(weights.T, np.dot(self.cov_matrix, weights)))
-                sharpe = (portfolio_return - self.risk_free_rate) / portfolio_std if portfolio_std > 0 else 0
+                portfolio_std = np.sqrt(
+                    np.dot(weights.T, np.dot(self.cov_matrix, weights))
+                )
+                sharpe = (
+                    (portfolio_return - self.risk_free_rate) / portfolio_std
+                    if portfolio_std > 0
+                    else 0
+                )
 
-                frontier_points.append({
-                    "return": float(portfolio_return),
-                    "risk": float(portfolio_std),
-                    "sharpe_ratio": float(sharpe),
-                })
+                frontier_points.append(
+                    {
+                        "return": float(portfolio_return),
+                        "risk": float(portfolio_std),
+                        "sharpe_ratio": float(sharpe),
+                    }
+                )
             except Exception as e:
                 logger.debug(f"Skipping frontier point at return {target_return}: {e}")
                 continue
@@ -112,10 +124,13 @@ class PortfolioOptimizer:
 
     def _max_sharpe(self, max_weight: float, min_weight: float) -> np.ndarray:
         """Maximize Sharpe ratio."""
+
         def neg_sharpe(weights):
             port_return = np.dot(weights, self.mean_returns)
             port_std = np.sqrt(np.dot(weights.T, np.dot(self.cov_matrix, weights)))
-            sharpe = (port_return - self.risk_free_rate) / port_std if port_std > 0 else 0
+            sharpe = (
+                (port_return - self.risk_free_rate) / port_std if port_std > 0 else 0
+            )
             return -sharpe  # Negative because we minimize
 
         return self._optimize_weights(neg_sharpe, max_weight, min_weight)
@@ -127,25 +142,35 @@ class PortfolioOptimizer:
         target_return: Optional[float] = None,
     ) -> np.ndarray:
         """Minimize portfolio variance."""
+
         def portfolio_variance(weights):
             return np.dot(weights.T, np.dot(self.cov_matrix, weights))
 
         constraints = []
         if target_return is not None:
             # Add return constraint
-            constraints.append({
-                'type': 'eq',
-                'fun': lambda w: np.dot(w, self.mean_returns) - target_return
-            })
+            constraints.append(
+                {
+                    "type": "eq",
+                    "fun": lambda w: np.dot(w, self.mean_returns) - target_return,
+                }
+            )
 
-        return self._optimize_weights(portfolio_variance, max_weight, min_weight, constraints)
+        return self._optimize_weights(
+            portfolio_variance, max_weight, min_weight, constraints
+        )
 
     def _risk_parity(self, max_weight: float, min_weight: float) -> np.ndarray:
         """Equal risk contribution from each strategy."""
+
         def risk_parity_objective(weights):
             # Calculate marginal risk contribution
             portfolio_std = np.sqrt(np.dot(weights.T, np.dot(self.cov_matrix, weights)))
-            marginal_contrib = np.dot(self.cov_matrix, weights) / portfolio_std if portfolio_std > 0 else np.zeros_like(weights)
+            marginal_contrib = (
+                np.dot(self.cov_matrix, weights) / portfolio_std
+                if portfolio_std > 0
+                else np.zeros_like(weights)
+            )
             risk_contrib = weights * marginal_contrib
 
             # We want all risk contributions to be equal
@@ -168,7 +193,7 @@ class PortfolioOptimizer:
 
         # Constraints
         constraints = [
-            {'type': 'eq', 'fun': lambda w: np.sum(w) - 1}  # Weights sum to 1
+            {"type": "eq", "fun": lambda w: np.sum(w) - 1}  # Weights sum to 1
         ]
         if extra_constraints:
             constraints.extend(extra_constraints)
@@ -180,10 +205,10 @@ class PortfolioOptimizer:
         result = minimize(
             objective_func,
             x0,
-            method='SLSQP',
+            method="SLSQP",
             bounds=bounds,
             constraints=constraints,
-            options={'maxiter': 1000, 'ftol': 1e-9}
+            options={"maxiter": 1000, "ftol": 1e-9},
         )
 
         if not result.success:
@@ -204,12 +229,12 @@ def extract_daily_returns(equity_curve: List[Dict[str, any]]) -> pd.Series:
         Series of daily returns (percentage)
     """
     df = pd.DataFrame(equity_curve)
-    df['date'] = pd.to_datetime(df['date'])
-    df = df.set_index('date')
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.set_index("date")
     df = df.sort_index()
 
     # Calculate daily returns
-    returns = df['value'].pct_change().dropna()
+    returns = df["value"].pct_change().dropna()
     return returns
 
 
@@ -230,16 +255,16 @@ def build_returns_matrix(
     labels = []
 
     for strat_info in strategies:
-        backtest_id = strat_info['backtest_id']
-        ticker = strat_info.get('ticker', 'Unknown')
-        strategy_name = strat_info.get('strategy', 'Unknown')
+        backtest_id = strat_info["backtest_id"]
+        ticker = strat_info.get("ticker", "Unknown")
+        strategy_name = strat_info.get("strategy", "Unknown")
 
         if backtest_id not in backtest_results:
             logger.warning(f"Backtest {backtest_id} not found, skipping")
             continue
 
         result = backtest_results[backtest_id]
-        equity_curve = result.get('equity_curve', [])
+        equity_curve = result.get("equity_curve", [])
 
         if not equity_curve:
             logger.warning(f"No equity curve for {backtest_id}, skipping")

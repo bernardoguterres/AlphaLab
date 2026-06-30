@@ -48,9 +48,7 @@ class BaseStrategy(ABC):
         """Verify *data* has the columns this strategy requires."""
         missing = set(self.required_columns()) - set(data.columns)
         if missing:
-            logger.warning(
-                "%s: missing columns for backtest: %s", self.name, missing
-            )
+            logger.warning("%s: missing columns for backtest: %s", self.name, missing)
             return False
         return True
 

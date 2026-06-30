@@ -90,7 +90,10 @@ class RSISimple(BaseStrategy):
         total_signals = (signals["signal"] != 0).sum()
         logger.info(
             "%s generated %d signals on %d bars (%.1f%% signal rate)",
-            self.name, total_signals, len(data), 100 * total_signals / len(data) if len(data) > 0 else 0
+            self.name,
+            total_signals,
+            len(data),
+            100 * total_signals / len(data) if len(data) > 0 else 0,
         )
 
         return signals

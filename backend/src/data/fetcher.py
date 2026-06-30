@@ -68,15 +68,21 @@ class DataFetcher:
         """
         ticker = ticker.upper().strip()
         if interval not in VALID_INTERVALS:
-            raise ValueError(f"Invalid interval '{interval}'. Use one of {VALID_INTERVALS}")
+            raise ValueError(
+                f"Invalid interval '{interval}'. Use one of {VALID_INTERVALS}"
+            )
 
-        logger.info("Fetching %s [%s -> %s] interval=%s", ticker, start_date, end_date, interval)
+        logger.info(
+            "Fetching %s [%s -> %s] interval=%s", ticker, start_date, end_date, interval
+        )
 
         # Check cache first
         cached = self.cache.get(ticker, interval, start_date, end_date)
         if cached is not None:
             logger.info("Returning cached data for %s (%d rows)", ticker, len(cached))
-            return self._build_result(ticker, cached, start_date, end_date, from_cache=True)
+            return self._build_result(
+                ticker, cached, start_date, end_date, from_cache=True
+            )
 
         # Validate ticker
         self._validate_ticker(ticker)
@@ -102,13 +108,18 @@ class DataFetcher:
         self.cache.put(ticker, interval, start_date, end_date, df)
 
         result = self._build_result(
-            ticker, df, start_date, end_date,
+            ticker,
+            df,
+            start_date,
+            end_date,
             quality_score=quality["score"],
             splits_detected=splits_detected,
         )
         logger.info(
             "Fetched %s: %d records, quality=%.2f",
-            ticker, len(df), quality["score"],
+            ticker,
+            len(df),
+            quality["score"],
         )
         return result
 
@@ -142,7 +153,9 @@ class DataFetcher:
                 ("recommendations", "recommendations"),
             ]:
                 data = getattr(t, attr, None)
-                if data is not None and not (isinstance(data, pd.DataFrame) and data.empty):
+                if data is not None and not (
+                    isinstance(data, pd.DataFrame) and data.empty
+                ):
                     result[name] = data
             return result
         except Exception as e:
@@ -207,10 +220,14 @@ class DataFetcher:
                 return df
             except Exception as e:
                 last_error = e
-                wait = 2 ** attempt
+                wait = 2**attempt
                 logger.warning(
                     "Attempt %d/%d for %s failed: %s. Retrying in %ds...",
-                    attempt, self.max_retries, ticker, e, wait,
+                    attempt,
+                    self.max_retries,
+                    ticker,
+                    e,
+                    wait,
                 )
                 time.sleep(wait)
 

@@ -93,8 +93,10 @@ class RSIMeanReversion(BaseStrategy):
                 if exit_reason is not None:
                     signals.iloc[i, signals.columns.get_loc("signal")] = -1
                     signals.iloc[i, signals.columns.get_loc("reason")] = exit_reason
-                    conf = ((rsi.iloc[i] - p["overbought"]) / (100 - p["overbought"]))
-                    signals.iloc[i, signals.columns.get_loc("confidence")] = max(0.3, min(1.0, conf))
+                    conf = (rsi.iloc[i] - p["overbought"]) / (100 - p["overbought"])
+                    signals.iloc[i, signals.columns.get_loc("confidence")] = max(
+                        0.3, min(1.0, conf)
+                    )
                     in_position = False
                     last_signal_bar = i
 
@@ -123,7 +125,9 @@ class RSIMeanReversion(BaseStrategy):
                 # Entry signal
                 signals.iloc[i, signals.columns.get_loc("signal")] = 1
                 buy_conf = (p["oversold"] - rsi.iloc[i]) / p["oversold"]
-                signals.iloc[i, signals.columns.get_loc("confidence")] = min(1.0, buy_conf)
+                signals.iloc[i, signals.columns.get_loc("confidence")] = min(
+                    1.0, buy_conf
+                )
 
                 reason = "RSI oversold"
                 if p["use_bb_confirmation"]:
@@ -133,12 +137,16 @@ class RSIMeanReversion(BaseStrategy):
                 in_position = True
                 entry_price = close.iloc[i]
                 entry_bar = i
-                atr_val = atr.iloc[i] if atr.iloc[i] == atr.iloc[i] else entry_price * 0.02
+                atr_val = (
+                    atr.iloc[i] if atr.iloc[i] == atr.iloc[i] else entry_price * 0.02
+                )
                 stop_loss = entry_price - p["stop_loss_atr_mult"] * atr_val
                 last_signal_bar = i
 
         logger.info(
             "%s generated %d signals on %d bars",
-            self.name, (signals["signal"] != 0).sum(), len(data),
+            self.name,
+            (signals["signal"] != 0).sum(),
+            len(data),
         )
         return signals

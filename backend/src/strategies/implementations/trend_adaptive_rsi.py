@@ -84,7 +84,9 @@ class TrendAdaptiveRSI(BaseStrategy):
         # State machine
         in_position = False
 
-        for i in range(p["trend_lookback"], len(data)):  # Need lookback for trend detection
+        for i in range(
+            p["trend_lookback"], len(data)
+        ):  # Need lookback for trend detection
             if pd.isna(close.iloc[i]) or pd.isna(rsi.iloc[i]) or pd.isna(sma.iloc[i]):
                 continue
 
@@ -94,7 +96,9 @@ class TrendAdaptiveRSI(BaseStrategy):
 
             # Detect market regime
             above_sma = close_curr > sma_curr
-            sma_slope = (sma.iloc[i] - sma.iloc[i - p["trend_lookback"]]) / sma.iloc[i - p["trend_lookback"]]
+            sma_slope = (sma.iloc[i] - sma.iloc[i - p["trend_lookback"]]) / sma.iloc[
+                i - p["trend_lookback"]
+            ]
 
             if above_sma and sma_slope > 0.005:  # 0.5% rise over lookback = uptrend
                 regime = "uptrend"
@@ -141,7 +145,11 @@ class TrendAdaptiveRSI(BaseStrategy):
 
         logger.info(
             "%s generated %d signals (%d buys, %d sells) on %d bars",
-            self.name, total_signals, buys, sells, len(data)
+            self.name,
+            total_signals,
+            buys,
+            sells,
+            len(data),
         )
 
         return signals

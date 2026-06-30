@@ -105,8 +105,12 @@ class BollingerBreakout(BaseStrategy):
                         f"{confirmation} closes above upper BB"
                     )
                     # Confidence based on distance from band
-                    distance_pct = ((close.iloc[i] - upper_band.iloc[i]) / upper_band.iloc[i]) * 100
-                    signals.iloc[i, signals.columns.get_loc("confidence")] = min(distance_pct / 2, 1.0)
+                    distance_pct = (
+                        (close.iloc[i] - upper_band.iloc[i]) / upper_band.iloc[i]
+                    ) * 100
+                    signals.iloc[i, signals.columns.get_loc("confidence")] = min(
+                        distance_pct / 2, 1.0
+                    )
                     position.iloc[i:] = 1  # Enter long position
 
                 # SELL signal: consecutive closes below lower band + volume
@@ -116,8 +120,12 @@ class BollingerBreakout(BaseStrategy):
                         f"{confirmation} closes below lower BB"
                     )
                     # Confidence based on distance from band
-                    distance_pct = ((lower_band.iloc[i] - close.iloc[i]) / lower_band.iloc[i]) * 100
-                    signals.iloc[i, signals.columns.get_loc("confidence")] = min(distance_pct / 2, 1.0)
+                    distance_pct = (
+                        (lower_band.iloc[i] - close.iloc[i]) / lower_band.iloc[i]
+                    ) * 100
+                    signals.iloc[i, signals.columns.get_loc("confidence")] = min(
+                        distance_pct / 2, 1.0
+                    )
                     position.iloc[i:] = -1  # Enter short position
 
             # Exit signals (if in position)
@@ -127,7 +135,9 @@ class BollingerBreakout(BaseStrategy):
                     # Generate exit signal (opposite of entry)
                     exit_signal = -current_position
                     signals.iloc[i, signals.columns.get_loc("signal")] = exit_signal
-                    signals.iloc[i, signals.columns.get_loc("reason")] = "Price returned to middle band"
+                    signals.iloc[i, signals.columns.get_loc("reason")] = (
+                        "Price returned to middle band"
+                    )
                     signals.iloc[i, signals.columns.get_loc("confidence")] = 0.5
                     position.iloc[i:] = 0  # Exit position
                 else:

@@ -4,6 +4,7 @@ import json
 import pytest
 
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.api.routes import _build_export_json
@@ -34,10 +35,14 @@ class TestStrategyExport:
                 "total_return_pct": 25.5,
                 "total_trades": 10,
                 "metrics": {
-                    "risk": {"sharpe_ratio": 1.5, "sortino_ratio": 1.8, "calmar_ratio": 2.0},
+                    "risk": {
+                        "sharpe_ratio": 1.5,
+                        "sortino_ratio": 1.8,
+                        "calmar_ratio": 2.0,
+                    },
                     "drawdown": {"max_drawdown": -15.2},
                     "trades": {"win_rate": 0.6, "profit_factor": 1.8},
-                }
+                },
             },
             config=config,
         )
@@ -68,17 +73,24 @@ class TestStrategyExport:
                 "total_return_pct": 25.5,
                 "total_trades": 10,
                 "metrics": {
-                    "risk": {"sharpe_ratio": 1.5, "sortino_ratio": 1.8, "calmar_ratio": 2.0},
+                    "risk": {
+                        "sharpe_ratio": 1.5,
+                        "sortino_ratio": 1.8,
+                        "calmar_ratio": 2.0,
+                    },
                     "drawdown": {"max_drawdown": -15.2},
                     "trades": {"win_rate": 0.6, "profit_factor": 1.8},
-                }
+                },
             },
             config=config,
         )
 
         # Strategy section
         assert export["strategy"]["name"] == "ma_crossover"
-        assert export["strategy"]["parameters"] == {"short_window": 50, "long_window": 200}
+        assert export["strategy"]["parameters"] == {
+            "short_window": 50,
+            "long_window": 200,
+        }
         assert "description" in export["strategy"]
 
         # Required fields
@@ -126,10 +138,14 @@ class TestStrategyExport:
                 "total_return_pct": 15.0,
                 "total_trades": 20,
                 "metrics": {
-                    "risk": {"sharpe_ratio": 1.2, "sortino_ratio": 1.5, "calmar_ratio": 1.8},
+                    "risk": {
+                        "sharpe_ratio": 1.2,
+                        "sortino_ratio": 1.5,
+                        "calmar_ratio": 1.8,
+                    },
                     "drawdown": {"max_drawdown": -10.0},
                     "trades": {"win_rate": 0.55, "profit_factor": 1.5},
-                }
+                },
             },
             config=config,
             risk_settings=custom_risk,
@@ -149,7 +165,10 @@ class TestStrategyExport:
 
         strategies = [
             ("ma_crossover", {"short_window": 50, "long_window": 200}),
-            ("rsi_mean_reversion", {"rsi_period": 14, "oversold": 30, "overbought": 70}),
+            (
+                "rsi_mean_reversion",
+                {"rsi_period": 14, "oversold": 30, "overbought": 70},
+            ),
             ("momentum_breakout", {"lookback": 20, "volume_surge_pct": 150}),
         ]
 
@@ -166,10 +185,14 @@ class TestStrategyExport:
                     "total_return_pct": 20.0,
                     "total_trades": 15,
                     "metrics": {
-                        "risk": {"sharpe_ratio": 1.3, "sortino_ratio": 1.6, "calmar_ratio": 1.9},
+                        "risk": {
+                            "sharpe_ratio": 1.3,
+                            "sortino_ratio": 1.6,
+                            "calmar_ratio": 1.9,
+                        },
                         "drawdown": {"max_drawdown": -12.0},
                         "trades": {"win_rate": 0.58, "profit_factor": 1.6},
-                    }
+                    },
                 },
                 config=config,
             )
@@ -208,17 +231,23 @@ class TestStrategyExport:
                 "total_return_pct": 20.0,
                 "total_trades": 10,
                 "metrics": {
-                    "risk": {"sharpe_ratio": 1.4, "sortino_ratio": 1.7, "calmar_ratio": 2.0},
+                    "risk": {
+                        "sharpe_ratio": 1.4,
+                        "sortino_ratio": 1.7,
+                        "calmar_ratio": 2.0,
+                    },
                     "drawdown": {"max_drawdown": -10.0},
                     "trades": {"win_rate": 0.6, "profit_factor": 1.7},
-                }
+                },
             },
             config=config,
         )
 
         assert export["schema_version"] == "1.0"
 
-    @pytest.mark.skipif(StrategyExportSchema is None, reason="StrategyExportSchema not available")
+    @pytest.mark.skipif(
+        StrategyExportSchema is None, reason="StrategyExportSchema not available"
+    )
     def test_pydantic_validation_passes(self):
         """Test that export passes Pydantic validation."""
         config = {"app": {"version": "0.1.0"}}
@@ -242,10 +271,14 @@ class TestStrategyExport:
                 "total_return_pct": 25.5,
                 "total_trades": 10,
                 "metrics": {
-                    "risk": {"sharpe_ratio": 1.5, "sortino_ratio": 1.8, "calmar_ratio": 2.0},
+                    "risk": {
+                        "sharpe_ratio": 1.5,
+                        "sortino_ratio": 1.8,
+                        "calmar_ratio": 2.0,
+                    },
                     "drawdown": {"max_drawdown": -15.2},
                     "trades": {"win_rate": 0.6, "profit_factor": 1.8},
-                }
+                },
             },
             config=config,
         )
@@ -271,10 +304,14 @@ class TestStrategyExport:
                 "total_return_pct": 35.5,
                 "total_trades": 12,
                 "metrics": {
-                    "risk": {"sharpe_ratio": 1.8, "sortino_ratio": 2.1, "calmar_ratio": 2.5},
+                    "risk": {
+                        "sharpe_ratio": 1.8,
+                        "sortino_ratio": 2.1,
+                        "calmar_ratio": 2.5,
+                    },
                     "drawdown": {"max_drawdown": -12.5},
                     "trades": {"win_rate": 0.65, "profit_factor": 2.2},
-                }
+                },
             },
             config=config,
         )

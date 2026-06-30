@@ -61,46 +61,61 @@ class TestDataEndpoints:
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         mock_dl.return_value = _mock_download()
 
-        resp = client.post("/api/data/fetch", json={
-            "tickers": ["AAPL"],
-            "start_date": "2020-01-01",
-            "end_date": "2024-12-31",
-        })
+        resp = client.post(
+            "/api/data/fetch",
+            json={
+                "tickers": ["AAPL"],
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+            },
+        )
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["status"] == "ok"
         assert "AAPL" in data["data"]
 
     def test_fetch_invalid_ticker_format(self, client):
-        resp = client.post("/api/data/fetch", json={
-            "tickers": ["invalid_ticker_123"],
-            "start_date": "2020-01-01",
-            "end_date": "2024-12-31",
-        })
+        resp = client.post(
+            "/api/data/fetch",
+            json={
+                "tickers": ["invalid_ticker_123"],
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+            },
+        )
         assert resp.status_code == 422
 
     def test_fetch_invalid_date(self, client):
-        resp = client.post("/api/data/fetch", json={
-            "tickers": ["AAPL"],
-            "start_date": "not-a-date",
-            "end_date": "2024-12-31",
-        })
+        resp = client.post(
+            "/api/data/fetch",
+            json={
+                "tickers": ["AAPL"],
+                "start_date": "not-a-date",
+                "end_date": "2024-12-31",
+            },
+        )
         assert resp.status_code == 422
 
     def test_fetch_no_tickers(self, client):
-        resp = client.post("/api/data/fetch", json={
-            "tickers": [],
-            "start_date": "2020-01-01",
-            "end_date": "2024-12-31",
-        })
+        resp = client.post(
+            "/api/data/fetch",
+            json={
+                "tickers": [],
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+            },
+        )
         assert resp.status_code == 422
 
     def test_fetch_too_many_tickers(self, client):
-        resp = client.post("/api/data/fetch", json={
-            "tickers": [f"T{i}" for i in range(21)],
-            "start_date": "2020-01-01",
-            "end_date": "2024-12-31",
-        })
+        resp = client.post(
+            "/api/data/fetch",
+            json={
+                "tickers": [f"T{i}" for i in range(21)],
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+            },
+        )
         assert resp.status_code == 422
 
     def test_available_data(self, client):
@@ -117,14 +132,17 @@ class TestBacktestEndpoints:
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         mock_dl.return_value = _mock_download(500)
 
-        resp = client.post("/api/strategies/backtest", json={
-            "ticker": "AAPL",
-            "strategy": "ma_crossover",
-            "start_date": "2020-01-01",
-            "end_date": "2024-12-31",
-            "initial_capital": 100000,
-            "params": {"short_window": 20, "long_window": 50},
-        })
+        resp = client.post(
+            "/api/strategies/backtest",
+            json={
+                "ticker": "AAPL",
+                "strategy": "ma_crossover",
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+                "initial_capital": 100000,
+                "params": {"short_window": 20, "long_window": 50},
+            },
+        )
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["status"] == "ok"
@@ -133,22 +151,28 @@ class TestBacktestEndpoints:
         assert data["data"]["final_value"] > 0
 
     def test_backtest_invalid_strategy(self, client):
-        resp = client.post("/api/strategies/backtest", json={
-            "ticker": "AAPL",
-            "strategy": "nonexistent",
-            "start_date": "2020-01-01",
-            "end_date": "2024-12-31",
-        })
+        resp = client.post(
+            "/api/strategies/backtest",
+            json={
+                "ticker": "AAPL",
+                "strategy": "nonexistent",
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+            },
+        )
         assert resp.status_code == 422
 
     def test_backtest_low_capital(self, client):
-        resp = client.post("/api/strategies/backtest", json={
-            "ticker": "AAPL",
-            "strategy": "ma_crossover",
-            "start_date": "2020-01-01",
-            "end_date": "2024-12-31",
-            "initial_capital": 10,
-        })
+        resp = client.post(
+            "/api/strategies/backtest",
+            json={
+                "ticker": "AAPL",
+                "strategy": "ma_crossover",
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+                "initial_capital": 10,
+            },
+        )
         assert resp.status_code == 422
 
     @patch("src.data.fetcher.yf.download")
@@ -158,13 +182,16 @@ class TestBacktestEndpoints:
         mock_dl.return_value = _mock_download(500)
 
         # Run backtest first
-        resp = client.post("/api/strategies/backtest", json={
-            "ticker": "AAPL",
-            "strategy": "ma_crossover",
-            "start_date": "2020-01-01",
-            "end_date": "2024-12-31",
-            "params": {"short_window": 20, "long_window": 50},
-        })
+        resp = client.post(
+            "/api/strategies/backtest",
+            json={
+                "ticker": "AAPL",
+                "strategy": "ma_crossover",
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+                "params": {"short_window": 20, "long_window": 50},
+            },
+        )
         bt_id = resp.get_json()["data"]["backtest_id"]
 
         # Retrieve metrics
@@ -183,24 +210,30 @@ class TestCompareEndpoint:
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         mock_dl.return_value = _mock_download(500)
 
-        resp = client.post("/api/compare", json={
-            "ticker": "AAPL",
-            "strategies": ["ma_crossover", "rsi_mean_reversion"],
-            "start_date": "2020-01-01",
-            "end_date": "2024-12-31",
-        })
+        resp = client.post(
+            "/api/compare",
+            json={
+                "ticker": "AAPL",
+                "strategies": ["ma_crossover", "rsi_mean_reversion"],
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+            },
+        )
         assert resp.status_code == 200
         data = resp.get_json()
         assert "ma_crossover" in data["data"]
         assert "rsi_mean_reversion" in data["data"]
 
     def test_compare_too_few_strategies(self, client):
-        resp = client.post("/api/compare", json={
-            "ticker": "AAPL",
-            "strategies": ["ma_crossover"],
-            "start_date": "2020-01-01",
-            "end_date": "2024-12-31",
-        })
+        resp = client.post(
+            "/api/compare",
+            json={
+                "ticker": "AAPL",
+                "strategies": ["ma_crossover"],
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+            },
+        )
         assert resp.status_code == 422
 
 

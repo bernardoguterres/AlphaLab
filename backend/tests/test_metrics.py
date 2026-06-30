@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.backtest.metrics import PerformanceMetrics
@@ -20,16 +21,42 @@ def _make_equity_curve(n=252, start_val=10_000, annual_return=0.10, seed=42):
     for r in returns:
         values.append(values[-1] * (1 + r))
     dates = pd.bdate_range("2023-01-01", periods=n + 1)
-    return [{"date": str(d.date()), "value": round(v, 2)} for d, v in zip(dates, values)]
+    return [
+        {"date": str(d.date()), "value": round(v, 2)} for d, v in zip(dates, values)
+    ]
 
 
 def _make_trades():
     """Generate sample trade log."""
     return [
-        {"side": "buy", "status": "filled", "filled_price": 100, "shares": 10, "commission": 0},
-        {"side": "sell", "status": "filled", "filled_price": 110, "shares": 10, "commission": 0},
-        {"side": "buy", "status": "filled", "filled_price": 105, "shares": 10, "commission": 0},
-        {"side": "sell", "status": "filled", "filled_price": 95, "shares": 10, "commission": 0},
+        {
+            "side": "buy",
+            "status": "filled",
+            "filled_price": 100,
+            "shares": 10,
+            "commission": 0,
+        },
+        {
+            "side": "sell",
+            "status": "filled",
+            "filled_price": 110,
+            "shares": 10,
+            "commission": 0,
+        },
+        {
+            "side": "buy",
+            "status": "filled",
+            "filled_price": 105,
+            "shares": 10,
+            "commission": 0,
+        },
+        {
+            "side": "sell",
+            "status": "filled",
+            "filled_price": 95,
+            "shares": 10,
+            "commission": 0,
+        },
     ]
 
 

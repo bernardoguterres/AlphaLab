@@ -25,6 +25,7 @@ import pandas as pd
 from unittest.mock import patch, MagicMock
 
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.backtest.engine import BacktestEngine
@@ -50,13 +51,16 @@ def large_dataset():
     open_ = close + np.random.randn(1260) * 1
     volume = np.random.randint(1_000_000, 10_000_000, 1260)
 
-    df = pd.DataFrame({
-        "Open": open_,
-        "High": high,
-        "Low": low,
-        "Close": close,
-        "Volume": volume,
-    }, index=dates)
+    df = pd.DataFrame(
+        {
+            "Open": open_,
+            "High": high,
+            "Low": low,
+            "Close": close,
+            "Volume": volume,
+        },
+        index=dates,
+    )
 
     # Process features
     processor = FeatureEngineer()
@@ -81,13 +85,16 @@ def medium_dataset():
     open_ = close + np.random.randn(1560) * 0.2
     volume = np.random.randint(500_000, 2_000_000, 1560)
 
-    df = pd.DataFrame({
-        "Open": open_,
-        "High": high,
-        "Low": low,
-        "Close": close,
-        "Volume": volume,
-    }, index=dates)
+    df = pd.DataFrame(
+        {
+            "Open": open_,
+            "High": high,
+            "Low": low,
+            "Close": close,
+            "Volume": volume,
+        },
+        index=dates,
+    )
 
     processor = FeatureEngineer()
     return processor.process(df)
@@ -103,12 +110,14 @@ def test_backtest_5_years_daily_completes_in_30_seconds(large_dataset):
     - Excessive logging in tight loops
     - Portfolio operations in every bar (should batch)
     """
-    strategy = MovingAverageCrossover({
-        "short_window": 20,
-        "long_window": 50,
-        "volume_confirmation": False,
-        "cooldown_days": 5,
-    })
+    strategy = MovingAverageCrossover(
+        {
+            "short_window": 20,
+            "long_window": 50,
+            "volume_confirmation": False,
+            "cooldown_days": 5,
+        }
+    )
 
     engine = BacktestEngine()
 
@@ -148,12 +157,14 @@ def test_signal_generation_500_bars_under_5_seconds(medium_dataset):
     """
     data_slice = medium_dataset.iloc[:500].copy()
 
-    strategy = MovingAverageCrossover({
-        "short_window": 20,
-        "long_window": 50,
-        "volume_confirmation": True,
-        "cooldown_days": 1,
-    })
+    strategy = MovingAverageCrossover(
+        {
+            "short_window": 20,
+            "long_window": 50,
+            "volume_confirmation": True,
+            "cooldown_days": 1,
+        }
+    )
 
     start = time.time()
     signals = strategy.generate_signals(data_slice)
@@ -251,13 +262,16 @@ def test_batch_backtest_10_tickers_under_3_minutes():
             open_ = close + np.random.randn(252) * 0.5
             volume = np.random.randint(1_000_000, 5_000_000, 252)
 
-            df = pd.DataFrame({
-                ("Open", ticker): open_,
-                ("High", ticker): high,
-                ("Low", ticker): low,
-                ("Close", ticker): close,
-                ("Volume", ticker): volume,
-            }, index=dates)
+            df = pd.DataFrame(
+                {
+                    ("Open", ticker): open_,
+                    ("High", ticker): high,
+                    ("Low", ticker): low,
+                    ("Close", ticker): close,
+                    ("Volume", ticker): volume,
+                },
+                index=dates,
+            )
             return df
 
         # Return data based on ticker
@@ -275,15 +289,27 @@ def test_batch_backtest_10_tickers_under_3_minutes():
         from src.data.fetcher import DataFetcher
         from src.data.processor import FeatureEngineer
 
-        tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA",
-                   "NVDA", "META", "NFLX", "AMD", "INTC"]
+        tickers = [
+            "AAPL",
+            "MSFT",
+            "GOOGL",
+            "AMZN",
+            "TSLA",
+            "NVDA",
+            "META",
+            "NFLX",
+            "AMD",
+            "INTC",
+        ]
 
-        strategy = MovingAverageCrossover({
-            "short_window": 20,
-            "long_window": 50,
-            "volume_confirmation": False,
-            "cooldown_days": 3,
-        })
+        strategy = MovingAverageCrossover(
+            {
+                "short_window": 20,
+                "long_window": 50,
+                "volume_confirmation": False,
+                "cooldown_days": 3,
+            }
+        )
 
         engine = BacktestEngine()
         processor = FeatureEngineer()
@@ -297,13 +323,16 @@ def test_batch_backtest_10_tickers_under_3_minutes():
                 data = create_mock_data(ticker)
 
                 # Extract single ticker data
-                ticker_data = pd.DataFrame({
-                    "Open": data[("Open", ticker)],
-                    "High": data[("High", ticker)],
-                    "Low": data[("Low", ticker)],
-                    "Close": data[("Close", ticker)],
-                    "Volume": data[("Volume", ticker)],
-                }, index=data.index)
+                ticker_data = pd.DataFrame(
+                    {
+                        "Open": data[("Open", ticker)],
+                        "High": data[("High", ticker)],
+                        "Low": data[("Low", ticker)],
+                        "Close": data[("Close", ticker)],
+                        "Volume": data[("Volume", ticker)],
+                    },
+                    index=data.index,
+                )
 
                 processed = processor.process(ticker_data)
 
@@ -354,13 +383,16 @@ def test_data_fetch_and_cache_1_ticker_under_2_seconds():
         open_ = close + np.random.randn(252) * 0.5
         volume = np.random.randint(1_000_000, 5_000_000, 252)
 
-        mock_df = pd.DataFrame({
-            ("Open", "AAPL"): open_,
-            ("High", "AAPL"): high,
-            ("Low", "AAPL"): low,
-            ("Close", "AAPL"): close,
-            ("Volume", "AAPL"): volume,
-        }, index=dates)
+        mock_df = pd.DataFrame(
+            {
+                ("Open", "AAPL"): open_,
+                ("High", "AAPL"): high,
+                ("Low", "AAPL"): low,
+                ("Close", "AAPL"): close,
+                ("Volume", "AAPL"): volume,
+            },
+            index=dates,
+        )
 
         mock_download.return_value = mock_df
 
@@ -406,12 +438,14 @@ def test_monte_carlo_100_runs_under_2_minutes(large_dataset):
     - Consider reducing default MC runs from 1000 to 100
     - Profile the random walk generation
     """
-    strategy = MovingAverageCrossover({
-        "short_window": 20,
-        "long_window": 50,
-        "volume_confirmation": False,
-        "cooldown_days": 3,
-    })
+    strategy = MovingAverageCrossover(
+        {
+            "short_window": 20,
+            "long_window": 50,
+            "volume_confirmation": False,
+            "cooldown_days": 3,
+        }
+    )
 
     engine = BacktestEngine()
 

@@ -13,6 +13,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.data.processor import FeatureEngineer
@@ -39,13 +40,16 @@ class TestDataQualityEdgeCases:
         open_ = close + np.random.normal(0, 0.02, 100)
         volume = np.random.randint(100_000, 1_000_000, 100)
 
-        df = pd.DataFrame({
-            "Open": open_,
-            "High": high,
-            "Low": low,
-            "Close": close,
-            "Volume": volume,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Open": open_,
+                "High": high,
+                "Low": low,
+                "Close": close,
+                "Volume": volume,
+            },
+            index=dates,
+        )
 
         # Process features - should not crash
         processor = FeatureEngineer()
@@ -55,12 +59,14 @@ class TestDataQualityEdgeCases:
         assert not processed["Close"].isna().all()
 
         # Run backtest - should handle small prices
-        strategy = MovingAverageCrossover({
-            "short_window": 10,
-            "long_window": 20,
-            "volume_confirmation": False,
-            "cooldown_days": 1,
-        })
+        strategy = MovingAverageCrossover(
+            {
+                "short_window": 10,
+                "long_window": 20,
+                "volume_confirmation": False,
+                "cooldown_days": 1,
+            }
+        )
 
         engine = BacktestEngine()
         result = engine.run_backtest(
@@ -86,13 +92,16 @@ class TestDataQualityEdgeCases:
         open_ = close + np.random.randn(100) * 0.5
         volume = np.random.randint(1_000_000, 5_000_000, 100)
 
-        df = pd.DataFrame({
-            "Open": open_,
-            "High": high,
-            "Low": low,
-            "Close": close,
-            "Volume": volume,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Open": open_,
+                "High": high,
+                "Low": low,
+                "Close": close,
+                "Volume": volume,
+            },
+            index=dates,
+        )
 
         # Remove 10 random days (simulate delisting gaps)
         gap_indices = np.random.choice(df.index[20:80], size=10, replace=False)
@@ -107,12 +116,14 @@ class TestDataQualityEdgeCases:
         assert len(processed) == 90
 
         # Backtest should handle non-consecutive dates
-        strategy = MovingAverageCrossover({
-            "short_window": 10,
-            "long_window": 20,
-            "volume_confirmation": False,
-            "cooldown_days": 1,
-        })
+        strategy = MovingAverageCrossover(
+            {
+                "short_window": 10,
+                "long_window": 20,
+                "volume_confirmation": False,
+                "cooldown_days": 1,
+            }
+        )
 
         engine = BacktestEngine()
         result = engine.run_backtest(
@@ -138,16 +149,21 @@ class TestDataQualityEdgeCases:
         low = close - np.abs(np.random.randn(100))
         open_ = close + np.random.randn(100) * 0.5
         volume_before = np.random.randint(1_000_000, 2_000_000, 50)
-        volume_after = np.random.randint(2_000_000, 4_000_000, 50)  # Volume doubles after split
+        volume_after = np.random.randint(
+            2_000_000, 4_000_000, 50
+        )  # Volume doubles after split
         volume = np.concatenate([volume_before, volume_after])
 
-        df = pd.DataFrame({
-            "Open": open_,
-            "High": high,
-            "Low": low,
-            "Close": close,
-            "Volume": volume,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Open": open_,
+                "High": high,
+                "Low": low,
+                "Close": close,
+                "Volume": volume,
+            },
+            index=dates,
+        )
 
         processor = FeatureEngineer()
         processed = processor.process(df)
@@ -160,12 +176,14 @@ class TestDataQualityEdgeCases:
         assert report.confidence < 0.95
 
         # Backtest should still work
-        strategy = MovingAverageCrossover({
-            "short_window": 10,
-            "long_window": 20,
-            "volume_confirmation": False,
-            "cooldown_days": 1,
-        })
+        strategy = MovingAverageCrossover(
+            {
+                "short_window": 10,
+                "long_window": 20,
+                "volume_confirmation": False,
+                "cooldown_days": 1,
+            }
+        )
 
         engine = BacktestEngine()
         result = engine.run_backtest(
@@ -187,13 +205,16 @@ class TestDataQualityEdgeCases:
         open_ = close + np.random.randn(30) * 0.5
         volume = np.random.randint(1_000_000, 5_000_000, 30)
 
-        df = pd.DataFrame({
-            "Open": open_,
-            "High": high,
-            "Low": low,
-            "Close": close,
-            "Volume": volume,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Open": open_,
+                "High": high,
+                "Low": low,
+                "Close": close,
+                "Volume": volume,
+            },
+            index=dates,
+        )
 
         processor = FeatureEngineer()
         processed = processor.process(df)
@@ -202,12 +223,14 @@ class TestDataQualityEdgeCases:
         assert processed["SMA_200"].isna().all()
 
         # Strategy with long_window=200 should handle gracefully
-        strategy = MovingAverageCrossover({
-            "short_window": 10,
-            "long_window": 200,
-            "volume_confirmation": False,
-            "cooldown_days": 1,
-        })
+        strategy = MovingAverageCrossover(
+            {
+                "short_window": 10,
+                "long_window": 200,
+                "volume_confirmation": False,
+                "cooldown_days": 1,
+            }
+        )
 
         signals = strategy.generate_signals(processed)
 
@@ -229,25 +252,30 @@ class TestDataQualityEdgeCases:
         zero_vol_indices = np.random.choice(range(100), size=10, replace=False)
         volume[zero_vol_indices] = 0
 
-        df = pd.DataFrame({
-            "Open": open_,
-            "High": high,
-            "Low": low,
-            "Close": close,
-            "Volume": volume,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Open": open_,
+                "High": high,
+                "Low": low,
+                "Close": close,
+                "Volume": volume,
+            },
+            index=dates,
+        )
 
         processor = FeatureEngineer()
         processed = processor.process(df)
 
         # Volume-based strategy should handle zero volume
-        strategy = MomentumBreakout({
-            "lookback": 20,
-            "volume_surge_pct": 150,
-            "rsi_min": 50,
-            "stop_loss_atr_mult": 2.0,
-            "trailing_stop_atr_mult": 3.0,
-        })
+        strategy = MomentumBreakout(
+            {
+                "lookback": 20,
+                "volume_surge_pct": 150,
+                "rsi_min": 50,
+                "stop_loss_atr_mult": 2.0,
+                "trailing_stop_atr_mult": 3.0,
+            }
+        )
 
         signals = strategy.generate_signals(processed)
 
@@ -259,13 +287,16 @@ class TestDataQualityEdgeCases:
         """Test single day of data - verify no index errors."""
         dates = pd.bdate_range("2023-01-01", periods=1)
 
-        df = pd.DataFrame({
-            "Open": [100.0],
-            "High": [102.0],
-            "Low": [99.0],
-            "Close": [101.0],
-            "Volume": [1_000_000],
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Open": [100.0],
+                "High": [102.0],
+                "Low": [99.0],
+                "Close": [101.0],
+                "Volume": [1_000_000],
+            },
+            index=dates,
+        )
 
         processor = FeatureEngineer()
         processed = processor.process(df)
@@ -275,12 +306,14 @@ class TestDataQualityEdgeCases:
         assert processed["SMA_20"].isna().all()
 
         # Strategy should handle gracefully
-        strategy = MovingAverageCrossover({
-            "short_window": 10,
-            "long_window": 20,
-            "volume_confirmation": False,
-            "cooldown_days": 1,
-        })
+        strategy = MovingAverageCrossover(
+            {
+                "short_window": 10,
+                "long_window": 20,
+                "volume_confirmation": False,
+                "cooldown_days": 1,
+            }
+        )
 
         signals = strategy.generate_signals(processed)
 
@@ -303,13 +336,16 @@ class TestDataQualityEdgeCases:
         close[nan_indices] = np.nan
         volume[nan_indices] = np.nan
 
-        df = pd.DataFrame({
-            "Open": open_,
-            "High": high,
-            "Low": low,
-            "Close": close,
-            "Volume": volume,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Open": open_,
+                "High": high,
+                "Low": low,
+                "Close": close,
+                "Volume": volume,
+            },
+            index=dates,
+        )
 
         processor = FeatureEngineer()
         processed = processor.process(df)
@@ -321,12 +357,14 @@ class TestDataQualityEdgeCases:
         assert processed["Close"].isna().sum() == 4
 
         # Strategy should handle NaN
-        strategy = MovingAverageCrossover({
-            "short_window": 10,
-            "long_window": 20,
-            "volume_confirmation": False,
-            "cooldown_days": 1,
-        })
+        strategy = MovingAverageCrossover(
+            {
+                "short_window": 10,
+                "long_window": 20,
+                "volume_confirmation": False,
+                "cooldown_days": 1,
+            }
+        )
 
         signals = strategy.generate_signals(processed)
         assert signals is not None
@@ -347,23 +385,28 @@ class TestStrategyEdgeCases:
         open_ = close
         volume = np.full(100, 1_000_000)
 
-        df = pd.DataFrame({
-            "Open": open_,
-            "High": high,
-            "Low": low,
-            "Close": close,
-            "Volume": volume,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Open": open_,
+                "High": high,
+                "Low": low,
+                "Close": close,
+                "Volume": volume,
+            },
+            index=dates,
+        )
 
         processor = FeatureEngineer()
         processed = processor.process(df)
 
-        strategy = MovingAverageCrossover({
-            "short_window": 10,
-            "long_window": 20,
-            "volume_confirmation": False,
-            "cooldown_days": 1,
-        })
+        strategy = MovingAverageCrossover(
+            {
+                "short_window": 10,
+                "long_window": 20,
+                "volume_confirmation": False,
+                "cooldown_days": 1,
+            }
+        )
 
         engine = BacktestEngine()
         result = engine.run_backtest(
@@ -398,24 +441,29 @@ class TestStrategyEdgeCases:
         open_ = close + np.random.randn(50) * 0.5
         volume = np.random.randint(1_000_000, 5_000_000, 50)
 
-        df = pd.DataFrame({
-            "Open": open_,
-            "High": high,
-            "Low": low,
-            "Close": close,
-            "Volume": volume,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Open": open_,
+                "High": high,
+                "Low": low,
+                "Close": close,
+                "Volume": volume,
+            },
+            index=dates,
+        )
 
         processor = FeatureEngineer()
         processed = processor.process(df)
 
         # Manually create a signal on day 45 (near end)
-        strategy = MovingAverageCrossover({
-            "short_window": 5,
-            "long_window": 10,
-            "volume_confirmation": False,
-            "cooldown_days": 1,
-        })
+        strategy = MovingAverageCrossover(
+            {
+                "short_window": 5,
+                "long_window": 10,
+                "volume_confirmation": False,
+                "cooldown_days": 1,
+            }
+        )
 
         engine = BacktestEngine()
         result = engine.run_backtest(
@@ -446,23 +494,28 @@ class TestStrategyEdgeCases:
         open_ = close + np.random.randn(100) * 0.5
         volume = np.random.randint(1_000_000, 5_000_000, 100)
 
-        df = pd.DataFrame({
-            "Open": open_,
-            "High": high,
-            "Low": low,
-            "Close": close,
-            "Volume": volume,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Open": open_,
+                "High": high,
+                "Low": low,
+                "Close": close,
+                "Volume": volume,
+            },
+            index=dates,
+        )
 
         processor = FeatureEngineer()
         processed = processor.process(df)
 
-        strategy = MovingAverageCrossover({
-            "short_window": 10,
-            "long_window": 20,
-            "volume_confirmation": False,
-            "cooldown_days": 1,
-        })
+        strategy = MovingAverageCrossover(
+            {
+                "short_window": 10,
+                "long_window": 20,
+                "volume_confirmation": False,
+                "cooldown_days": 1,
+            }
+        )
 
         engine = BacktestEngine()
         result = engine.run_backtest(
@@ -491,23 +544,28 @@ class TestStrategyEdgeCases:
         open_ = close
         volume = np.random.randint(1_000_000, 5_000_000, 50)
 
-        df = pd.DataFrame({
-            "Open": open_,
-            "High": high,
-            "Low": low,
-            "Close": close,
-            "Volume": volume,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Open": open_,
+                "High": high,
+                "Low": low,
+                "Close": close,
+                "Volume": volume,
+            },
+            index=dates,
+        )
 
         processor = FeatureEngineer()
         processed = processor.process(df)
 
-        strategy = MovingAverageCrossover({
-            "short_window": 5,
-            "long_window": 10,
-            "volume_confirmation": False,
-            "cooldown_days": 1,
-        })
+        strategy = MovingAverageCrossover(
+            {
+                "short_window": 5,
+                "long_window": 10,
+                "volume_confirmation": False,
+                "cooldown_days": 1,
+            }
+        )
 
         engine = BacktestEngine()
         result = engine.run_backtest(
@@ -539,23 +597,28 @@ class TestStrategyEdgeCases:
         open_ = close
         volume = np.random.randint(1_000_000, 5_000_000, 50)
 
-        df = pd.DataFrame({
-            "Open": open_,
-            "High": high,
-            "Low": low,
-            "Close": close,
-            "Volume": volume,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Open": open_,
+                "High": high,
+                "Low": low,
+                "Close": close,
+                "Volume": volume,
+            },
+            index=dates,
+        )
 
         processor = FeatureEngineer()
         processed = processor.process(df)
 
-        strategy = MovingAverageCrossover({
-            "short_window": 5,
-            "long_window": 10,
-            "volume_confirmation": False,
-            "cooldown_days": 1,
-        })
+        strategy = MovingAverageCrossover(
+            {
+                "short_window": 5,
+                "long_window": 10,
+                "volume_confirmation": False,
+                "cooldown_days": 1,
+            }
+        )
 
         engine = BacktestEngine()
         result = engine.run_backtest(
@@ -614,7 +677,7 @@ class TestExportEdgeCases:
                     "avg_win": 0.0,
                     "avg_loss": 0.0,
                 },
-            }
+            },
         }
 
         export = _build_export_json(
@@ -650,10 +713,14 @@ class TestExportEdgeCases:
             "total_return_pct": 10.0,
             "total_trades": 5,
             "metrics": {
-                "risk": {"sharpe_ratio": 1.5, "sortino_ratio": 1.8, "calmar_ratio": 2.0},
+                "risk": {
+                    "sharpe_ratio": 1.5,
+                    "sortino_ratio": 1.8,
+                    "calmar_ratio": 2.0,
+                },
                 "drawdown": {"max_drawdown": -5.0},
                 "trades": {"win_rate": 0.6, "profit_factor": 1.5},
-            }
+            },
         }
 
         # Long ticker with special characters
@@ -690,16 +757,20 @@ class TestExportEdgeCases:
             "total_return_pct": 5.0,
             "total_trades": 10,
             "metrics": {
-                "risk": {"sharpe_ratio": 1.2, "sortino_ratio": 1.5, "calmar_ratio": 1.8},
+                "risk": {
+                    "sharpe_ratio": 1.2,
+                    "sortino_ratio": 1.5,
+                    "calmar_ratio": 1.8,
+                },
                 "drawdown": {"max_drawdown": -8.0},
                 "trades": {"win_rate": 0.5, "profit_factor": 1.2},
-            }
+            },
         }
 
         # Extreme parameters (very short windows)
         extreme_params = {
             "short_window": 2,  # Minimum
-            "long_window": 3,   # Minimum
+            "long_window": 3,  # Minimum
             "volume_confirmation": False,
             "volume_avg_period": 5,
             "min_separation_pct": 0.0,

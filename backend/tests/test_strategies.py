@@ -5,9 +5,12 @@ import pandas as pd
 import pytest
 
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.strategies.implementations.moving_average_crossover import MovingAverageCrossover
+from src.strategies.implementations.moving_average_crossover import (
+    MovingAverageCrossover,
+)
 from src.strategies.implementations.rsi_mean_reversion import RSIMeanReversion
 from src.strategies.implementations.momentum_breakout import MomentumBreakout
 from src.strategies.implementations.bollinger_breakout import BollingerBreakout
@@ -34,12 +37,16 @@ class TestMovingAverageCrossover:
 
     def test_cooldown_enforced(self):
         data = _make_featured_data()
-        s = MovingAverageCrossover({"short_window": 10, "long_window": 30, "cooldown_days": 10})
+        s = MovingAverageCrossover(
+            {"short_window": 10, "long_window": 30, "cooldown_days": 10}
+        )
         signals = s.generate_signals(data)
         # Check no two signals within 10 bars
         sig_idx = signals[signals["signal"] != 0].index
         for i in range(1, len(sig_idx)):
-            gap = signals.index.get_loc(sig_idx[i]) - signals.index.get_loc(sig_idx[i - 1])
+            gap = signals.index.get_loc(sig_idx[i]) - signals.index.get_loc(
+                sig_idx[i - 1]
+            )
             assert gap > 10
 
 
@@ -122,7 +129,9 @@ class TestBollingerBreakout:
         # Check no two signals within 5 bars
         sig_idx = signals[signals["signal"] != 0].index
         for i in range(1, len(sig_idx)):
-            gap = signals.index.get_loc(sig_idx[i]) - signals.index.get_loc(sig_idx[i - 1])
+            gap = signals.index.get_loc(sig_idx[i]) - signals.index.get_loc(
+                sig_idx[i - 1]
+            )
             assert gap > 5
 
     def test_volume_filter(self):
@@ -206,7 +215,9 @@ class TestVWAPReversion:
         # Check no two signals within 7 bars
         sig_idx = signals[signals["signal"] != 0].index
         for i in range(1, len(sig_idx)):
-            gap = signals.index.get_loc(sig_idx[i]) - signals.index.get_loc(sig_idx[i - 1])
+            gap = signals.index.get_loc(sig_idx[i]) - signals.index.get_loc(
+                sig_idx[i - 1]
+            )
             assert gap > 7
 
     def test_rsi_filter(self):

@@ -5,12 +5,15 @@ import pandas as pd
 import pytest
 
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.backtest.engine import BacktestEngine
 from src.backtest.portfolio import Portfolio
 from src.backtest.order import Order, OrderSide, OrderType, OrderStatus
-from src.strategies.implementations.moving_average_crossover import MovingAverageCrossover
+from src.strategies.implementations.moving_average_crossover import (
+    MovingAverageCrossover,
+)
 from helpers import make_featured_data as _make_featured_data_base
 
 
@@ -72,8 +75,11 @@ class TestPortfolio:
 
     def test_drawdown_halt(self):
         p = Portfolio(
-            initial_capital=10_000, max_drawdown_pct=5,
-            slippage_pct=0, commission_rate=0, cash_reserve_pct=0,
+            initial_capital=10_000,
+            max_drawdown_pct=5,
+            slippage_pct=0,
+            commission_rate=0,
+            cash_reserve_pct=0,
             max_position_pct=100,
         )
         # Invest almost everything

@@ -72,7 +72,9 @@ class PerformanceMetrics:
     # ------------------------------------------------------------------
 
     def _return_metrics(self, eq: pd.DataFrame) -> dict:
-        total = eq["value"].iloc[-1] / eq["value"].iloc[0] - 1 if eq["value"].iloc[0] else 0
+        total = (
+            eq["value"].iloc[-1] / eq["value"].iloc[0] - 1 if eq["value"].iloc[0] else 0
+        )
         n_days = len(eq)
         years = max(n_days / TRADING_DAYS, 1 / TRADING_DAYS)
         cagr = (1 + total) ** (1 / years) - 1 if total > -1 else -1
@@ -111,7 +113,9 @@ class PerformanceMetrics:
 
         # Sortino: downside deviation only
         downside = rets[rets < 0]
-        down_std = float(downside.std()) * np.sqrt(TRADING_DAYS) if len(downside) > 1 else 0
+        down_std = (
+            float(downside.std()) * np.sqrt(TRADING_DAYS) if len(downside) > 1 else 0
+        )
         sortino = excess / down_std if down_std > 0 else 0.0
 
         # Calmar
@@ -122,7 +126,11 @@ class PerformanceMetrics:
         # VaR and CVaR
         var_95 = float(rets.quantile(0.05)) * 100
         var_99 = float(rets.quantile(0.01)) * 100
-        cvar_95 = float(rets[rets <= rets.quantile(0.05)].mean()) * 100 if (rets <= rets.quantile(0.05)).any() else var_95
+        cvar_95 = (
+            float(rets[rets <= rets.quantile(0.05)].mean()) * 100
+            if (rets <= rets.quantile(0.05)).any()
+            else var_95
+        )
 
         return {
             "volatility_annual_pct": round(vol * 100, 2),
@@ -167,7 +175,9 @@ class PerformanceMetrics:
         post_dd = values.loc[max_dd_idx:]
         pre_dd_peak = peak.loc[max_dd_idx]
         recovered = post_dd[post_dd >= pre_dd_peak]
-        recovery_days = (recovered.index[0] - max_dd_idx).days if len(recovered) > 0 else None
+        recovery_days = (
+            (recovered.index[0] - max_dd_idx).days if len(recovered) > 0 else None
+        )
 
         return {
             "max_drawdown_pct": round(max_dd, 2),
@@ -203,7 +213,7 @@ class PerformanceMetrics:
                 sell_price = t.get("filled_price", 0) or 0
                 shares = min(buy.get("shares", 0), t.get("shares", 0))
                 pnl = (sell_price - buy_price) * shares
-                pnl -= (buy.get("commission", 0) + t.get("commission", 0))
+                pnl -= buy.get("commission", 0) + t.get("commission", 0)
                 pnls.append(pnl)
 
         wins = [p for p in pnls if p > 0]
@@ -212,7 +222,11 @@ class PerformanceMetrics:
 
         gross_profit = sum(wins) if wins else 0
         gross_loss = abs(sum(losses)) if losses else 0
-        profit_factor = gross_profit / gross_loss if gross_loss > 0 else float("inf") if gross_profit > 0 else 0
+        profit_factor = (
+            gross_profit / gross_loss
+            if gross_loss > 0
+            else float("inf") if gross_profit > 0 else 0
+        )
 
         avg_win = np.mean(wins) if wins else 0
         avg_loss = np.mean(losses) if losses else 0
@@ -258,18 +272,28 @@ class PerformanceMetrics:
 
         # Ulcer Index
         drawdown = (eq["value"] / eq["value"].cummax() - 1) * 100
-        ulcer = np.sqrt((drawdown ** 2).rolling(14).mean())
+        ulcer = np.sqrt((drawdown**2).rolling(14).mean())
 
         return {
             "profitable_months": int(profitable_months),
             "total_months": int(total_months),
-            "profitable_months_pct": round(profitable_months / max(total_months, 1) * 100, 1),
+            "profitable_months_pct": round(
+                profitable_months / max(total_months, 1) * 100, 1
+            ),
             "profitable_years": int(profitable_years),
             "total_years": int(total_years),
             "longest_win_streak": max(win_streaks) if win_streaks else 0,
             "longest_loss_streak": max(loss_streaks) if loss_streaks else 0,
-            "ulcer_index": round(float(ulcer.iloc[-1]), 4) if len(ulcer) > 0 and not np.isnan(ulcer.iloc[-1]) else 0,
-            "rolling_sharpe_latest": round(float(rolling_sharpe.iloc[-1]), 4) if len(rolling_sharpe) > 0 else 0,
+            "ulcer_index": (
+                round(float(ulcer.iloc[-1]), 4)
+                if len(ulcer) > 0 and not np.isnan(ulcer.iloc[-1])
+                else 0
+            ),
+            "rolling_sharpe_latest": (
+                round(float(rolling_sharpe.iloc[-1]), 4)
+                if len(rolling_sharpe) > 0
+                else 0
+            ),
         }
 
     # ------------------------------------------------------------------
@@ -294,25 +318,37 @@ class PerformanceMetrics:
         # Beta and Alpha
         cov = np.cov(strat_ret, bench_ret)
         beta = cov[0, 1] / cov[1, 1] if cov[1, 1] != 0 else 0
-        alpha_annual = (float(strat_ret.mean()) - beta * float(bench_ret.mean())) * TRADING_DAYS
+        alpha_annual = (
+            float(strat_ret.mean()) - beta * float(bench_ret.mean())
+        ) * TRADING_DAYS
 
         # Tracking error
         active_ret = strat_ret - bench_ret
         tracking_error = float(active_ret.std()) * np.sqrt(TRADING_DAYS)
 
         # Information ratio
-        ir = float(active_ret.mean()) * TRADING_DAYS / tracking_error if tracking_error > 0 else 0
+        ir = (
+            float(active_ret.mean()) * TRADING_DAYS / tracking_error
+            if tracking_error > 0
+            else 0
+        )
 
         # Up/Down capture
         up_market = bench_ret > 0
         down_market = bench_ret < 0
         up_capture = (
-            float(strat_ret[up_market].mean()) / float(bench_ret[up_market].mean()) * 100
-            if up_market.any() and bench_ret[up_market].mean() != 0 else 0
+            float(strat_ret[up_market].mean())
+            / float(bench_ret[up_market].mean())
+            * 100
+            if up_market.any() and bench_ret[up_market].mean() != 0
+            else 0
         )
         down_capture = (
-            float(strat_ret[down_market].mean()) / float(bench_ret[down_market].mean()) * 100
-            if down_market.any() and bench_ret[down_market].mean() != 0 else 0
+            float(strat_ret[down_market].mean())
+            / float(bench_ret[down_market].mean())
+            * 100
+            if down_market.any() and bench_ret[down_market].mean() != 0
+            else 0
         )
 
         # Statistical significance: is alpha > 0?

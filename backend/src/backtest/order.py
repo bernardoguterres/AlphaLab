@@ -65,6 +65,8 @@ class Order:
             "commission": round(self.commission, 4),
             "slippage": round(self.slippage, 4),
             "timestamp": str(self.timestamp) if self.timestamp else None,
-            "filled_timestamp": str(self.filled_timestamp) if self.filled_timestamp else None,
+            "filled_timestamp": (
+                str(self.filled_timestamp) if self.filled_timestamp else None
+            ),
             "reason": self.reason,
         }

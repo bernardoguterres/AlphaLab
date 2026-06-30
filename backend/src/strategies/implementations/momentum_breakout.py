@@ -71,7 +71,9 @@ class MomentumBreakout(BaseStrategy):
                 # Update trailing stop
                 if current_close > peak_price:
                     peak_price = current_close
-                    atr_val = atr.iloc[i] if atr.iloc[i] == atr.iloc[i] else peak_price * 0.02
+                    atr_val = (
+                        atr.iloc[i] if atr.iloc[i] == atr.iloc[i] else peak_price * 0.02
+                    )
                     trailing_stop = peak_price - p["trailing_stop_atr_mult"] * atr_val
 
                 exit_reason = None
@@ -142,6 +144,8 @@ class MomentumBreakout(BaseStrategy):
 
         logger.info(
             "%s generated %d signals on %d bars",
-            self.name, (signals["signal"] != 0).sum(), len(data),
+            self.name,
+            (signals["signal"] != 0).sum(),
+            len(data),
         )
         return signals
