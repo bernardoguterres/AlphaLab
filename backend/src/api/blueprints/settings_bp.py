@@ -2,7 +2,6 @@
 
 import os
 
-import httpx
 from flask import Blueprint, jsonify, request
 from pydantic import ValidationError
 
@@ -73,6 +72,8 @@ def test_telegram():
         )
 
     try:
+        import httpx
+
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         response = httpx.post(
             url,
