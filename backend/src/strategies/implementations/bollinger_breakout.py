@@ -65,9 +65,6 @@ class BollingerBreakout(BaseStrategy):
         signals["confidence"] = 0.0
         signals["reason"] = ""
 
-        # Track position state (0 = no position, 1 = long, -1 = short)
-        position = pd.Series(0, index=data.index)
-
         # Check for consecutive closes above/below bands
         above_upper = close > upper_band
         below_lower = close < lower_band
@@ -83,10 +80,9 @@ class BollingerBreakout(BaseStrategy):
             vol_avg = data["Volume"].rolling(20).mean()
             vol_ok = data["Volume"] >= (vol_avg * p["volume_threshold"])
 
-        # State machine for position tracking
+        # State machine for position tracking (scalar avoids SettingWithCopyWarning)
+        current_position = 0
         for i in range(len(data)):
-            current_position = position.iloc[i - 1] if i > 0 else 0
-
             # Entry signals (only if no position)
             if current_position == 0:
                 # BUY signal: consecutive closes above upper band + volume
@@ -95,14 +91,13 @@ class BollingerBreakout(BaseStrategy):
                     signals.iloc[i, signals.columns.get_loc("reason")] = (
                         f"{confirmation} closes above upper BB"
                     )
-                    # Confidence based on distance from band
                     distance_pct = (
                         (close.iloc[i] - upper_band.iloc[i]) / upper_band.iloc[i]
                     ) * 100
                     signals.iloc[i, signals.columns.get_loc("confidence")] = min(
                         distance_pct / 2, 1.0
                     )
-                    position.iloc[i:] = 1  # Enter long position
+                    current_position = 1
 
                 # SELL signal: consecutive closes below lower band + volume
                 elif consecutive_below.iloc[i] and vol_ok.iloc[i]:
@@ -110,30 +105,23 @@ class BollingerBreakout(BaseStrategy):
                     signals.iloc[i, signals.columns.get_loc("reason")] = (
                         f"{confirmation} closes below lower BB"
                     )
-                    # Confidence based on distance from band
                     distance_pct = (
                         (lower_band.iloc[i] - close.iloc[i]) / lower_band.iloc[i]
                     ) * 100
                     signals.iloc[i, signals.columns.get_loc("confidence")] = min(
                         distance_pct / 2, 1.0
                     )
-                    position.iloc[i:] = -1  # Enter short position
+                    current_position = -1
 
             # Exit signals (if in position)
             elif current_position != 0:
-                # Exit when price returns to middle band
                 if at_middle.iloc[i]:
-                    # Generate exit signal (opposite of entry)
-                    exit_signal = -current_position
-                    signals.iloc[i, signals.columns.get_loc("signal")] = exit_signal
+                    signals.iloc[i, signals.columns.get_loc("signal")] = -current_position
                     signals.iloc[i, signals.columns.get_loc("reason")] = (
                         "Price returned to middle band"
                     )
                     signals.iloc[i, signals.columns.get_loc("confidence")] = 0.5
-                    position.iloc[i:] = 0  # Exit position
-                else:
-                    # Maintain position
-                    position.iloc[i] = current_position
+                    current_position = 0
 
         # Apply cooldown
         signals = self._apply_cooldown(signals, p["cooldown_days"])
@@ -146,18 +134,3 @@ class BollingerBreakout(BaseStrategy):
         )
         return signals
 
-    @staticmethod
-    def _apply_cooldown(signals: pd.DataFrame, cooldown: int) -> pd.DataFrame:
-        """Enforce minimum days between signals."""
-        if cooldown <= 0:
-            return signals
-
-        last_signal_idx = -cooldown - 1
-        for i in range(len(signals)):
-            if signals.iloc[i]["signal"] != 0:
-                if i - last_signal_idx <= cooldown:
-                    signals.iloc[i, signals.columns.get_loc("signal")] = 0
-                    signals.iloc[i, signals.columns.get_loc("reason")] = ""
-                else:
-                    last_signal_idx = i
-        return signals

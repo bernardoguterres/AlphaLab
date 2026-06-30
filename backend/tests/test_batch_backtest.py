@@ -50,12 +50,13 @@ class TestBatchBacktest:
     @patch("src.api.routes.DataFetcher")
     def test_valid_batch_request(self, mock_fetcher_cls):
         """Test batch backtest with valid request."""
-        # Mock fetcher
+        # Create app inside patch so the shared fetcher instance is the mock
         mock_fetcher = MagicMock()
         mock_fetcher_cls.return_value = mock_fetcher
         mock_fetcher.fetch.side_effect = (
             lambda ticker, *args, **kwargs: _mock_fetch_response(ticker)
         )
+        client = create_app().test_client()
 
         payload = {
             "tickers": ["AAPL", "MSFT", "GOOGL"],
@@ -66,7 +67,7 @@ class TestBatchBacktest:
             "params": {"short_window": 10, "long_window": 30},
         }
 
-        response = self.client.post(
+        response = client.post(
             "/api/strategies/batch-backtest",
             data=json.dumps(payload),
             content_type="application/json",
@@ -159,7 +160,7 @@ class TestBatchBacktest:
     @patch("src.api.routes.DataFetcher")
     def test_partial_failures(self, mock_fetcher_cls):
         """Test batch where some tickers fail."""
-        # Mock fetcher - AAPL succeeds, MSFT fails, GOOGL succeeds
+        # Create app inside patch so the shared fetcher instance is the mock
         mock_fetcher = MagicMock()
         mock_fetcher_cls.return_value = mock_fetcher
 
@@ -171,6 +172,7 @@ class TestBatchBacktest:
             return _mock_fetch_response(ticker)
 
         mock_fetcher.fetch.side_effect = fetch_side_effect
+        client = create_app().test_client()
 
         payload = {
             "tickers": ["AAPL", "MSFT", "GOOGL"],
@@ -180,7 +182,7 @@ class TestBatchBacktest:
             "initial_capital": 100000,
         }
 
-        response = self.client.post(
+        response = client.post(
             "/api/strategies/batch-backtest",
             data=json.dumps(payload),
             content_type="application/json",

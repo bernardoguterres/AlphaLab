@@ -94,14 +94,3 @@ class MovingAverageCrossover(BaseStrategy):
         )
         return signals
 
-    @staticmethod
-    def _apply_cooldown(signals: pd.DataFrame, cooldown: int) -> pd.DataFrame:
-        last_signal_idx = -cooldown - 1
-        for i in range(len(signals)):
-            if signals.iloc[i]["signal"] != 0:
-                if i - last_signal_idx <= cooldown:
-                    signals.iloc[i, signals.columns.get_loc("signal")] = 0
-                    signals.iloc[i, signals.columns.get_loc("reason")] = ""
-                else:
-                    last_signal_idx = i
-        return signals
