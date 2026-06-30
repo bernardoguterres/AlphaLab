@@ -17,9 +17,6 @@ class FeatureEngineer:
     DataFrame suitable for strategy signal generation and backtesting.
     """
 
-    def __init__(self, benchmark_ticker: str = "SPY"):
-        self.benchmark_ticker = benchmark_ticker
-
     def process(
         self,
         df: pd.DataFrame,

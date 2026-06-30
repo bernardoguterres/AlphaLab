@@ -171,15 +171,6 @@ class Portfolio:
         )
         return self.cash + position_value
 
-    def get_cash_balance(self) -> float:
-        return self.cash
-
-    def can_afford(self, ticker: str, shares: int, price: float) -> bool:
-        cost = price * shares * (1 + self.slippage_pct) + abs(
-            price * shares * self.commission_rate
-        )
-        return self._can_afford(cost)
-
     def get_position(self, ticker: str) -> int:
         return self.positions.get(ticker, 0)
 

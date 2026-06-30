@@ -1,10 +1,8 @@
 """Abstract base class for all trading strategies."""
 
 from abc import ABC, abstractmethod
-from itertools import product
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
 from ..utils.logger import setup_logger
@@ -82,49 +80,3 @@ class BaseStrategy(ABC):
             "quality": quality,
         }
 
-    def optimize_params(
-        self,
-        data: pd.DataFrame,
-        param_grid: dict[str, list],
-        metric: str = "total_return",
-    ) -> dict:
-        """Grid search for best parameters by running backtests.
-
-        Args:
-            data: Full OHLCV + features DataFrame.
-            param_grid: e.g. {"short_window": [20, 50], "long_window": [100, 200]}
-            metric: Key to maximize in the results dict.
-
-        Returns:
-            Dict with ``best_params``, ``best_score``, and ``all_results``.
-        """
-        keys = list(param_grid.keys())
-        combos = list(product(*param_grid.values()))
-        results = []
-
-        for combo in combos:
-            test_params = dict(zip(keys, combo))
-            try:
-                instance = self.__class__(test_params)
-                signals = instance.generate_signals(data)
-                # Simple return estimation: sum of returns on signal days
-                if "Close" in data.columns and "signal" in signals.columns:
-                    aligned = signals["signal"].reindex(data.index, fill_value=0)
-                    daily_ret = data["Close"].pct_change()
-                    strat_ret = (aligned.shift(1) * daily_ret).sum()
-                else:
-                    strat_ret = 0.0
-
-                results.append({**test_params, metric: round(strat_ret, 6)})
-            except (ValueError, KeyError) as e:
-                logger.debug("Skipping params %s: %s", test_params, e)
-
-        if not results:
-            return {"best_params": self.params, "best_score": 0, "all_results": []}
-
-        best = max(results, key=lambda r: r.get(metric, 0))
-        return {
-            "best_params": {k: best[k] for k in keys},
-            "best_score": best[metric],
-            "all_results": results,
-        }
