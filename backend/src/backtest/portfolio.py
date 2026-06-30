@@ -223,9 +223,7 @@ class Portfolio:
         reserve = self.initial_capital * self.cash_reserve_pct
         return self.cash - cost >= reserve
 
-    def _get_execution_price(
-        self, order: Order, market_price: float
-    ) -> float | None:
+    def _get_execution_price(self, order: Order, market_price: float) -> float | None:
         return market_price
 
     def _check_drawdown_halt(self, current_value: float):

@@ -116,7 +116,9 @@ class BollingerBreakout(BaseStrategy):
             # Exit signals (if in position)
             elif current_position != 0:
                 if at_middle.iloc[i]:
-                    signals.iloc[i, signals.columns.get_loc("signal")] = -current_position
+                    signals.iloc[i, signals.columns.get_loc("signal")] = (
+                        -current_position
+                    )
                     signals.iloc[i, signals.columns.get_loc("reason")] = (
                         "Price returned to middle band"
                     )
@@ -133,4 +135,3 @@ class BollingerBreakout(BaseStrategy):
             len(data),
         )
         return signals
-

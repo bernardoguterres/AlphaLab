@@ -167,10 +167,14 @@ class FundamentalScreener:
 
     def _rank(self, results: list[ScreenerResult]) -> list[ScreenerResult]:
         # Assign per-factor ranks in-place (one pass each), then sort once for final output
-        for i, r in enumerate(sorted(results, key=lambda r: r.earnings_yield, reverse=True)):
+        for i, r in enumerate(
+            sorted(results, key=lambda r: r.earnings_yield, reverse=True)
+        ):
             r.earnings_yield_rank = i + 1
 
-        for i, r in enumerate(sorted(results, key=lambda r: r.return_on_equity, reverse=True)):
+        for i, r in enumerate(
+            sorted(results, key=lambda r: r.return_on_equity, reverse=True)
+        ):
             r.roe_rank = i + 1
 
         for r in results:

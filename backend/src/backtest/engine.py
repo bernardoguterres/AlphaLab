@@ -323,8 +323,7 @@ class BacktestEngine:
         cash_reserve = capital - shares * start_price
         equity = shares * close + cash_reserve
         bnh_curve = [
-            {"date": idx, "value": round(val, 2)}
-            for idx, val in equity.items()
+            {"date": idx, "value": round(val, 2)} for idx, val in equity.items()
         ]
 
         # Max drawdown (vectorized)

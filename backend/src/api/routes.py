@@ -12,6 +12,7 @@ from .blueprints.data import data_bp
 from .blueprints.portfolio import portfolio_bp
 from .blueprints.screener import screener_bp
 from .blueprints.settings_bp import settings_bp
+
 # Re-exported for backward compatibility (tests import these from routes)
 from .helpers import _build_export_json, _fetch_and_prepare  # noqa: F401
 from ..data.fetcher import DataFetcher

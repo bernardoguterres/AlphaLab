@@ -338,7 +338,11 @@ class ParameterOptimizer:
                 except Exception as e:
                     logger.debug(
                         "Heatmap cell failed at %s=%s, %s=%s: %s",
-                        param1_name, p1_val, param2_name, p2_val, e,
+                        param1_name,
+                        p1_val,
+                        param2_name,
+                        p2_val,
+                        e,
                     )
                     row.append(None)
 

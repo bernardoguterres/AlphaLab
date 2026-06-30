@@ -65,13 +65,20 @@ def run_backtest():
     results_store = current_app.extensions["results_store"]
     body = BacktestRequest(**request.get_json(force=True))
 
-    featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
+    featured, report, err = _fetch_and_prepare(
+        fetcher, body.ticker, body.start_date, body.end_date
+    )
     if err:
         return err
 
     strategy_cls = STRATEGY_MAP.get(body.strategy)
     if not strategy_cls:
-        return jsonify({"status": "error", "message": f"Unknown strategy: {body.strategy}"}), 400
+        return (
+            jsonify(
+                {"status": "error", "message": f"Unknown strategy: {body.strategy}"}
+            ),
+            400,
+        )
 
     strategy = strategy_cls(body.params or {})
 
@@ -118,7 +125,9 @@ def optimize_strategy():
     fetcher = current_app.extensions["fetcher"]
     body = OptimizeRequest(**request.get_json(force=True))
 
-    featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
+    featured, report, err = _fetch_and_prepare(
+        fetcher, body.ticker, body.start_date, body.end_date
+    )
     if err:
         return err
 
@@ -156,7 +165,9 @@ def parameter_heatmap():
     fetcher = current_app.extensions["fetcher"]
     body = HeatmapRequest(**request.get_json(force=True))
 
-    featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
+    featured, report, err = _fetch_and_prepare(
+        fetcher, body.ticker, body.start_date, body.end_date
+    )
     if err:
         return err
 
@@ -173,10 +184,12 @@ def parameter_heatmap():
 
     if len(param1_values) * len(param2_values) > 400:
         return (
-            jsonify({
-                "status": "error",
-                "message": "Heatmap grid too large (max 400 cells). Use larger step sizes.",
-            }),
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Heatmap grid too large (max 400 cells). Use larger step sizes.",
+                }
+            ),
             400,
         )
 
@@ -219,7 +232,9 @@ def compare_strategies():
     fetcher = current_app.extensions["fetcher"]
     body = CompareRequest(**request.get_json(force=True))
 
-    featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
+    featured, report, err = _fetch_and_prepare(
+        fetcher, body.ticker, body.start_date, body.end_date
+    )
     if err:
         return err
 
@@ -267,7 +282,12 @@ def batch_backtest():
 
     strategy_cls = STRATEGY_MAP.get(body.strategy)
     if not strategy_cls:
-        return jsonify({"status": "error", "message": f"Unknown strategy: {body.strategy}"}), 400
+        return (
+            jsonify(
+                {"status": "error", "message": f"Unknown strategy: {body.strategy}"}
+            ),
+            400,
+        )
 
     results = []
     errors = []
@@ -281,10 +301,12 @@ def batch_backtest():
 
             cleaned, report = validator.validate_and_clean(raw["data"], ticker)
             if not report.is_acceptable:
-                errors.append({
-                    "ticker": ticker,
-                    "error": f"Data quality too low ({report.confidence:.2f})",
-                })
+                errors.append(
+                    {
+                        "ticker": ticker,
+                        "error": f"Data quality too low ({report.confidence:.2f})",
+                    }
+                )
                 continue
 
             featured = processor.process(cleaned)
@@ -304,16 +326,18 @@ def batch_backtest():
                 backtest_result.equity_curve, backtest_result.trades
             )
 
-            results.append({
-                "ticker": ticker,
-                "total_return_pct": backtest_result.total_return_pct,
-                "sharpe_ratio": metrics["risk"]["sharpe_ratio"],
-                "max_drawdown_pct": metrics["drawdown"]["max_drawdown_pct"],
-                "win_rate": metrics["trades"]["win_rate"],
-                "total_trades": len(backtest_result.trades),
-                "final_value": backtest_result.final_value,
-                "metrics": metrics,
-            })
+            results.append(
+                {
+                    "ticker": ticker,
+                    "total_return_pct": backtest_result.total_return_pct,
+                    "sharpe_ratio": metrics["risk"]["sharpe_ratio"],
+                    "max_drawdown_pct": metrics["drawdown"]["max_drawdown_pct"],
+                    "win_rate": metrics["trades"]["win_rate"],
+                    "total_trades": len(backtest_result.trades),
+                    "final_value": backtest_result.final_value,
+                    "metrics": metrics,
+                }
+            )
 
         except DataFetchError as e:
             errors.append({"ticker": ticker, "error": str(e)})
@@ -341,18 +365,22 @@ def batch_backtest():
         "best_ticker": best_ticker["ticker"] if best_ticker else None,
         "best_sharpe": round(best_ticker["sharpe_ratio"], 2) if best_ticker else None,
         "worst_ticker": worst_ticker["ticker"] if worst_ticker else None,
-        "worst_sharpe": round(worst_ticker["sharpe_ratio"], 2) if worst_ticker else None,
+        "worst_sharpe": (
+            round(worst_ticker["sharpe_ratio"], 2) if worst_ticker else None
+        ),
         "runtime_seconds": round(total_runtime, 1),
     }
 
-    return jsonify({
-        "status": "ok",
-        "data": {
-            "results": results,
-            "batch_summary": batch_summary,
-            "errors": errors,
-        },
-    })
+    return jsonify(
+        {
+            "status": "ok",
+            "data": {
+                "results": results,
+                "batch_summary": batch_summary,
+                "errors": errors,
+            },
+        }
+    )
 
 
 @backtest_bp.route("/api/strategies/export", methods=["POST"])
@@ -364,7 +392,9 @@ def export_strategy():
     stored = results_store.get(body.backtest_id)
     if not stored:
         return (
-            jsonify({"status": "error", "message": f"Backtest {body.backtest_id} not found"}),
+            jsonify(
+                {"status": "error", "message": f"Backtest {body.backtest_id} not found"}
+            ),
             404,
         )
 
@@ -393,7 +423,12 @@ def export_strategy():
             except ValidationError as e:
                 logger.error("Export validation failed: %s", e)
                 return (
-                    jsonify({"status": "error", "message": f"Export validation failed: {str(e)}"}),
+                    jsonify(
+                        {
+                            "status": "error",
+                            "message": f"Export validation failed: {str(e)}",
+                        }
+                    ),
                     422,
                 )
 
@@ -411,7 +446,9 @@ def export_strategy():
 
         logger.info(
             "Exported strategy %s for %s (backtest %s)",
-            req["strategy"], req["ticker"], body.backtest_id,
+            req["strategy"],
+            req["ticker"],
+            body.backtest_id,
         )
         return response
 

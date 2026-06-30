@@ -51,14 +51,24 @@ def test_telegram():
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not bot_token:
         return (
-            jsonify({"status": "error", "message": "TELEGRAM_BOT_TOKEN environment variable not set"}),
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "TELEGRAM_BOT_TOKEN environment variable not set",
+                }
+            ),
             400,
         )
 
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if not chat_id:
         return (
-            jsonify({"status": "error", "message": "TELEGRAM_CHAT_ID environment variable not set"}),
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "TELEGRAM_CHAT_ID environment variable not set",
+                }
+            ),
             400,
         )
 
@@ -66,22 +76,34 @@ def test_telegram():
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         response = httpx.post(
             url,
-            json={"chat_id": chat_id, "text": "🔔 AlphaLab notification test successful!"},
+            json={
+                "chat_id": chat_id,
+                "text": "🔔 AlphaLab notification test successful!",
+            },
             timeout=10.0,
         )
 
         if response.status_code == 200:
-            return jsonify({"status": "ok", "message": "Test message sent successfully"})
+            return jsonify(
+                {"status": "ok", "message": "Test message sent successfully"}
+            )
         return (
-            jsonify({
-                "status": "error",
-                "message": f"Telegram API returned status {response.status_code}: {response.text}",
-            }),
+            jsonify(
+                {
+                    "status": "error",
+                    "message": f"Telegram API returned status {response.status_code}: {response.text}",
+                }
+            ),
             400,
         )
     except Exception as e:
         logger.exception("Telegram test failed")
-        return jsonify({"status": "error", "message": f"Failed to send test message: {str(e)}"}), 500
+        return (
+            jsonify(
+                {"status": "error", "message": f"Failed to send test message: {str(e)}"}
+            ),
+            500,
+        )
 
 
 @settings_bp.route("/api/settings/alpaca/test", methods=["POST"])
@@ -92,10 +114,12 @@ def test_alpaca():
 
     if not api_key or not secret_key:
         return (
-            jsonify({
-                "status": "error",
-                "message": "ALPACA_API_KEY and ALPACA_SECRET_KEY environment variables must be set",
-            }),
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "ALPACA_API_KEY and ALPACA_SECRET_KEY environment variables must be set",
+                }
+            ),
             400,
         )
 
@@ -107,26 +131,33 @@ def test_alpaca():
         client = TradingClient(api_key, secret_key, paper=paper)
         account = client.get_account()
 
-        return jsonify({
-            "status": "ok",
-            "message": f"Connection successful (paper={paper})",
-            "data": {
-                "account_number": account.account_number,
-                "status": account.status,
-                "buying_power": float(account.buying_power),
-                "cash": float(account.cash),
-                "paper_trading": paper,
-            },
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "message": f"Connection successful (paper={paper})",
+                "data": {
+                    "account_number": account.account_number,
+                    "status": account.status,
+                    "buying_power": float(account.buying_power),
+                    "cash": float(account.cash),
+                    "paper_trading": paper,
+                },
+            }
+        )
 
     except ImportError:
         return (
-            jsonify({
-                "status": "error",
-                "message": "alpaca-py library not installed. Run: pip install alpaca-py",
-            }),
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "alpaca-py library not installed. Run: pip install alpaca-py",
+                }
+            ),
             500,
         )
     except Exception as e:
         logger.exception("Alpaca test failed")
-        return jsonify({"status": "error", "message": f"Connection failed: {str(e)}"}), 400
+        return (
+            jsonify({"status": "error", "message": f"Connection failed: {str(e)}"}),
+            400,
+        )

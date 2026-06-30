@@ -94,4 +94,3 @@ class BaseStrategy(ABC):
             "avg_holding_bars": round(float(avg_hold), 1),
             "quality": quality,
         }
-
