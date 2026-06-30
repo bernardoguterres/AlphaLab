@@ -74,6 +74,40 @@ STRATEGY_MAP = {
 _results_store: dict[str, dict] = {}
 
 
+def _fetch_and_prepare(
+    fetcher,
+    ticker: str,
+    start_date,
+    end_date,
+) -> tuple:
+    """Fetch, validate, and feature-engineer data for a ticker.
+
+    Returns (featured_df, None) on success or (None, flask_response_tuple) on failure.
+    """
+    try:
+        raw = fetcher.fetch(ticker, start_date, end_date)
+    except DataFetchError as e:
+        return None, None, (jsonify({"status": "error", "message": str(e)}), 400)
+
+    validator = DataValidator()
+    cleaned, report = validator.validate_and_clean(raw["data"], ticker)
+    if not report.is_acceptable:
+        return None, None, (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": f"Data quality too low ({report.confidence:.2f})",
+                    "quality_report": report.to_dict(),
+                }
+            ),
+            422,
+        )
+
+    featured = FeatureEngineer().process(cleaned)
+    featured.attrs["ticker"] = ticker
+    return featured, report, None
+
+
 def create_app() -> Flask:
     """Create and configure the Flask application."""
     config = load_config()
@@ -171,28 +205,9 @@ def create_app() -> Flask:
     def run_backtest():
         body = BacktestRequest(**request.get_json(force=True))
 
-        try:
-            raw = fetcher.fetch(body.ticker, body.start_date, body.end_date)
-        except DataFetchError as e:
-            return jsonify({"status": "error", "message": str(e)}), 400
-
-        validator = DataValidator()
-        cleaned, report = validator.validate_and_clean(raw["data"], body.ticker)
-        if not report.is_acceptable:
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": f"Data quality too low ({report.confidence:.2f})",
-                        "quality_report": report.to_dict(),
-                    }
-                ),
-                422,
-            )
-
-        processor = FeatureEngineer()
-        featured = processor.process(cleaned)
-        featured.attrs["ticker"] = body.ticker
+        featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
+        if err:
+            return err
 
         strategy_cls = STRATEGY_MAP.get(body.strategy)
         if not strategy_cls:
@@ -251,27 +266,9 @@ def create_app() -> Flask:
         """
         body = OptimizeRequest(**request.get_json(force=True))
 
-        try:
-            raw = fetcher.fetch(body.ticker, body.start_date, body.end_date)
-        except DataFetchError as e:
-            return jsonify({"status": "error", "message": str(e)}), 400
-
-        validator = DataValidator()
-        cleaned, report = validator.validate_and_clean(raw["data"], body.ticker)
-        if not report.is_acceptable:
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": f"Data quality too low ({report.confidence:.2f})",
-                    }
-                ),
-                422,
-            )
-
-        processor = FeatureEngineer()
-        featured = processor.process(cleaned)
-        featured.attrs["ticker"] = body.ticker
+        featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
+        if err:
+            return err
 
         strategy_cls = STRATEGY_MAP.get(body.strategy)
         if not strategy_cls:
@@ -311,27 +308,9 @@ def create_app() -> Flask:
         """
         body = HeatmapRequest(**request.get_json(force=True))
 
-        try:
-            raw = fetcher.fetch(body.ticker, body.start_date, body.end_date)
-        except DataFetchError as e:
-            return jsonify({"status": "error", "message": str(e)}), 400
-
-        validator = DataValidator()
-        cleaned, report = validator.validate_and_clean(raw["data"], body.ticker)
-        if not report.is_acceptable:
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": f"Data quality too low ({report.confidence:.2f})",
-                    }
-                ),
-                422,
-            )
-
-        processor = FeatureEngineer()
-        featured = processor.process(cleaned)
-        featured.attrs["ticker"] = body.ticker
+        featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
+        if err:
+            return err
 
         strategy_cls = STRATEGY_MAP.get(body.strategy)
         if not strategy_cls:
@@ -402,27 +381,9 @@ def create_app() -> Flask:
     def compare_strategies():
         body = CompareRequest(**request.get_json(force=True))
 
-        try:
-            raw = fetcher.fetch(body.ticker, body.start_date, body.end_date)
-        except DataFetchError as e:
-            return jsonify({"status": "error", "message": str(e)}), 400
-
-        processor = FeatureEngineer()
-        validator = DataValidator()
-        cleaned, report = validator.validate_and_clean(raw["data"], body.ticker)
-        if not report.is_acceptable:
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": f"Data quality too low ({report.confidence:.2f})",
-                        "quality_report": report.to_dict(),
-                    }
-                ),
-                422,
-            )
-        featured = processor.process(cleaned)
-        featured.attrs["ticker"] = body.ticker
+        featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
+        if err:
+            return err
 
         engine = BacktestEngine()
         metrics_calc = PerformanceMetrics()
