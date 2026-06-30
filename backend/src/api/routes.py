@@ -424,7 +424,18 @@ def create_app() -> Flask:
 
         processor = FeatureEngineer()
         validator = DataValidator()
-        cleaned, _ = validator.validate_and_clean(raw["data"])
+        cleaned, report = validator.validate_and_clean(raw["data"], body.ticker)
+        if not report.is_acceptable:
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": f"Data quality too low ({report.confidence:.2f})",
+                        "quality_report": report.to_dict(),
+                    }
+                ),
+                422,
+            )
         featured = processor.process(cleaned)
         featured.attrs["ticker"] = body.ticker
 
@@ -488,7 +499,7 @@ def create_app() -> Flask:
                 raw = fetcher.fetch(ticker, body.start_date, body.end_date)
 
                 # If not cached, add small delay to avoid rate limits
-                if not raw.get("from_cache", False):
+                if not raw.get("metadata", {}).get("from_cache", False):
                     time.sleep(0.5)
 
                 # Validate and clean
@@ -1011,7 +1022,7 @@ def _build_export_json(
     end_date: str,
     initial_capital: float,
     results: dict,
-    config: dict,
+    config,
     risk_settings: dict = None,
 ) -> dict:
     """Build export JSON following the schema v1.0.

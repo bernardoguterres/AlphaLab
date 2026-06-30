@@ -46,7 +46,7 @@ class VWAPReversion(BaseStrategy):
             raise ValueError("cooldown_days must be >= 0")
 
     def required_columns(self) -> list[str]:
-        return ["Close", "Volume", "RSI"]
+        return ["Close", "High", "Low", "Volume", "RSI"]
 
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         """Generate mean reversion signals based on VWAP deviation."""
