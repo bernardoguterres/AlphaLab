@@ -5,19 +5,13 @@ app:
 
 data:
   cache_dir: "data/cache"
-  raw_dir: "data/raw"
-  processed_dir: "data/processed"
-  default_interval: "1d"
   max_retries: 3
   cache_expiry_hours: 24
-  max_cache_age_days: 7
 
 backtest:
   initial_capital: 100000.0
   commission: 0.0           # Modern brokers charge $0
   slippage: 0.05            # 0.05% price impact
-  max_position_size_percent: 20
-  cash_reserve_percent: 5
   risk_free_rate: 0.04      # 4% annual (10-year Treasury approx)
 
 strategies:
@@ -58,7 +52,6 @@ strategies:
 api:
   host: "127.0.0.1"
   port: 5000
-  rate_limit: 100
   cors_origins:
     - "http://localhost:3000"
     - "http://localhost:5173"

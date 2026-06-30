@@ -8,9 +8,6 @@ from typing import Optional
 
 class OrderType(Enum):
     MARKET = "market"
-    LIMIT = "limit"
-    STOP_LOSS = "stop_loss"
-    TRAILING_STOP = "trailing_stop"
 
 
 class OrderSide(Enum):
@@ -33,9 +30,6 @@ class Order:
     side: OrderSide
     shares: int
     order_type: OrderType = OrderType.MARKET
-    limit_price: Optional[float] = None
-    stop_price: Optional[float] = None
-    trail_pct: Optional[float] = None
     status: OrderStatus = OrderStatus.PENDING
     filled_price: Optional[float] = None
     commission: float = 0.0
@@ -58,8 +52,6 @@ class Order:
             "side": self.side.value,
             "shares": self.shares,
             "order_type": self.order_type.value,
-            "limit_price": self.limit_price,
-            "stop_price": self.stop_price,
             "status": self.status.value,
             "filled_price": self.filled_price,
             "commission": round(self.commission, 4),
