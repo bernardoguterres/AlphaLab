@@ -126,6 +126,8 @@ class Portfolio:
                 self.avg_cost[order.ticker] = (
                     prev_cost + exec_price * order.shares
                 ) / new_shares
+            if order.ticker not in self.trailing_stops:
+                self.trailing_stops[order.ticker] = exec_price * (1 - self.slippage_pct)
 
         else:  # SELL
             held = self.positions.get(order.ticker, 0)
