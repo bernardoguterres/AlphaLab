@@ -368,19 +368,17 @@ class BacktestEngine:
         shares = int(capital / start_price)
         bnh_final = shares * end_price + (capital - shares * start_price)
 
-        # Benchmark equity curve
-        bnh_curve = []
-        for idx, price in close.items():
-            val = shares * price + (capital - shares * start_price)
-            bnh_curve.append({"date": idx, "value": round(val, 2)})
+        # Benchmark equity curve (vectorized)
+        cash_reserve = capital - shares * start_price
+        equity = shares * close + cash_reserve
+        bnh_curve = [
+            {"date": idx, "value": round(val, 2)}
+            for idx, val in equity.items()
+        ]
 
-        # Max drawdown
-        peak = capital
-        max_dd = 0.0
-        for pt in bnh_curve:
-            peak = max(peak, pt["value"])
-            dd = (pt["value"] - peak) / peak * 100
-            max_dd = min(max_dd, dd)
+        # Max drawdown (vectorized)
+        running_peak = equity.cummax()
+        max_dd = float(((equity - running_peak) / running_peak * 100).min())
 
         return {
             "buy_and_hold_return_pct": round(bnh_return, 2),

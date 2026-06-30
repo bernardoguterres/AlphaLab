@@ -280,8 +280,12 @@ def build_returns_matrix(
     if not returns_dict:
         raise ValueError("No valid backtest results found")
 
-    # Combine into DataFrame (align dates)
-    returns_df = pd.DataFrame(returns_dict)
-    returns_df = returns_df.fillna(0)  # Fill missing dates with 0 return
+    # Combine into DataFrame (align dates with forward-fill to avoid injecting
+    # zero returns on trading holidays or gaps, which distorts correlation)
+    all_dates = sorted(set().union(*[v.index for v in returns_dict.values()]))
+    idx = pd.DatetimeIndex(all_dates)
+    returns_df = pd.DataFrame(
+        {k: v.reindex(idx).ffill() for k, v in returns_dict.items()}
+    )
 
     return returns_df, labels

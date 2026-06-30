@@ -166,17 +166,13 @@ class FundamentalScreener:
         return out
 
     def _rank(self, results: list[ScreenerResult]) -> list[ScreenerResult]:
-        # Rank by earnings yield descending (higher earnings yield = rank 1)
-        by_ey = sorted(results, key=lambda r: r.earnings_yield, reverse=True)
-        for i, r in enumerate(by_ey):
+        # Assign per-factor ranks in-place (one pass each), then sort once for final output
+        for i, r in enumerate(sorted(results, key=lambda r: r.earnings_yield, reverse=True)):
             r.earnings_yield_rank = i + 1
 
-        # Rank by ROE descending (higher ROE = rank 1)
-        by_roe = sorted(results, key=lambda r: r.return_on_equity, reverse=True)
-        for i, r in enumerate(by_roe):
+        for i, r in enumerate(sorted(results, key=lambda r: r.return_on_equity, reverse=True)):
             r.roe_rank = i + 1
 
-        # Combined rank = sum of both ranks (lower = better)
         for r in results:
             r.combined_rank = r.earnings_yield_rank + r.roe_rank
 

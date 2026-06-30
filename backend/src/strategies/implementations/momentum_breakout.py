@@ -71,9 +71,8 @@ class MomentumBreakout(BaseStrategy):
                 # Update trailing stop
                 if current_close > peak_price:
                     peak_price = current_close
-                    atr_val = (
-                        atr.iloc[i] if atr.iloc[i] == atr.iloc[i] else peak_price * 0.02
-                    )
+                    atr_i = atr.iloc[i]
+                    atr_val = atr_i if pd.notna(atr_i) else peak_price * 0.02
                     trailing_stop = peak_price - p["trailing_stop_atr_mult"] * atr_val
 
                 exit_reason = None
@@ -114,7 +113,8 @@ class MomentumBreakout(BaseStrategy):
                 avg_vol = vol_avg.iloc[i]
                 if pd.isna(avg_vol) or avg_vol <= 0:
                     continue
-                if volume.iloc[i] <= (avg_vol * p["volume_surge_pct"] / 100):
+                volume_i = volume.iloc[i]
+                if volume_i <= (avg_vol * p["volume_surge_pct"] / 100):
                     continue
 
                 # RSI momentum confirmation
@@ -123,14 +123,15 @@ class MomentumBreakout(BaseStrategy):
                     continue
 
                 # Entry signal
-                atr_val = atr.iloc[i] if pd.notna(atr.iloc[i]) else current_close * 0.02
+                atr_i = atr.iloc[i]
+                atr_val = atr_i if pd.notna(atr_i) else current_close * 0.02
                 entry_price = current_close
                 stop_price = entry_price - p["stop_loss_atr_mult"] * atr_val
                 peak_price = entry_price
                 trailing_stop = entry_price - p["trailing_stop_atr_mult"] * atr_val
 
                 # Confidence based on volume surge magnitude
-                surge_ratio = volume.iloc[i] / avg_vol if avg_vol > 0 else 1
+                surge_ratio = volume_i / avg_vol if avg_vol > 0 else 1
                 conf = min(1.0, (surge_ratio - 1) / 4)
 
                 signals.iloc[i, signals.columns.get_loc("signal")] = 1
