@@ -82,13 +82,9 @@ class TestFeatureEngineer:
         assert "Gap" in result.columns
         assert "Gap_Pct" in result.columns
 
-    def test_pivot_points(self):
+    def test_no_unused_indicators(self):
         df = _make_ohlcv()
         fe = FeatureEngineer()
         result = fe.process(df)
-        valid = result.dropna(subset=["Pivot"])
-        # Pivot = (H+L+C)/3 of previous day
-        row = valid.iloc[-1]
-        prev = df.iloc[-2]
-        expected = (prev["High"] + prev["Low"] + prev["Close"]) / 3
-        assert abs(row["Pivot"] - expected) < 0.01
+        for removed in ["Pivot", "Pivot_R1", "Pivot_S1", "Fib_0.236", "PSAR"]:
+            assert removed not in result.columns, f"{removed} should have been removed"
