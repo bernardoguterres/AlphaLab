@@ -6,7 +6,9 @@ from unittest.mock import MagicMock, patch
 from src.screener.fundamental_screener import FundamentalScreener, ScreenerResult
 
 
-def _make_info(pe=15.0, roe=0.20, market_cap=5e9, dte=0.5, name="Test Co", sector="Tech"):
+def _make_info(
+    pe=15.0, roe=0.20, market_cap=5e9, dte=0.5, name="Test Co", sector="Tech"
+):
     return {
         "trailingPE": pe,
         "returnOnEquity": roe,
@@ -37,9 +39,9 @@ class TestFundamentalScreener(unittest.TestCase):
     @patch("src.screener.fundamental_screener.yf.Ticker")
     def test_basic_screen_returns_ranked_results(self, mock_ticker_cls):
         infos = {
-            "A": _make_info(pe=10.0, roe=0.30),   # High EY (0.10), high ROE
-            "B": _make_info(pe=20.0, roe=0.10),   # Low EY (0.05), low ROE
-            "C": _make_info(pe=15.0, roe=0.20),   # Mid EY (0.067), mid ROE
+            "A": _make_info(pe=10.0, roe=0.30),  # High EY (0.10), high ROE
+            "B": _make_info(pe=20.0, roe=0.10),  # Low EY (0.05), low ROE
+            "C": _make_info(pe=15.0, roe=0.20),  # Mid EY (0.067), mid ROE
         }
         mock_ticker_cls.side_effect = lambda t: _mock_ticker(infos[t])
 
@@ -70,7 +72,7 @@ class TestFundamentalScreener(unittest.TestCase):
         # yfinance debtToEquity is a percentage: 300 = 300% = 3.0× ratio (filtered out)
         infos = {
             "A": _make_info(pe=10.0, roe=0.30, dte=300.0),  # 3.0× D/E → filtered
-            "B": _make_info(pe=15.0, roe=0.20, dte=50.0),   # 0.5× D/E → passes
+            "B": _make_info(pe=15.0, roe=0.20, dte=50.0),  # 0.5× D/E → passes
         }
         mock_ticker_cls.side_effect = lambda t: _mock_ticker(infos[t])
 
@@ -83,7 +85,7 @@ class TestFundamentalScreener(unittest.TestCase):
     @patch("src.screener.fundamental_screener.yf.Ticker")
     def test_skips_negative_pe(self, mock_ticker_cls):
         infos = {
-            "A": _make_info(pe=-5.0, roe=0.30),   # Negative P/E (loss-making)
+            "A": _make_info(pe=-5.0, roe=0.30),  # Negative P/E (loss-making)
             "B": _make_info(pe=15.0, roe=0.20),
         }
         mock_ticker_cls.side_effect = lambda t: _mock_ticker(infos[t])
@@ -100,6 +102,7 @@ class TestFundamentalScreener(unittest.TestCase):
             if ticker == "BAD":
                 raise Exception("Network error")
             return _mock_ticker(_make_info())
+
         mock_ticker_cls.side_effect = side_effect
 
         screener = self._make_screener(["BAD", "GOOD"])

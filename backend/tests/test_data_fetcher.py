@@ -11,7 +11,12 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.data.fetcher import DataFetcher, DataFetchError, InvalidTickerError, InsufficientDataError
+from src.data.fetcher import (
+    DataFetcher,
+    DataFetchError,
+    InvalidTickerError,
+    InsufficientDataError,
+)
 
 
 def _mock_download(n=200):

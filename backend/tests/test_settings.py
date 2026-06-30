@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.utils.settings_manager import SettingsManager
@@ -89,7 +90,9 @@ class TestSettingsManager:
             },
         }
 
-        with pytest.raises(ValueError, match="API keys must be set as environment variables"):
+        with pytest.raises(
+            ValueError, match="API keys must be set as environment variables"
+        ):
             mgr.save_settings(settings_with_key)
 
         # Try with secret_key
@@ -101,7 +104,9 @@ class TestSettingsManager:
             },
         }
 
-        with pytest.raises(ValueError, match="API keys must be set as environment variables"):
+        with pytest.raises(
+            ValueError, match="API keys must be set as environment variables"
+        ):
             mgr.save_settings(settings_with_secret)
 
     def test_configured_flags_not_saved(self, tmp_path):
@@ -194,7 +199,9 @@ class TestSettingsValidators:
             },
         }
 
-        with pytest.raises(ValidationError, match="API keys must be set as environment variables"):
+        with pytest.raises(
+            ValidationError, match="API keys must be set as environment variables"
+        ):
             NotificationSettingsRequest(**data_with_key)
 
     def test_reject_secret_key_in_request(self):
@@ -216,7 +223,9 @@ class TestSettingsValidators:
             },
         }
 
-        with pytest.raises(ValidationError, match="API keys must be set as environment variables"):
+        with pytest.raises(
+            ValidationError, match="API keys must be set as environment variables"
+        ):
             NotificationSettingsRequest(**data_with_secret)
 
     def test_drawdown_threshold_validation(self):

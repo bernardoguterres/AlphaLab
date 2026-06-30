@@ -50,6 +50,7 @@ from ..utils.settings_manager import SettingsManager
 try:
     import sys
     import os
+
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
     from strategy_schema import StrategyExportSchema, export_strategy_to_json
 except ImportError:
@@ -98,7 +99,10 @@ def create_app() -> Flask:
         if elapsed > 2000:
             logger.warning(
                 "[%s] Slow request: %s %s took %.0fms",
-                g.request_id, request.method, request.path, elapsed,
+                g.request_id,
+                request.method,
+                request.path,
+                elapsed,
             )
         return response
 
@@ -134,7 +138,9 @@ def create_app() -> Flask:
 
         for ticker in body.tickers:
             try:
-                res = fetcher.fetch(ticker, body.start_date, body.end_date, body.interval)
+                res = fetcher.fetch(
+                    ticker, body.start_date, body.end_date, body.interval
+                )
                 results[ticker] = {
                     "records": res["metadata"]["records"],
                     "quality_score": res["metadata"]["quality_score"],
@@ -144,11 +150,13 @@ def create_app() -> Flask:
             except DataFetchError as e:
                 errors.append({"ticker": ticker, "error": str(e)})
 
-        return jsonify({
-            "status": "ok",
-            "data": results,
-            "errors": errors,
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "data": results,
+                "errors": errors,
+            }
+        )
 
     @app.route("/api/data/available")
     def available_data():
@@ -174,11 +182,16 @@ def create_app() -> Flask:
         validator = DataValidator()
         cleaned, report = validator.validate_and_clean(raw["data"], body.ticker)
         if not report.is_acceptable:
-            return jsonify({
-                "status": "error",
-                "message": f"Data quality too low ({report.confidence:.2f})",
-                "quality_report": report.to_dict(),
-            }), 422
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": f"Data quality too low ({report.confidence:.2f})",
+                        "quality_report": report.to_dict(),
+                    }
+                ),
+                422,
+            )
 
         processor = FeatureEngineer()
         featured = processor.process(cleaned)
@@ -187,7 +200,12 @@ def create_app() -> Flask:
         # Build strategy
         strategy_cls = STRATEGY_MAP.get(body.strategy)
         if not strategy_cls:
-            return jsonify({"status": "error", "message": f"Unknown strategy: {body.strategy}"}), 400
+            return (
+                jsonify(
+                    {"status": "error", "message": f"Unknown strategy: {body.strategy}"}
+                ),
+                400,
+            )
 
         strategy = strategy_cls(body.params or {})
 
@@ -219,8 +237,10 @@ def create_app() -> Flask:
                 "end_date": body.end_date,
                 "initial_capital": body.initial_capital,
                 "params": body.params or {},
-                "risk_settings": body.risk_settings.model_dump() if body.risk_settings else None,
-            }
+                "risk_settings": (
+                    body.risk_settings.model_dump() if body.risk_settings else None
+                ),
+            },
         }
 
         response = results.to_dict()
@@ -247,10 +267,15 @@ def create_app() -> Flask:
         validator = DataValidator()
         cleaned, report = validator.validate_and_clean(raw["data"], body.ticker)
         if not report.is_acceptable:
-            return jsonify({
-                "status": "error",
-                "message": f"Data quality too low ({report.confidence:.2f})",
-            }), 422
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": f"Data quality too low ({report.confidence:.2f})",
+                    }
+                ),
+                422,
+            )
 
         processor = FeatureEngineer()
         featured = processor.process(cleaned)
@@ -306,10 +331,15 @@ def create_app() -> Flask:
         validator = DataValidator()
         cleaned, report = validator.validate_and_clean(raw["data"], body.ticker)
         if not report.is_acceptable:
-            return jsonify({
-                "status": "error",
-                "message": f"Data quality too low ({report.confidence:.2f})",
-            }), 422
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": f"Data quality too low ({report.confidence:.2f})",
+                    }
+                ),
+                422,
+            )
 
         processor = FeatureEngineer()
         featured = processor.process(cleaned)
@@ -322,15 +352,29 @@ def create_app() -> Flask:
 
         # Generate parameter value ranges
         import numpy as np
-        param1_values = list(np.arange(body.param1_min, body.param1_max + body.param1_step, body.param1_step))
-        param2_values = list(np.arange(body.param2_min, body.param2_max + body.param2_step, body.param2_step))
+
+        param1_values = list(
+            np.arange(
+                body.param1_min, body.param1_max + body.param1_step, body.param1_step
+            )
+        )
+        param2_values = list(
+            np.arange(
+                body.param2_min, body.param2_max + body.param2_step, body.param2_step
+            )
+        )
 
         # Limit grid size to prevent excessive computation
         if len(param1_values) * len(param2_values) > 400:
-            return jsonify({
-                "status": "error",
-                "message": "Heatmap grid too large (max 400 cells). Use larger step sizes."
-            }), 400
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Heatmap grid too large (max 400 cells). Use larger step sizes.",
+                    }
+                ),
+                400,
+            )
 
         # Initialize optimizer
         param_optimizer = ParameterOptimizer()
@@ -428,7 +472,12 @@ def create_app() -> Flask:
         # Get strategy class
         strategy_cls = STRATEGY_MAP.get(body.strategy)
         if not strategy_cls:
-            return jsonify({"status": "error", "message": f"Unknown strategy: {body.strategy}"}), 400
+            return (
+                jsonify(
+                    {"status": "error", "message": f"Unknown strategy: {body.strategy}"}
+                ),
+                400,
+            )
 
         results = []
         errors = []
@@ -445,10 +494,12 @@ def create_app() -> Flask:
                 # Validate and clean
                 cleaned, report = validator.validate_and_clean(raw["data"], ticker)
                 if not report.is_acceptable:
-                    errors.append({
-                        "ticker": ticker,
-                        "error": f"Data quality too low ({report.confidence:.2f})"
-                    })
+                    errors.append(
+                        {
+                            "ticker": ticker,
+                            "error": f"Data quality too low ({report.confidence:.2f})",
+                        }
+                    )
                     continue
 
                 # Process features
@@ -470,18 +521,22 @@ def create_app() -> Flask:
                 )
 
                 # Calculate metrics
-                metrics = metrics_calc.calculate_all(backtest_result.equity_curve, backtest_result.trades)
+                metrics = metrics_calc.calculate_all(
+                    backtest_result.equity_curve, backtest_result.trades
+                )
 
-                results.append({
-                    "ticker": ticker,
-                    "total_return_pct": backtest_result.total_return_pct,
-                    "sharpe_ratio": metrics["risk"]["sharpe_ratio"],
-                    "max_drawdown_pct": metrics["drawdown"]["max_drawdown_pct"],
-                    "win_rate": metrics["trades"]["win_rate"],
-                    "total_trades": len(backtest_result.trades),
-                    "final_value": backtest_result.final_value,
-                    "metrics": metrics,
-                })
+                results.append(
+                    {
+                        "ticker": ticker,
+                        "total_return_pct": backtest_result.total_return_pct,
+                        "sharpe_ratio": metrics["risk"]["sharpe_ratio"],
+                        "max_drawdown_pct": metrics["drawdown"]["max_drawdown_pct"],
+                        "win_rate": metrics["trades"]["win_rate"],
+                        "total_trades": len(backtest_result.trades),
+                        "final_value": backtest_result.final_value,
+                        "metrics": metrics,
+                    }
+                )
 
             except DataFetchError as e:
                 errors.append({"ticker": ticker, "error": str(e)})
@@ -495,7 +550,9 @@ def create_app() -> Flask:
         # Calculate batch summary
         total_runtime = time.time() - start_time
         num_profitable = sum(1 for r in results if r["total_return_pct"] > 0)
-        avg_sharpe = sum(r["sharpe_ratio"] for r in results) / len(results) if results else 0
+        avg_sharpe = (
+            sum(r["sharpe_ratio"] for r in results) / len(results) if results else 0
+        )
 
         best_ticker = results[0] if results else None
         worst_ticker = results[-1] if results else None
@@ -508,20 +565,26 @@ def create_app() -> Flask:
             "profitable_pct": (num_profitable / len(results) * 100) if results else 0,
             "avg_sharpe_ratio": round(avg_sharpe, 2),
             "best_ticker": best_ticker["ticker"] if best_ticker else None,
-            "best_sharpe": round(best_ticker["sharpe_ratio"], 2) if best_ticker else None,
+            "best_sharpe": (
+                round(best_ticker["sharpe_ratio"], 2) if best_ticker else None
+            ),
             "worst_ticker": worst_ticker["ticker"] if worst_ticker else None,
-            "worst_sharpe": round(worst_ticker["sharpe_ratio"], 2) if worst_ticker else None,
+            "worst_sharpe": (
+                round(worst_ticker["sharpe_ratio"], 2) if worst_ticker else None
+            ),
             "runtime_seconds": round(total_runtime, 1),
         }
 
-        return jsonify({
-            "status": "ok",
-            "data": {
-                "results": results,
-                "batch_summary": batch_summary,
-                "errors": errors,
+        return jsonify(
+            {
+                "status": "ok",
+                "data": {
+                    "results": results,
+                    "batch_summary": batch_summary,
+                    "errors": errors,
+                },
             }
-        })
+        )
 
     @app.route("/api/portfolio/optimize", methods=["POST"])
     def optimize_portfolio():
@@ -544,9 +607,11 @@ def create_app() -> Flask:
             # Extract results from store (strip wrapper)
             backtest_results = {}
             for strat in strategies:
-                bt_id = strat['backtest_id']
+                bt_id = strat["backtest_id"]
                 if bt_id in _results_store:
-                    backtest_results[bt_id] = _results_store[bt_id].get('results', _results_store[bt_id])
+                    backtest_results[bt_id] = _results_store[bt_id].get(
+                        "results", _results_store[bt_id]
+                    )
 
             # Build returns matrix from stored backtests
             returns_matrix, labels = build_returns_matrix(strategies, backtest_results)
@@ -595,7 +660,15 @@ def create_app() -> Flask:
         # Look up stored backtest
         stored = _results_store.get(body.backtest_id)
         if not stored:
-            return jsonify({"status": "error", "message": f"Backtest {body.backtest_id} not found"}), 404
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": f"Backtest {body.backtest_id} not found",
+                    }
+                ),
+                404,
+            )
 
         results = stored["results"]
         req = stored["request"]
@@ -622,13 +695,19 @@ def create_app() -> Flask:
                     export_json = validated.model_dump(mode="json", exclude_none=True)
                 except ValidationError as e:
                     logger.error(f"Export validation failed: {e}")
-                    return jsonify({
-                        "status": "error",
-                        "message": f"Export validation failed: {str(e)}"
-                    }), 422
+                    return (
+                        jsonify(
+                            {
+                                "status": "error",
+                                "message": f"Export validation failed: {str(e)}",
+                            }
+                        ),
+                        422,
+                    )
 
             # Convert to JSON string
             import json
+
             json_str = json.dumps(export_json, indent=2)
 
             # Return as downloadable file
@@ -640,10 +719,12 @@ def create_app() -> Flask:
                 headers={
                     "Content-Disposition": f'attachment; filename="{filename}"',
                     "X-Backtest-Id": body.backtest_id,
-                }
+                },
             )
 
-            logger.info(f"Exported strategy {req['strategy']} for {req['ticker']} (backtest {body.backtest_id})")
+            logger.info(
+                f"Exported strategy {req['strategy']} for {req['ticker']} (backtest {body.backtest_id})"
+            )
             return response
 
         except Exception as e:
@@ -664,10 +745,12 @@ def create_app() -> Flask:
         settings_mgr = SettingsManager()
         settings = settings_mgr.load_settings()
 
-        return jsonify({
-            "status": "ok",
-            "data": settings,
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "data": settings,
+            }
+        )
 
     @app.route("/api/settings/notifications", methods=["POST"])
     def save_notification_settings():
@@ -691,10 +774,12 @@ def create_app() -> Flask:
 
         try:
             settings_mgr.save_settings(settings)
-            return jsonify({
-                "status": "ok",
-                "message": "Settings saved successfully",
-            })
+            return jsonify(
+                {
+                    "status": "ok",
+                    "message": "Settings saved successfully",
+                }
+            )
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 400
         except Exception as e:
@@ -713,17 +798,27 @@ def create_app() -> Flask:
 
         bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
         if not bot_token:
-            return jsonify({
-                "status": "error",
-                "message": "TELEGRAM_BOT_TOKEN environment variable not set",
-            }), 400
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "TELEGRAM_BOT_TOKEN environment variable not set",
+                    }
+                ),
+                400,
+            )
 
         chat_id = os.environ.get("TELEGRAM_CHAT_ID")
         if not chat_id:
-            return jsonify({
-                "status": "error",
-                "message": "TELEGRAM_CHAT_ID environment variable not set",
-            }), 400
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "TELEGRAM_CHAT_ID environment variable not set",
+                    }
+                ),
+                400,
+            )
 
         try:
             # Send test message using httpx (no library)
@@ -738,22 +833,34 @@ def create_app() -> Flask:
             )
 
             if response.status_code == 200:
-                return jsonify({
-                    "status": "ok",
-                    "message": "Test message sent successfully",
-                })
+                return jsonify(
+                    {
+                        "status": "ok",
+                        "message": "Test message sent successfully",
+                    }
+                )
             else:
-                return jsonify({
-                    "status": "error",
-                    "message": f"Telegram API returned status {response.status_code}: {response.text}",
-                }), 400
+                return (
+                    jsonify(
+                        {
+                            "status": "error",
+                            "message": f"Telegram API returned status {response.status_code}: {response.text}",
+                        }
+                    ),
+                    400,
+                )
 
         except Exception as e:
             logger.exception("Telegram test failed")
-            return jsonify({
-                "status": "error",
-                "message": f"Failed to send test message: {str(e)}",
-            }), 500
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": f"Failed to send test message: {str(e)}",
+                    }
+                ),
+                500,
+            )
 
     @app.route("/api/settings/alpaca/test", methods=["POST"])
     def test_alpaca():
@@ -768,10 +875,15 @@ def create_app() -> Flask:
         secret_key = os.environ.get("ALPACA_SECRET_KEY")
 
         if not api_key or not secret_key:
-            return jsonify({
-                "status": "error",
-                "message": "ALPACA_API_KEY and ALPACA_SECRET_KEY environment variables must be set",
-            }), 400
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "ALPACA_API_KEY and ALPACA_SECRET_KEY environment variables must be set",
+                    }
+                ),
+                400,
+            )
 
         try:
             # Test connection using alpaca-py
@@ -788,29 +900,41 @@ def create_app() -> Flask:
             # Test by getting account info
             account = client.get_account()
 
-            return jsonify({
-                "status": "ok",
-                "message": f"Connection successful (paper={paper})",
-                "data": {
-                    "account_number": account.account_number,
-                    "status": account.status,
-                    "buying_power": float(account.buying_power),
-                    "cash": float(account.cash),
-                    "paper_trading": paper,
-                },
-            })
+            return jsonify(
+                {
+                    "status": "ok",
+                    "message": f"Connection successful (paper={paper})",
+                    "data": {
+                        "account_number": account.account_number,
+                        "status": account.status,
+                        "buying_power": float(account.buying_power),
+                        "cash": float(account.cash),
+                        "paper_trading": paper,
+                    },
+                }
+            )
 
         except ImportError:
-            return jsonify({
-                "status": "error",
-                "message": "alpaca-py library not installed. Run: pip install alpaca-py",
-            }), 500
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "alpaca-py library not installed. Run: pip install alpaca-py",
+                    }
+                ),
+                500,
+            )
         except Exception as e:
             logger.exception("Alpaca test failed")
-            return jsonify({
-                "status": "error",
-                "message": f"Connection failed: {str(e)}",
-            }), 400
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": f"Connection failed: {str(e)}",
+                    }
+                ),
+                400,
+            )
 
     # ------------------------------------------------------------------
     # Screener
@@ -846,29 +970,31 @@ def create_app() -> Flask:
                 max_debt_to_equity=max_dte,
             )
             results = screener.screen(top_n=top_n)
-            return jsonify({
-                "status": "ok",
-                "data": {
-                    "candidates": [
-                        {
-                            "rank": r.combined_rank,
-                            "ticker": r.ticker,
-                            "company": r.company_name,
-                            "sector": r.sector,
-                            "earnings_yield_pct": round(r.earnings_yield * 100, 2),
-                            "roe_pct": round(r.return_on_equity * 100, 2),
-                            "pe_ratio": round(r.pe_ratio, 2),
-                            "market_cap_b": round(r.market_cap_b, 2),
-                            "debt_to_equity": round(r.debt_to_equity, 2),
-                            "ey_rank": r.earnings_yield_rank,
-                            "roe_rank": r.roe_rank,
-                        }
-                        for r in results
-                    ],
-                    "total_screened": len(tickers),
-                    "total_qualified": len(results),
-                },
-            })
+            return jsonify(
+                {
+                    "status": "ok",
+                    "data": {
+                        "candidates": [
+                            {
+                                "rank": r.combined_rank,
+                                "ticker": r.ticker,
+                                "company": r.company_name,
+                                "sector": r.sector,
+                                "earnings_yield_pct": round(r.earnings_yield * 100, 2),
+                                "roe_pct": round(r.return_on_equity * 100, 2),
+                                "pe_ratio": round(r.pe_ratio, 2),
+                                "market_cap_b": round(r.market_cap_b, 2),
+                                "debt_to_equity": round(r.debt_to_equity, 2),
+                                "ey_rank": r.earnings_yield_rank,
+                                "roe_rank": r.roe_rank,
+                            }
+                            for r in results
+                        ],
+                        "total_screened": len(tickers),
+                        "total_qualified": len(results),
+                    },
+                }
+            )
         except Exception as exc:
             logger.exception("Greenblatt screen failed")
             return jsonify({"status": "error", "message": str(exc)}), 500
@@ -907,7 +1033,9 @@ def _build_export_json(
         "sharpe_ratio": round(metrics.get("risk", {}).get("sharpe_ratio", 0.0), 2),
         "sortino_ratio": round(metrics.get("risk", {}).get("sortino_ratio", 0.0), 2),
         "total_return_pct": round(results.get("total_return_pct", 0.0), 2),
-        "max_drawdown_pct": round(metrics.get("drawdown", {}).get("max_drawdown", 0.0), 2),
+        "max_drawdown_pct": round(
+            metrics.get("drawdown", {}).get("max_drawdown", 0.0), 2
+        ),
         "win_rate_pct": round(metrics.get("trades", {}).get("win_rate", 0.0) * 100, 2),
         "profit_factor": round(metrics.get("trades", {}).get("profit_factor", 0.0), 2),
         "total_trades": results.get("total_trades", 0),
@@ -983,7 +1111,7 @@ def _build_export_json(
                 "end": end_date,
             },
             "performance": performance,
-        }
+        },
     }
 
     return export

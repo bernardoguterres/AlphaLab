@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.backtest.portfolio_optimizer import (
@@ -46,7 +47,7 @@ class TestPortfolioOptimizer:
 
         assert "optimal_weights" in result
         assert len(result["optimal_weights"]) == 3
-        assert all(abs(w - 1/3) < 0.01 for w in result["optimal_weights"])
+        assert all(abs(w - 1 / 3) < 0.01 for w in result["optimal_weights"])
         assert abs(sum(result["optimal_weights"]) - 1.0) < 1e-6
 
     def test_max_sharpe(self):
@@ -79,7 +80,9 @@ class TestPortfolioOptimizer:
 
         # Risk should be lower than equal weight
         eq_result = optimizer.optimize(method="equal_weight")
-        assert result["expected_risk"] <= eq_result["expected_risk"] + 0.01  # Small tolerance
+        assert (
+            result["expected_risk"] <= eq_result["expected_risk"] + 0.01
+        )  # Small tolerance
 
     def test_risk_parity(self):
         """Test risk parity optimization."""
@@ -100,11 +103,7 @@ class TestPortfolioOptimizer:
         returns = _make_returns_matrix(n=252, n_strategies=3)
         optimizer = PortfolioOptimizer(returns)
 
-        result = optimizer.optimize(
-            method="max_sharpe",
-            max_weight=0.5,
-            min_weight=0.1
-        )
+        result = optimizer.optimize(method="max_sharpe", max_weight=0.5, min_weight=0.1)
 
         # All weights should be within bounds
         assert all(0.1 <= w <= 0.5 for w in result["optimal_weights"])
@@ -138,11 +137,14 @@ class TestPortfolioOptimizer:
         dates = pd.bdate_range("2020-01-01", periods=n)
         base_returns = np.random.normal(0.0004, 0.01, n)
 
-        returns_df = pd.DataFrame({
-            "Strategy_1": base_returns,
-            "Strategy_2": base_returns * 1.0,  # Perfect correlation
-            "Strategy_3": base_returns * 0.95,  # Near-perfect correlation
-        }, index=dates)
+        returns_df = pd.DataFrame(
+            {
+                "Strategy_1": base_returns,
+                "Strategy_2": base_returns * 1.0,  # Perfect correlation
+                "Strategy_3": base_returns * 0.95,  # Near-perfect correlation
+            },
+            index=dates,
+        )
 
         optimizer = PortfolioOptimizer(returns_df)
         result = optimizer.optimize(method="min_variance")
@@ -203,7 +205,7 @@ class TestPortfolioOptimizer:
                     {"date": "2020-01-02", "value": 100500},
                     {"date": "2020-01-03", "value": 101000},
                 ]
-            }
+            },
         }
 
         returns_df, labels = build_returns_matrix(strategies, backtest_results)
@@ -225,7 +227,11 @@ class TestPortfolioOptimizer:
         """Test handling of missing backtest IDs."""
         strategies = [
             {"backtest_id": "bt_1", "ticker": "AAPL", "strategy": "ma_crossover"},
-            {"backtest_id": "bt_missing", "ticker": "MSFT", "strategy": "rsi_mean_reversion"},
+            {
+                "backtest_id": "bt_missing",
+                "ticker": "MSFT",
+                "strategy": "rsi_mean_reversion",
+            },
         ]
 
         backtest_results = {

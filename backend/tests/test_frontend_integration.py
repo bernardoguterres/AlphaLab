@@ -12,6 +12,7 @@ import pandas as pd
 import numpy as np
 
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.api.routes import create_app
@@ -40,13 +41,16 @@ def mock_yfinance():
         open_ = close + np.random.randn(1000) * 0.3
         volume = np.random.randint(1_000_000, 10_000_000, 1000)
 
-        mock_df = pd.DataFrame({
-            ("Open", "AAPL"): open_,
-            ("High", "AAPL"): high,
-            ("Low", "AAPL"): low,
-            ("Close", "AAPL"): close,
-            ("Volume", "AAPL"): volume,
-        }, index=dates)
+        mock_df = pd.DataFrame(
+            {
+                ("Open", "AAPL"): open_,
+                ("High", "AAPL"): high,
+                ("Low", "AAPL"): low,
+                ("Close", "AAPL"): close,
+                ("Volume", "AAPL"): volume,
+            },
+            index=dates,
+        )
 
         mock_download.return_value = mock_df
         yield mock_download
@@ -66,7 +70,7 @@ class TestFullBacktestFlow:
                 "start_date": "2020-01-01",
                 "end_date": "2024-12-31",
                 "interval": "1d",
-            }
+            },
         )
 
         assert fetch_response.status_code == 200
@@ -100,8 +104,8 @@ class TestFullBacktestFlow:
                     "trailing_stop_enabled": False,
                     "trailing_stop_pct": 3.0,
                     "commission_per_trade": 0.0,
-                }
-            }
+                },
+            },
         )
 
         assert backtest_response.status_code == 200
@@ -134,8 +138,7 @@ class TestFullBacktestFlow:
 
         # Step 3: Export strategy
         export_response = client.post(
-            "/api/strategies/export",
-            json={"backtest_id": backtest_id}
+            "/api/strategies/export", json={"backtest_id": backtest_id}
         )
 
         assert export_response.status_code == 200
@@ -174,7 +177,7 @@ class TestBatchBacktestFlow:
                 "start_date": "2020-01-01",
                 "end_date": "2024-12-31",
                 "interval": "1d",
-            }
+            },
         )
 
         assert fetch_response.status_code == 200
@@ -193,7 +196,7 @@ class TestBatchBacktestFlow:
                     "long_window": 200,
                 },
                 "position_sizing": "equal_weight",
-            }
+            },
         )
 
         assert batch_response.status_code == 200
@@ -240,7 +243,7 @@ class TestComparisonFlow:
                 "start_date": "2020-01-01",
                 "end_date": "2024-12-31",
                 "interval": "1d",
-            }
+            },
         )
 
         assert fetch_response.status_code == 200
@@ -250,11 +253,15 @@ class TestComparisonFlow:
             "/api/compare",
             json={
                 "ticker": "AAPL",
-                "strategies": ["ma_crossover", "rsi_mean_reversion", "momentum_breakout"],
+                "strategies": [
+                    "ma_crossover",
+                    "rsi_mean_reversion",
+                    "momentum_breakout",
+                ],
                 "start_date": "2020-01-01",
                 "end_date": "2024-12-31",
                 "initial_capital": 100000,
-            }
+            },
         )
 
         assert compare_response.status_code == 200
@@ -290,7 +297,7 @@ class TestPortfolioOptimizeFlow:
                 "start_date": "2020-01-01",
                 "end_date": "2024-12-31",
                 "interval": "1d",
-            }
+            },
         )
 
         # Step 2: Run 3 backtests with different strategies
@@ -309,7 +316,7 @@ class TestPortfolioOptimizeFlow:
                     "params": {},
                     "position_sizing": "equal_weight",
                     "monte_carlo_runs": 0,
-                }
+                },
             )
 
             assert response.status_code == 200
@@ -321,17 +328,29 @@ class TestPortfolioOptimizeFlow:
             "/api/portfolio/optimize",
             json={
                 "strategies": [
-                    {"backtest_id": backtest_ids[0], "ticker": "AAPL", "strategy": strategies[0]},
-                    {"backtest_id": backtest_ids[1], "ticker": "AAPL", "strategy": strategies[1]},
-                    {"backtest_id": backtest_ids[2], "ticker": "AAPL", "strategy": strategies[2]},
+                    {
+                        "backtest_id": backtest_ids[0],
+                        "ticker": "AAPL",
+                        "strategy": strategies[0],
+                    },
+                    {
+                        "backtest_id": backtest_ids[1],
+                        "ticker": "AAPL",
+                        "strategy": strategies[1],
+                    },
+                    {
+                        "backtest_id": backtest_ids[2],
+                        "ticker": "AAPL",
+                        "strategy": strategies[2],
+                    },
                 ],
                 "method": "max_sharpe",
                 "constraints": {
                     "max_weight_per_strategy": 0.5,
                     "min_weight_per_strategy": 0.1,
                     "target_return": None,
-                }
-            }
+                },
+            },
         )
 
         assert optimize_response.status_code == 200
@@ -394,8 +413,8 @@ class TestSettingsFlow:
                 },
                 "alpaca": {
                     "paper_trading": False,
-                }
-            }
+                },
+            },
         )
 
         assert save_response.status_code == 200
@@ -430,7 +449,10 @@ class TestSettingsFlow:
         settings_2 = get_response_2.get_json()["data"]
 
         assert settings_2["telegram"]["enabled"] == settings["telegram"]["enabled"]
-        assert settings_2["telegram"]["drawdown_threshold_pct"] == settings["telegram"]["drawdown_threshold_pct"]
+        assert (
+            settings_2["telegram"]["drawdown_threshold_pct"]
+            == settings["telegram"]["drawdown_threshold_pct"]
+        )
 
 
 class TestAllStrategiesBacktest:
@@ -447,7 +469,7 @@ class TestAllStrategiesBacktest:
                 "start_date": "2020-01-01",
                 "end_date": "2024-12-31",
                 "interval": "1d",
-            }
+            },
         )
 
         strategies = [
@@ -470,7 +492,7 @@ class TestAllStrategiesBacktest:
                     "params": {},  # Use default params
                     "position_sizing": "equal_weight",
                     "monte_carlo_runs": 0,
-                }
+                },
             )
 
             assert response.status_code == 200, f"Strategy {strategy} failed"
@@ -489,7 +511,11 @@ class TestAllStrategiesBacktest:
             # Verify metrics are reasonable (not NaN or infinite)
             metrics = result["metrics"]
             sharpe = metrics["risk"]["sharpe_ratio"]
-            assert not np.isnan(sharpe) and not np.isinf(sharpe), f"Strategy {strategy} has invalid Sharpe ratio"
+            assert not np.isnan(sharpe) and not np.isinf(
+                sharpe
+            ), f"Strategy {strategy} has invalid Sharpe ratio"
 
             total_return = result["total_return_pct"]
-            assert not np.isnan(total_return) and not np.isinf(total_return), f"Strategy {strategy} has invalid total return"
+            assert not np.isnan(total_return) and not np.isinf(
+                total_return
+            ), f"Strategy {strategy} has invalid total return"

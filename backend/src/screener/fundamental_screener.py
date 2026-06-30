@@ -25,14 +25,14 @@ class ScreenerResult:
     ticker: str
     company_name: str
     sector: str
-    earnings_yield: float      # 1 / PE  (higher = cheaper)
-    return_on_equity: float    # ROE     (higher = more efficient)
+    earnings_yield: float  # 1 / PE  (higher = cheaper)
+    return_on_equity: float  # ROE     (higher = more efficient)
     pe_ratio: float
-    market_cap_b: float        # billions
+    market_cap_b: float  # billions
     debt_to_equity: float
-    earnings_yield_rank: int   # 1 = best
-    roe_rank: int              # 1 = best
-    combined_rank: int         # earnings_yield_rank + roe_rank (lower = better)
+    earnings_yield_rank: int  # 1 = best
+    roe_rank: int  # 1 = best
+    combined_rank: int  # earnings_yield_rank + roe_rank (lower = better)
     raw: dict = field(default_factory=dict, repr=False)
 
 
@@ -145,7 +145,7 @@ class FundamentalScreener:
             pe_ratio=pe,
             market_cap_b=market_cap_b,
             debt_to_equity=dte,
-            earnings_yield_rank=0,   # filled in _rank()
+            earnings_yield_rank=0,  # filled in _rank()
             roe_rank=0,
             combined_rank=0,
             raw=info,
@@ -155,7 +155,9 @@ class FundamentalScreener:
         out = []
         for r in results:
             if r.market_cap_b < self.min_market_cap_b:
-                logger.debug(f"{r.ticker}: market cap {r.market_cap_b:.1f}B < min, skip")
+                logger.debug(
+                    f"{r.ticker}: market cap {r.market_cap_b:.1f}B < min, skip"
+                )
                 continue
             if r.debt_to_equity > self.max_debt_to_equity:
                 logger.debug(f"{r.ticker}: D/E {r.debt_to_equity:.1f} > max, skip")

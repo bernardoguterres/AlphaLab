@@ -110,7 +110,9 @@ class Portfolio:
                 position_val = exec_price * order.shares
                 if position_val / portfolio_val > self.max_position_pct:
                     order.status = OrderStatus.REJECTED
-                    order.reason = f"Position exceeds {self.max_position_pct*100:.0f}% limit"
+                    order.reason = (
+                        f"Position exceeds {self.max_position_pct*100:.0f}% limit"
+                    )
                     self._log_trade(order, timestamp)
                     return order
 
@@ -121,7 +123,9 @@ class Portfolio:
             new_shares = prev_shares + order.shares
             self.positions[order.ticker] = new_shares
             if new_shares > 0:
-                self.avg_cost[order.ticker] = (prev_cost + exec_price * order.shares) / new_shares
+                self.avg_cost[order.ticker] = (
+                    prev_cost + exec_price * order.shares
+                ) / new_shares
 
         else:  # SELL
             held = self.positions.get(order.ticker, 0)
@@ -169,7 +173,9 @@ class Portfolio:
         return self.cash
 
     def can_afford(self, ticker: str, shares: int, price: float) -> bool:
-        cost = price * shares * (1 + self.slippage_pct) + abs(price * shares * self.commission_rate)
+        cost = price * shares * (1 + self.slippage_pct) + abs(
+            price * shares * self.commission_rate
+        )
         return self._can_afford(cost)
 
     def get_position(self, ticker: str) -> int:
@@ -192,7 +198,11 @@ class Portfolio:
         max_risk = current_portfolio_value * self.max_loss_per_trade_pct
         shares = int(max_risk / risk_per_share)
         # Also cap by max position size
-        max_by_size = int(current_portfolio_value * self.max_position_pct / price) if price > 0 else 0
+        max_by_size = (
+            int(current_portfolio_value * self.max_position_pct / price)
+            if price > 0
+            else 0
+        )
         return max(0, min(shares, max_by_size))
 
     def update_trailing_stops(self, current_prices: dict[str, float]):
@@ -221,7 +231,9 @@ class Portfolio:
         reserve = self.initial_capital * self.cash_reserve_pct
         return self.cash - cost >= reserve
 
-    def _get_execution_price(self, order: Order, market_price: float) -> Optional[float]:
+    def _get_execution_price(
+        self, order: Order, market_price: float
+    ) -> Optional[float]:
         if order.order_type == OrderType.MARKET:
             return market_price
         if order.order_type == OrderType.LIMIT:
@@ -253,7 +265,8 @@ class Portfolio:
             self.halted = True
             logger.warning(
                 "Trading HALTED: drawdown %.1f%% exceeds limit %.1f%%",
-                dd * 100, self.max_drawdown_pct * 100,
+                dd * 100,
+                self.max_drawdown_pct * 100,
             )
 
     def _log_trade(self, order: Order, timestamp):

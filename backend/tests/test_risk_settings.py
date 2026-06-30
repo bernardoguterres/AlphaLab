@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.api.validators import RiskSettings
@@ -30,13 +31,16 @@ def _make_test_data(n=300):
     open_ = close + np.random.normal(0, 0.5, n)
     volume = np.random.randint(1_000_000, 5_000_000, n)
 
-    df = pd.DataFrame({
-        "Open": open_,
-        "High": high,
-        "Low": low,
-        "Close": close,
-        "Volume": volume,
-    }, index=dates)
+    df = pd.DataFrame(
+        {
+            "Open": open_,
+            "High": high,
+            "Low": low,
+            "Close": close,
+            "Volume": volume,
+        },
+        index=dates,
+    )
 
     processor = FeatureEngineer()
     return processor.process(df)

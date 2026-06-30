@@ -38,11 +38,11 @@ class GreenblattWeekly(BaseStrategy):
     def validate_params(self):
         p = self.params
         p.setdefault("fast_sma", 10)
-        p.setdefault("slow_sma", 50)            # 50 weeks ≈ 1 year
+        p.setdefault("slow_sma", 50)  # 50 weeks ≈ 1 year
         p.setdefault("rsi_period", 14)
         p.setdefault("rsi_oversold", 35)
         p.setdefault("rsi_overbought", 65)
-        p.setdefault("min_hold_bars", 52)        # 52 weeks = ~1 year
+        p.setdefault("min_hold_bars", 52)  # 52 weeks = ~1 year
         p.setdefault("trailing_stop_pct", 0.20)  # 20% below peak
         p.setdefault("exit_rsi_overbought", False)
         p.setdefault("exit_sma_cross", False)
@@ -108,7 +108,11 @@ class GreenblattWeekly(BaseStrategy):
 
                 min_hold_met = bars_held >= p["min_hold_bars"]
 
-                if min_hold_met and p["exit_rsi_overbought"] and rsi.iloc[i] > p["rsi_overbought"]:
+                if (
+                    min_hold_met
+                    and p["exit_rsi_overbought"]
+                    and rsi.iloc[i] > p["rsi_overbought"]
+                ):
                     signals.at[data.index[i], "signal"] = -1
                     signals.at[data.index[i], "confidence"] = 0.75
                     signals.at[data.index[i], "reason"] = (
@@ -142,7 +146,9 @@ class GreenblattWeekly(BaseStrategy):
             if rsi_oversold or sma_cross_up:
                 reasons, conf = [], 0.0
                 if rsi_oversold:
-                    reasons.append(f"Weekly RSI oversold ({rsi.iloc[i]:.1f} < {p['rsi_oversold']})")
+                    reasons.append(
+                        f"Weekly RSI oversold ({rsi.iloc[i]:.1f} < {p['rsi_oversold']})"
+                    )
                     conf = max(conf, 0.75)
                 if sma_cross_up:
                     reasons.append(

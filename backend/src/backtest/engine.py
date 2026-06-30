@@ -105,15 +105,20 @@ class BacktestEngine:
         signals = strategy.generate_signals(df)
 
         # Run core simulation
-        portfolio, trades = self._simulate(df, signals, capital, position_sizing,
-                                           max_drawdown_pct=max_drawdown_pct)
+        portfolio, trades = self._simulate(
+            df, signals, capital, position_sizing, max_drawdown_pct=max_drawdown_pct
+        )
 
         results = BacktestResults(
             strategy_name=strategy.name,
             initial_capital=capital,
-            final_value=portfolio.get_portfolio_value(
-                {col: df["Close"].iloc[-1] for col in portfolio.positions}
-            ) if portfolio.positions else portfolio.cash,
+            final_value=(
+                portfolio.get_portfolio_value(
+                    {col: df["Close"].iloc[-1] for col in portfolio.positions}
+                )
+                if portfolio.positions
+                else portfolio.cash
+            ),
             equity_curve=portfolio.value_history,
             trades=portfolio.ledger,
             signals=signals,
@@ -130,7 +135,9 @@ class BacktestEngine:
 
         logger.info(
             "Backtest complete for %s: %.2f%% return, %d trades",
-            strategy.name, results.total_return_pct, len(portfolio.ledger),
+            strategy.name,
+            results.total_return_pct,
+            len(portfolio.ledger),
         )
         return results
 
@@ -166,8 +173,13 @@ class BacktestEngine:
 
             strategy = strategy_class(strategy_params)
             r = self.run_backtest(strategy, test_data, initial_capital=capital)
-            r.walk_forward = [{"split": i, "test_start": str(test_data.index[0]),
-                               "test_end": str(test_data.index[-1])}]
+            r.walk_forward = [
+                {
+                    "split": i,
+                    "test_start": str(test_data.index[0]),
+                    "test_end": str(test_data.index[-1]),
+                }
+            ]
             results.append(r)
 
         return results
@@ -245,9 +257,17 @@ class BacktestEngine:
             # Read today's signal for tomorrow's execution
             if i < len(signals) and ts in signals.index:
                 sig = signals.loc[ts]
-                sig_val = int(sig.get("signal", 0)) if not isinstance(sig, pd.DataFrame) else 0
+                sig_val = (
+                    int(sig.get("signal", 0))
+                    if not isinstance(sig, pd.DataFrame)
+                    else 0
+                )
                 if sig_val != 0:
-                    reason = sig.get("reason", "") if not isinstance(sig, pd.DataFrame) else ""
+                    reason = (
+                        sig.get("reason", "")
+                        if not isinstance(sig, pd.DataFrame)
+                        else ""
+                    )
                     pending_signal = (sig_val, reason)
 
         return portfolio, portfolio.ledger
@@ -269,7 +289,9 @@ class BacktestEngine:
 
         if sizing == "equal_weight":
             # Use up to max_position_pct of portfolio, accounting for slippage
-            port_val = portfolio.cash  # approximate (no other position values without prices)
+            port_val = (
+                portfolio.cash
+            )  # approximate (no other position values without prices)
             max_alloc = port_val * portfolio.max_position_pct
             budget = min(available, max_alloc)
             effective_price = price * (1 + portfolio.slippage_pct)

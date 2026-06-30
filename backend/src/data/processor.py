@@ -51,7 +51,11 @@ class FeatureEngineer:
         df = self._add_statistical_features(df, benchmark)
         df = self._add_advanced_features(df)
 
-        logger.info("Feature engineering complete: %d features, %d rows", len(df.columns), len(df))
+        logger.info(
+            "Feature engineering complete: %d features, %d rows",
+            len(df.columns),
+            len(df),
+        )
         return df
 
     # ------------------------------------------------------------------
@@ -93,11 +97,14 @@ class FeatureEngineer:
         plus_dm = plus_dm.where((plus_dm > minus_dm) & (plus_dm > 0), 0.0)
         minus_dm = minus_dm.where((minus_dm > plus_dm) & (minus_dm > 0), 0.0)
 
-        tr = pd.concat([
-            high - low,
-            (high - close.shift(1)).abs(),
-            (low - close.shift(1)).abs(),
-        ], axis=1).max(axis=1)
+        tr = pd.concat(
+            [
+                high - low,
+                (high - close.shift(1)).abs(),
+                (low - close.shift(1)).abs(),
+            ],
+            axis=1,
+        ).max(axis=1)
 
         atr = tr.ewm(alpha=1 / period, adjust=False).mean()
         plus_di = 100 * (plus_dm.ewm(alpha=1 / period, adjust=False).mean() / atr)
@@ -110,7 +117,9 @@ class FeatureEngineer:
         return df
 
     @staticmethod
-    def _compute_psar(df: pd.DataFrame, af_start: float = 0.02, af_max: float = 0.2) -> pd.DataFrame:
+    def _compute_psar(
+        df: pd.DataFrame, af_start: float = 0.02, af_max: float = 0.2
+    ) -> pd.DataFrame:
         high = df["High"].values
         low = df["Low"].values
         n = len(df)
@@ -217,11 +226,14 @@ class FeatureEngineer:
         df["BB_Width"] = (df["BB_Upper"] - df["BB_Lower"]) / sma20.replace(0, np.nan)
 
         # ATR (14)
-        tr = pd.concat([
-            high - low,
-            (high - close.shift(1)).abs(),
-            (low - close.shift(1)).abs(),
-        ], axis=1).max(axis=1)
+        tr = pd.concat(
+            [
+                high - low,
+                (high - close.shift(1)).abs(),
+                (low - close.shift(1)).abs(),
+            ],
+            axis=1,
+        ).max(axis=1)
         df["ATR"] = tr.ewm(alpha=1 / 14, adjust=False).mean()
 
         # Historical volatility
@@ -299,8 +311,14 @@ class FeatureEngineer:
         df["Kurt_30"] = df["Return"].rolling(30, min_periods=30).kurt()
 
         # Beta and correlation vs benchmark
-        if benchmark is not None and "Close" in benchmark.columns and len(benchmark) > 60:
-            bench_ret = benchmark["Close"].pct_change(fill_method=None).reindex(df.index)
+        if (
+            benchmark is not None
+            and "Close" in benchmark.columns
+            and len(benchmark) > 60
+        ):
+            bench_ret = (
+                benchmark["Close"].pct_change(fill_method=None).reindex(df.index)
+            )
             df["Benchmark_Return"] = bench_ret
             rolling_cov = df["Return"].rolling(60, min_periods=60).cov(bench_ret)
             rolling_var = bench_ret.rolling(60, min_periods=60).var()

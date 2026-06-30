@@ -76,7 +76,9 @@ class DataValidator:
         df = df[~df.index.duplicated(keep="last")]
         report.duplicates_removed = before - len(df)
         if report.duplicates_removed:
-            report.warnings.append(f"Removed {report.duplicates_removed} duplicate timestamps")
+            report.warnings.append(
+                f"Removed {report.duplicates_removed} duplicate timestamps"
+            )
 
         # Step 2: Missing data analysis
         df, imputed = self._handle_missing_data(df, report)
@@ -102,7 +104,11 @@ class DataValidator:
         status = "PASS" if report.is_acceptable else "FAIL"
         logger.info(
             "Validation %s for %s: confidence=%.3f, outliers=%d, imputed=%d",
-            status, ticker, report.confidence, report.outliers_removed, report.values_imputed,
+            status,
+            ticker,
+            report.confidence,
+            report.outliers_removed,
+            report.values_imputed,
         )
         return df, report
 
@@ -165,12 +171,16 @@ class DataValidator:
         if bad_high.any():
             count = bad_high.sum()
             df.loc[bad_high, "High"] = df.loc[bad_high, ["Open", "Close"]].max(axis=1)
-            report.warnings.append(f"Corrected {count} rows where High < max(Open, Close)")
+            report.warnings.append(
+                f"Corrected {count} rows where High < max(Open, Close)"
+            )
 
         if bad_low.any():
             count = bad_low.sum()
             df.loc[bad_low, "Low"] = df.loc[bad_low, ["Open", "Close"]].min(axis=1)
-            report.warnings.append(f"Corrected {count} rows where Low > min(Open, Close)")
+            report.warnings.append(
+                f"Corrected {count} rows where Low > min(Open, Close)"
+            )
 
         return df
 
@@ -208,7 +218,9 @@ class DataValidator:
                 vol_outlier = z.abs() > self.zscore_threshold
                 if vol_outlier.any():
                     count = vol_outlier.sum()
-                    report.warnings.append(f"Flagged {count} volume anomalies (Z-score)")
+                    report.warnings.append(
+                        f"Flagged {count} volume anomalies (Z-score)"
+                    )
                     # Cap rather than remove volume outliers
                     upper_cap = vol.mean() + self.zscore_threshold * vol.std()
                     df.loc[vol_outlier, "Volume"] = upper_cap

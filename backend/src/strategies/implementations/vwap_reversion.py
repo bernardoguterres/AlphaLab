@@ -64,7 +64,9 @@ class VWAPReversion(BaseStrategy):
 
         # Calculate rolling VWAP
         typical_price = (data["High"] + data["Low"] + data["Close"]) / 3
-        vwap = (typical_price * data["Volume"]).rolling(period).sum() / data["Volume"].rolling(period).sum()
+        vwap = (typical_price * data["Volume"]).rolling(period).sum() / data[
+            "Volume"
+        ].rolling(period).sum()
 
         # Calculate standard deviation of price from VWAP
         price_diff = data["Close"] - vwap
@@ -102,16 +104,24 @@ class VWAPReversion(BaseStrategy):
                 # BUY: Price below lower band AND RSI oversold
                 if close < lower and current_rsi < oversold:
                     signals.loc[idx, "signal"] = 1
-                    signals.loc[idx, "confidence"] = min(1.0, (lower - close) / lower * 10)
-                    signals.loc[idx, "reason"] = f"Price {close:.2f} < VWAP lower {lower:.2f}, RSI {current_rsi:.1f}"
+                    signals.loc[idx, "confidence"] = min(
+                        1.0, (lower - close) / lower * 10
+                    )
+                    signals.loc[idx, "reason"] = (
+                        f"Price {close:.2f} < VWAP lower {lower:.2f}, RSI {current_rsi:.1f}"
+                    )
                     position = 1
                     last_signal_idx = i
 
                 # SELL: Price above upper band AND RSI overbought
                 elif close > upper and current_rsi > overbought:
                     signals.loc[idx, "signal"] = -1
-                    signals.loc[idx, "confidence"] = min(1.0, (close - upper) / upper * 10)
-                    signals.loc[idx, "reason"] = f"Price {close:.2f} > VWAP upper {upper:.2f}, RSI {current_rsi:.1f}"
+                    signals.loc[idx, "confidence"] = min(
+                        1.0, (close - upper) / upper * 10
+                    )
+                    signals.loc[idx, "reason"] = (
+                        f"Price {close:.2f} > VWAP upper {upper:.2f}, RSI {current_rsi:.1f}"
+                    )
                     position = -1
                     last_signal_idx = i
 
@@ -120,7 +130,9 @@ class VWAPReversion(BaseStrategy):
                 if close >= current_vwap:
                     signals.loc[idx, "signal"] = -1
                     signals.loc[idx, "confidence"] = 0.8
-                    signals.loc[idx, "reason"] = f"Exit long: price {close:.2f} returned to VWAP {current_vwap:.2f}"
+                    signals.loc[idx, "reason"] = (
+                        f"Exit long: price {close:.2f} returned to VWAP {current_vwap:.2f}"
+                    )
                     position = 0
                     last_signal_idx = i
 
@@ -129,7 +141,9 @@ class VWAPReversion(BaseStrategy):
                 if close <= current_vwap:
                     signals.loc[idx, "signal"] = 1
                     signals.loc[idx, "confidence"] = 0.8
-                    signals.loc[idx, "reason"] = f"Exit short: price {close:.2f} returned to VWAP {current_vwap:.2f}"
+                    signals.loc[idx, "reason"] = (
+                        f"Exit short: price {close:.2f} returned to VWAP {current_vwap:.2f}"
+                    )
                     position = 0
                     last_signal_idx = i
 

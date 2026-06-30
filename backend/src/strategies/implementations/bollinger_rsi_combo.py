@@ -78,7 +78,11 @@ class BollingerRSICombo(BaseStrategy):
 
         for i in range(len(data)):
             # Skip if data is NaN
-            if any(pd.isna([close.iloc[i], bb_lower.iloc[i], bb_middle.iloc[i], rsi.iloc[i]])):
+            if any(
+                pd.isna(
+                    [close.iloc[i], bb_lower.iloc[i], bb_middle.iloc[i], rsi.iloc[i]]
+                )
+            ):
                 continue
 
             close_curr = close.iloc[i]
@@ -102,7 +106,11 @@ class BollingerRSICombo(BaseStrategy):
                     signals.iloc[i, signals.columns.get_loc("signal")] = -1
                     signals.iloc[i, signals.columns.get_loc("reason")] = exit_reason
                     # Higher confidence if RSI is very overbought
-                    conf = min(1.0, (rsi_curr - p["rsi_overbought"]) / (100 - p["rsi_overbought"]) + 0.5)
+                    conf = min(
+                        1.0,
+                        (rsi_curr - p["rsi_overbought"]) / (100 - p["rsi_overbought"])
+                        + 0.5,
+                    )
                     signals.iloc[i, signals.columns.get_loc("confidence")] = conf
                     in_position = False
 
@@ -113,12 +121,16 @@ class BollingerRSICombo(BaseStrategy):
 
                 if bb_touch and rsi_oversold:
                     # Calculate confidence based on how far below BB and RSI levels
-                    bb_penetration = (bb_lower.iloc[i] - close_curr) / bb_lower.iloc[i] * 100
+                    bb_penetration = (
+                        (bb_lower.iloc[i] - close_curr) / bb_lower.iloc[i] * 100
+                    )
                     rsi_distance = (p["rsi_oversold"] - rsi_curr) / p["rsi_oversold"]
                     confidence = min(1.0, (bb_penetration * 10 + rsi_distance) / 2)
 
                     signals.iloc[i, signals.columns.get_loc("signal")] = 1
-                    signals.iloc[i, signals.columns.get_loc("confidence")] = max(0.3, confidence)
+                    signals.iloc[i, signals.columns.get_loc("confidence")] = max(
+                        0.3, confidence
+                    )
                     signals.iloc[i, signals.columns.get_loc("reason")] = (
                         f"BB lower touch + RSI {rsi_curr:.1f}"
                     )
@@ -132,7 +144,11 @@ class BollingerRSICombo(BaseStrategy):
 
         logger.info(
             "%s generated %d signals (%d buys, %d sells) on %d bars",
-            self.name, total_signals, buys, sells, len(data)
+            self.name,
+            total_signals,
+            buys,
+            sells,
+            len(data),
         )
 
         return signals

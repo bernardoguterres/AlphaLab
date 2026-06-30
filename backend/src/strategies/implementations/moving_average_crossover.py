@@ -80,19 +80,17 @@ class MovingAverageCrossover(BaseStrategy):
         signals.loc[sell_mask, "confidence"] = (prev_sep[sell_mask] / 5).clip(0, 1)
 
         # Reasons
-        signals.loc[buy_mask, "reason"] = (
-            f"SMA{short_w} crossed above SMA{long_w}"
-        )
-        signals.loc[sell_mask, "reason"] = (
-            f"SMA{short_w} crossed below SMA{long_w}"
-        )
+        signals.loc[buy_mask, "reason"] = f"SMA{short_w} crossed above SMA{long_w}"
+        signals.loc[sell_mask, "reason"] = f"SMA{short_w} crossed below SMA{long_w}"
 
         # Cooldown enforcement
         signals = self._apply_cooldown(signals, p["cooldown_days"])
 
         logger.info(
             "%s generated %d signals on %d bars",
-            self.name, (signals["signal"] != 0).sum(), len(data),
+            self.name,
+            (signals["signal"] != 0).sum(),
+            len(data),
         )
         return signals
 

@@ -46,6 +46,7 @@ class FetchDataRequest(BaseModel):
 
 class RiskSettings(BaseModel):
     """Risk management parameters for backtest."""
+
     stop_loss_pct: float = 2.0
     take_profit_pct: float = 5.0
     max_position_size_pct: float = 10.0
@@ -119,7 +120,16 @@ class BacktestRequest(BaseModel):
     @field_validator("strategy")
     @classmethod
     def validate_strategy(cls, v):
-        allowed = ("ma_crossover", "rsi_mean_reversion", "momentum_breakout", "bollinger_breakout", "vwap_reversion", "greenblatt_weekly", "bollinger_rsi_combo", "trend_adaptive_rsi")
+        allowed = (
+            "ma_crossover",
+            "rsi_mean_reversion",
+            "momentum_breakout",
+            "bollinger_breakout",
+            "vwap_reversion",
+            "greenblatt_weekly",
+            "bollinger_rsi_combo",
+            "trend_adaptive_rsi",
+        )
         if v not in allowed:
             raise ValueError(f"Strategy must be one of: {', '.join(allowed)}")
         return v
@@ -153,7 +163,16 @@ class OptimizeRequest(BaseModel):
     @field_validator("strategy")
     @classmethod
     def validate_strategy(cls, v):
-        allowed = ("ma_crossover", "rsi_mean_reversion", "momentum_breakout", "bollinger_breakout", "vwap_reversion", "greenblatt_weekly", "bollinger_rsi_combo", "trend_adaptive_rsi")
+        allowed = (
+            "ma_crossover",
+            "rsi_mean_reversion",
+            "momentum_breakout",
+            "bollinger_breakout",
+            "vwap_reversion",
+            "greenblatt_weekly",
+            "bollinger_rsi_combo",
+            "trend_adaptive_rsi",
+        )
         if v not in allowed:
             raise ValueError(f"Strategy must be one of: {', '.join(allowed)}")
         return v
@@ -163,7 +182,9 @@ class OptimizeRequest(BaseModel):
     def validate_target(cls, v):
         allowed = ("sharpe_ratio", "total_return_pct", "max_drawdown_pct", "win_rate")
         if v not in allowed:
-            raise ValueError(f"Optimization target must be one of: {', '.join(allowed)}")
+            raise ValueError(
+                f"Optimization target must be one of: {', '.join(allowed)}"
+            )
         return v
 
     @field_validator("n_folds")
@@ -176,6 +197,7 @@ class OptimizeRequest(BaseModel):
 
 class HeatmapRequest(BaseModel):
     """Request for parameter heatmap visualization."""
+
     ticker: str
     strategy: str
     start_date: str
@@ -194,7 +216,16 @@ class HeatmapRequest(BaseModel):
     @field_validator("strategy")
     @classmethod
     def validate_strategy(cls, v):
-        allowed = ("ma_crossover", "rsi_mean_reversion", "momentum_breakout", "bollinger_breakout", "vwap_reversion", "greenblatt_weekly", "bollinger_rsi_combo", "trend_adaptive_rsi")
+        allowed = (
+            "ma_crossover",
+            "rsi_mean_reversion",
+            "momentum_breakout",
+            "bollinger_breakout",
+            "vwap_reversion",
+            "greenblatt_weekly",
+            "bollinger_rsi_combo",
+            "trend_adaptive_rsi",
+        )
         if v not in allowed:
             raise ValueError(f"Strategy must be one of: {', '.join(allowed)}")
         return v
@@ -217,11 +248,13 @@ class CompareRequest(BaseModel):
 
 class ExportStrategyRequest(BaseModel):
     """Request to export a strategy config for AlphaLive."""
+
     backtest_id: str
 
 
 class BatchBacktestRequest(BaseModel):
     """Request to run batch backtests across multiple tickers."""
+
     tickers: list[str]
     strategy: str
     start_date: str
@@ -252,7 +285,16 @@ class BatchBacktestRequest(BaseModel):
     @field_validator("strategy")
     @classmethod
     def validate_strategy(cls, v):
-        allowed = ("ma_crossover", "rsi_mean_reversion", "momentum_breakout", "bollinger_breakout", "vwap_reversion", "greenblatt_weekly", "bollinger_rsi_combo", "trend_adaptive_rsi")
+        allowed = (
+            "ma_crossover",
+            "rsi_mean_reversion",
+            "momentum_breakout",
+            "bollinger_breakout",
+            "vwap_reversion",
+            "greenblatt_weekly",
+            "bollinger_rsi_combo",
+            "trend_adaptive_rsi",
+        )
         if v not in allowed:
             raise ValueError(f"Strategy must be one of: {', '.join(allowed)}")
         return v
@@ -265,9 +307,9 @@ class BatchBacktestRequest(BaseModel):
         return v
 
 
-
 class PortfolioStrategy(BaseModel):
     """Single strategy in portfolio optimization."""
+
     backtest_id: str
     ticker: str
     strategy: str
@@ -275,6 +317,7 @@ class PortfolioStrategy(BaseModel):
 
 class PortfolioConstraints(BaseModel):
     """Portfolio optimization constraints."""
+
     max_weight_per_strategy: float = 0.4
     min_weight_per_strategy: float = 0.05
     target_return: Optional[float] = None
@@ -296,6 +339,7 @@ class PortfolioConstraints(BaseModel):
 
 class PortfolioOptimizeRequest(BaseModel):
     """Request to optimize portfolio weights."""
+
     strategies: list[PortfolioStrategy]
     method: str = "max_sharpe"
     constraints: Optional[PortfolioConstraints] = None
@@ -316,4 +360,3 @@ class PortfolioOptimizeRequest(BaseModel):
         if v not in allowed:
             raise ValueError(f"Method must be one of: {', '.join(allowed)}")
         return v
-

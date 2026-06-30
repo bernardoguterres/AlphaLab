@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.backtest.parameter_optimizer import ParameterOptimizer
@@ -30,13 +31,16 @@ def _make_synthetic_data(n=500, seed=42):
     open_ = close + np.random.normal(0, 1, n)
     volume = np.random.randint(1_000_000, 10_000_000, n)
 
-    df = pd.DataFrame({
-        "Open": open_,
-        "High": high,
-        "Low": low,
-        "Close": close,
-        "Volume": volume,
-    }, index=dates)
+    df = pd.DataFrame(
+        {
+            "Open": open_,
+            "High": high,
+            "Low": low,
+            "Close": close,
+            "Volume": volume,
+        },
+        index=dates,
+    )
 
     # Add features using FeatureEngineer
     processor = FeatureEngineer()
@@ -194,7 +198,12 @@ class TestParameterOptimizer:
         }
 
         # Test each target
-        for target in ["sharpe_ratio", "total_return_pct", "max_drawdown_pct", "win_rate"]:
+        for target in [
+            "sharpe_ratio",
+            "total_return_pct",
+            "max_drawdown_pct",
+            "win_rate",
+        ]:
             result = optimizer.grid_search(
                 strategy_class=MovingAverageCrossover,
                 data=data,

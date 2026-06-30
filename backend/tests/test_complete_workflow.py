@@ -13,7 +13,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.data.fetcher import DataFetcher
 from src.data.validator import DataValidator
 from src.data.processor import FeatureEngineer
-from src.strategies.implementations.moving_average_crossover import MovingAverageCrossover
+from src.strategies.implementations.moving_average_crossover import (
+    MovingAverageCrossover,
+)
 from src.strategies.implementations.rsi_mean_reversion import RSIMeanReversion
 from src.strategies.implementations.momentum_breakout import MomentumBreakout
 from src.backtest.engine import BacktestEngine
@@ -98,15 +100,20 @@ class TestCompleteWorkflow:
 
         for strategy in strategies:
             results = self.engine.run_backtest(strategy, data, initial_capital=100_000)
-            metrics = self.metrics_calc.calculate_all(results.equity_curve, results.trades)
+            metrics = self.metrics_calc.calculate_all(
+                results.equity_curve, results.trades
+            )
 
             # Verify core metrics exist
-            assert "sharpe_ratio" in metrics.get("risk", {}), \
-                f"{strategy.name}: missing sharpe_ratio"
-            assert "max_drawdown_pct" in metrics.get("drawdown", {}), \
-                f"{strategy.name}: missing max_drawdown_pct"
-            assert "total_trades" in metrics.get("trades", {}), \
-                f"{strategy.name}: missing total_trades"
+            assert "sharpe_ratio" in metrics.get(
+                "risk", {}
+            ), f"{strategy.name}: missing sharpe_ratio"
+            assert "max_drawdown_pct" in metrics.get(
+                "drawdown", {}
+            ), f"{strategy.name}: missing max_drawdown_pct"
+            assert "total_trades" in metrics.get(
+                "trades", {}
+            ), f"{strategy.name}: missing total_trades"
 
     def test_results_reproducible(self):
         """Same inputs should produce identical results."""

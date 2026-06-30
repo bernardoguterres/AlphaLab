@@ -105,21 +105,24 @@ class ParameterOptimizer:
                 )
 
                 metrics = metrics_calc.calculate_all(
-                    backtest_result.equity_curve,
-                    backtest_result.trades
+                    backtest_result.equity_curve, backtest_result.trades
                 )
 
                 # Extract target metric
-                score = self._extract_metric(metrics, backtest_result, optimization_target)
+                score = self._extract_metric(
+                    metrics, backtest_result, optimization_target
+                )
 
-                results.append({
-                    "params": params,
-                    "score": score,
-                    "total_return_pct": backtest_result.total_return_pct,
-                    "sharpe_ratio": metrics["risk"]["sharpe_ratio"],
-                    "max_drawdown_pct": metrics["drawdown"]["max_drawdown_pct"],
-                    "total_trades": len(backtest_result.trades),
-                })
+                results.append(
+                    {
+                        "params": params,
+                        "score": score,
+                        "total_return_pct": backtest_result.total_return_pct,
+                        "sharpe_ratio": metrics["risk"]["sharpe_ratio"],
+                        "max_drawdown_pct": metrics["drawdown"]["max_drawdown_pct"],
+                        "total_trades": len(backtest_result.trades),
+                    }
+                )
 
             except Exception as e:
                 self.logger.warning(f"Failed to test params {params}: {e}")
@@ -180,32 +183,37 @@ class ParameterOptimizer:
                     )
 
                     test_metrics = metrics_calc.calculate_all(
-                        test_result.equity_curve,
-                        test_result.trades
+                        test_result.equity_curve, test_result.trades
                     )
 
-                    score = self._extract_metric(test_metrics, test_result, optimization_target)
+                    score = self._extract_metric(
+                        test_metrics, test_result, optimization_target
+                    )
                     fold_scores.append(score)
 
                 except Exception as e:
                     self.logger.debug(f"Fold {fold_idx} failed for {params}: {e}")
-                    fold_scores.append(float('-inf'))
+                    fold_scores.append(float("-inf"))
 
             # Average out-of-sample score
-            avg_score = np.mean([s for s in fold_scores if s != float('-inf')])
+            avg_score = np.mean([s for s in fold_scores if s != float("-inf")])
 
-            combination_scores.append({
-                "params": params,
-                "avg_out_of_sample_score": avg_score,
-                "fold_scores": fold_scores,
-            })
+            combination_scores.append(
+                {
+                    "params": params,
+                    "avg_out_of_sample_score": avg_score,
+                    "fold_scores": fold_scores,
+                }
+            )
 
         if not combination_scores:
             raise ValueError("Walk-forward optimization failed for all parameters")
 
         # Sort by average out-of-sample score
         reverse = optimization_target != "max_drawdown_pct"
-        combination_scores.sort(key=lambda x: x["avg_out_of_sample_score"], reverse=reverse)
+        combination_scores.sort(
+            key=lambda x: x["avg_out_of_sample_score"], reverse=reverse
+        )
 
         best_params = combination_scores[0]["params"]
 
@@ -222,8 +230,7 @@ class ParameterOptimizer:
         )
 
         final_metrics = metrics_calc.calculate_all(
-            final_result.equity_curve,
-            final_result.trades
+            final_result.equity_curve, final_result.trades
         )
 
         return {
@@ -240,7 +247,9 @@ class ParameterOptimizer:
             },
         }
 
-    def _create_folds(self, data: pd.DataFrame, n_folds: int) -> List[Tuple[pd.DataFrame, pd.DataFrame]]:
+    def _create_folds(
+        self, data: pd.DataFrame, n_folds: int
+    ) -> List[Tuple[pd.DataFrame, pd.DataFrame]]:
         """Create time-based train/test folds.
 
         Each fold uses progressively more data for training and tests on the next segment.
@@ -324,12 +333,16 @@ class ParameterOptimizer:
                         monte_carlo_runs=0,
                     )
 
-                    metrics = metrics_calc.calculate_all(result.equity_curve, result.trades)
+                    metrics = metrics_calc.calculate_all(
+                        result.equity_curve, result.trades
+                    )
                     sharpe = metrics["risk"]["sharpe_ratio"]
                     row.append(float(sharpe))
 
                 except Exception as e:
-                    self.logger.debug(f"Heatmap cell failed at {param1_name}={p1_val}, {param2_name}={p2_val}: {e}")
+                    self.logger.debug(
+                        f"Heatmap cell failed at {param1_name}={p1_val}, {param2_name}={p2_val}: {e}"
+                    )
                     row.append(None)
 
             heatmap_data.append(row)
