@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from typing import List, Dict, Tuple, Optional
 
 from ..utils.logger import setup_logger
 
@@ -31,8 +30,8 @@ class PortfolioOptimizer:
         method: str,
         max_weight: float = 0.4,
         min_weight: float = 0.05,
-        target_return: Optional[float] = None,
-    ) -> Dict:
+        target_return: float | None = None,
+    ) -> dict:
         """Optimize portfolio weights.
 
         Args:
@@ -76,7 +75,7 @@ class PortfolioOptimizer:
         n_points: int = 20,
         max_weight: float = 0.4,
         min_weight: float = 0.05,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Calculate efficient frontier points.
 
         Args:
@@ -139,7 +138,7 @@ class PortfolioOptimizer:
         self,
         max_weight: float,
         min_weight: float,
-        target_return: Optional[float] = None,
+        target_return: float | None = None,
     ) -> np.ndarray:
         """Minimize portfolio variance."""
 
@@ -185,7 +184,7 @@ class PortfolioOptimizer:
         objective_func,
         max_weight: float,
         min_weight: float,
-        extra_constraints: Optional[List] = None,
+        extra_constraints: list | None = None,
     ) -> np.ndarray:
         """Generic weight optimization with constraints."""
         # Initial guess: equal weights
@@ -219,7 +218,7 @@ class PortfolioOptimizer:
         return result.x
 
 
-def extract_daily_returns(equity_curve: List[Dict[str, any]]) -> pd.Series:
+def extract_daily_returns(equity_curve: list[dict[str, any]]) -> pd.Series:
     """Extract daily returns from equity curve.
 
     Args:
@@ -239,9 +238,9 @@ def extract_daily_returns(equity_curve: List[Dict[str, any]]) -> pd.Series:
 
 
 def build_returns_matrix(
-    strategies: List[Dict],
-    backtest_results: Dict[str, Dict],
-) -> Tuple[pd.DataFrame, List[str]]:
+    strategies: list[dict],
+    backtest_results: dict[str, dict],
+) -> tuple[pd.DataFrame, list[str]]:
     """Build returns matrix from multiple backtest results.
 
     Args:

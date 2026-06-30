@@ -1,8 +1,6 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
-
 import yaml
 
 
@@ -32,7 +30,7 @@ class BacktestConfig:
 class ApiConfig:
     host: str = "127.0.0.1"
     port: int = 5000
-    cors_origins: List[str] = field(default_factory=lambda: ["http://localhost:8080"])
+    cors_origins: list[str] = field(default_factory=lambda: ["http://localhost:8080"])
 
 
 @dataclass
