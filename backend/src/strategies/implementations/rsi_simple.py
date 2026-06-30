@@ -6,7 +6,6 @@ Just RSI with relaxed thresholds for frequent signals.
 EXACT PARITY with AlphaLive implementation.
 """
 
-import numpy as np
 import pandas as pd
 
 from ..base_strategy import BaseStrategy

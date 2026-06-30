@@ -1,7 +1,6 @@
 """VWAP Mean Reversion strategy with RSI filter."""
 
 import pandas as pd
-import numpy as np
 
 from ..base_strategy import BaseStrategy
 from ...utils.logger import setup_logger

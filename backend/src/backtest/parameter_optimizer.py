@@ -2,7 +2,7 @@
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Dict, List, Tuple, Optional
 from itertools import product
 
 from ..utils.logger import setup_logger

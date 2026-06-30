@@ -1,7 +1,6 @@
 """Backtest engine with realistic execution, walk-forward testing, and Monte Carlo."""
 
 from dataclasses import dataclass, field
-from datetime import timedelta
 from typing import Optional
 
 import numpy as np

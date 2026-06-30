@@ -4,7 +4,6 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from scipy import stats as scipy_stats
 
 from ..utils.logger import setup_logger
 
