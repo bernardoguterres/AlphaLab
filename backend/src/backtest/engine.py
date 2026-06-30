@@ -178,7 +178,7 @@ class BacktestEngine:
 
                 if sig_val == 1:
                     shares = self._calculate_shares(
-                        portfolio, ticker, row["Open"], sizing, data, i
+                        portfolio, ticker, row["Open"], sizing, data, i, open_prices
                     )
                     if shares > 0:
                         order = Order(
@@ -236,6 +236,7 @@ class BacktestEngine:
         sizing: str,
         data: pd.DataFrame,
         bar_idx: int,
+        current_prices: dict = None,
     ) -> int:
         """Determine number of shares to buy based on sizing method."""
         if price <= 0:
@@ -244,10 +245,7 @@ class BacktestEngine:
         available = portfolio.cash * (1 - portfolio.cash_reserve_pct)
 
         if sizing == "equal_weight":
-            # Use up to max_position_pct of portfolio, accounting for slippage
-            port_val = (
-                portfolio.cash
-            )  # approximate (no other position values without prices)
+            port_val = portfolio.get_portfolio_value(current_prices or {ticker: price})
             max_alloc = port_val * portfolio.max_position_pct
             budget = min(available, max_alloc)
             effective_price = price * (1 + portfolio.slippage_pct)
