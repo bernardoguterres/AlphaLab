@@ -81,6 +81,8 @@ def create_app() -> Flask:
     app = Flask(__name__)
     CORS(app, origins=config.api.cors_origins)
 
+    fetcher = DataFetcher()
+
     # ------------------------------------------------------------------
     # Middleware
     # ------------------------------------------------------------------
@@ -131,7 +133,6 @@ def create_app() -> Flask:
     @app.route("/api/data/fetch", methods=["POST"])
     def fetch_data():
         body = FetchDataRequest(**request.get_json(force=True))
-        fetcher = DataFetcher()
         results = {}
         errors = []
 
@@ -159,7 +160,6 @@ def create_app() -> Flask:
 
     @app.route("/api/data/available")
     def available_data():
-        fetcher = DataFetcher()
         cached = fetcher.cache.list_cached()
         return jsonify({"status": "ok", "data": cached})
 
@@ -172,7 +172,6 @@ def create_app() -> Flask:
         body = BacktestRequest(**request.get_json(force=True))
 
         # Fetch and process data
-        fetcher = DataFetcher()
         try:
             raw = fetcher.fetch(body.ticker, body.start_date, body.end_date)
         except DataFetchError as e:
@@ -257,7 +256,6 @@ def create_app() -> Flask:
         body = OptimizeRequest(**request.get_json(force=True))
 
         # Fetch and process data
-        fetcher = DataFetcher()
         try:
             raw = fetcher.fetch(body.ticker, body.start_date, body.end_date)
         except DataFetchError as e:
@@ -321,7 +319,6 @@ def create_app() -> Flask:
         body = HeatmapRequest(**request.get_json(force=True))
 
         # Fetch and process data
-        fetcher = DataFetcher()
         try:
             raw = fetcher.fetch(body.ticker, body.start_date, body.end_date)
         except DataFetchError as e:
@@ -415,7 +412,6 @@ def create_app() -> Flask:
     def compare_strategies():
         body = CompareRequest(**request.get_json(force=True))
 
-        fetcher = DataFetcher()
         try:
             raw = fetcher.fetch(body.ticker, body.start_date, body.end_date)
         except DataFetchError as e:
@@ -473,7 +469,6 @@ def create_app() -> Flask:
         body = BatchBacktestRequest(**request.get_json(force=True))
 
         start_time = time.time()
-        fetcher = DataFetcher()
         validator = DataValidator()
         processor = FeatureEngineer()
         engine = BacktestEngine()
@@ -551,7 +546,7 @@ def create_app() -> Flask:
             except DataFetchError as e:
                 errors.append({"ticker": ticker, "error": str(e)})
             except Exception as e:
-                logger.exception(f"Batch backtest failed for {ticker}")
+                logger.exception("Batch backtest failed for %s", ticker)
                 errors.append({"ticker": ticker, "error": str(e)})
 
         # Sort by Sharpe ratio descending
@@ -704,7 +699,7 @@ def create_app() -> Flask:
                     validated = StrategyExportSchema.model_validate(export_json)
                     export_json = validated.model_dump(mode="json", exclude_none=True)
                 except ValidationError as e:
-                    logger.error(f"Export validation failed: {e}")
+                    logger.error("Export validation failed: %s", e)
                     return (
                         jsonify(
                             {
@@ -736,7 +731,7 @@ def create_app() -> Flask:
             return response
 
         except Exception as e:
-            logger.exception(f"Export failed for backtest {body.backtest_id}")
+            logger.exception("Export failed for backtest %s", body.backtest_id)
             return jsonify({"status": "error", "message": str(e)}), 500
 
     # ------------------------------------------------------------------
@@ -967,7 +962,7 @@ def create_app() -> Flask:
         min_cap = float(body.get("min_market_cap_b", 1.0))
         max_dte = float(body.get("max_debt_to_equity", 2.0))
 
-        logger.info(f"Greenblatt screen: {len(tickers)} tickers, top_n={top_n}")
+        logger.info("Greenblatt screen: %d tickers, top_n=%d", len(tickers), top_n)
         try:
             screener = FundamentalScreener(
                 universe=tickers,

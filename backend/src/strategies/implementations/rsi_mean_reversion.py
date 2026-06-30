@@ -61,7 +61,7 @@ class RSIMeanReversion(BaseStrategy):
         last_signal_bar = -p["cooldown_days"] - 1
 
         for i in range(len(data)):
-            if rsi.iloc[i] != rsi.iloc[i]:  # NaN check
+            if pd.isna(rsi.iloc[i]):
                 continue
 
             if in_position:
@@ -138,7 +138,7 @@ class RSIMeanReversion(BaseStrategy):
                 entry_price = close.iloc[i]
                 entry_bar = i
                 atr_val = (
-                    atr.iloc[i] if atr.iloc[i] == atr.iloc[i] else entry_price * 0.02
+                    atr.iloc[i] if not pd.isna(atr.iloc[i]) else entry_price * 0.02
                 )
                 stop_loss = entry_price - p["stop_loss_atr_mult"] * atr_val
                 last_signal_bar = i

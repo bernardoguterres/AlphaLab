@@ -13,9 +13,6 @@ logger = setup_logger("alphalab.param_optimizer")
 class ParameterOptimizer:
     """Optimize strategy parameters using grid search with optional walk-forward."""
 
-    def __init__(self):
-        self.logger = logger
-
     def grid_search(
         self,
         strategy_class,
@@ -49,7 +46,7 @@ class ParameterOptimizer:
         param_values = list(param_grid.values())
         all_combinations = list(product(*param_values))
 
-        self.logger.info(f"Testing {len(all_combinations)} parameter combinations")
+        logger.info("Testing %d parameter combinations", len(all_combinations))
 
         if walk_forward:
             return self._walk_forward_optimize(
@@ -125,7 +122,7 @@ class ParameterOptimizer:
                 )
 
             except Exception as e:
-                self.logger.warning(f"Failed to test params {params}: {e}")
+                logger.warning("Failed to test params %s: %s", params, e)
                 continue
 
         if not results:
@@ -192,7 +189,7 @@ class ParameterOptimizer:
                     fold_scores.append(score)
 
                 except Exception as e:
-                    self.logger.debug(f"Fold {fold_idx} failed for {params}: {e}")
+                    logger.debug("Fold %d failed for %s: %s", fold_idx, params, e)
                     fold_scores.append(float("-inf"))
 
             # Average out-of-sample score
@@ -340,8 +337,9 @@ class ParameterOptimizer:
                     row.append(float(sharpe))
 
                 except Exception as e:
-                    self.logger.debug(
-                        f"Heatmap cell failed at {param1_name}={p1_val}, {param2_name}={p2_val}: {e}"
+                    logger.debug(
+                        "Heatmap cell failed at %s=%s, %s=%s: %s",
+                        param1_name, p1_val, param2_name, p2_val, e,
                     )
                     row.append(None)
 

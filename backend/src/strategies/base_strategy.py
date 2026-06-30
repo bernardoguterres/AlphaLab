@@ -42,6 +42,21 @@ class BaseStrategy(ABC):
     # Shared helpers
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _apply_cooldown(signals: pd.DataFrame, cooldown: int) -> pd.DataFrame:
+        """Enforce a minimum number of bars between consecutive signals."""
+        if cooldown <= 0:
+            return signals
+        last_signal_idx = -cooldown - 1
+        for i in range(len(signals)):
+            if signals.iloc[i]["signal"] != 0:
+                if i - last_signal_idx <= cooldown:
+                    signals.iloc[i, signals.columns.get_loc("signal")] = 0
+                    signals.iloc[i, signals.columns.get_loc("reason")] = ""
+                else:
+                    last_signal_idx = i
+        return signals
+
     def backtest_ready_check(self, data: pd.DataFrame) -> bool:
         """Verify *data* has the columns this strategy requires."""
         missing = set(self.required_columns()) - set(data.columns)
