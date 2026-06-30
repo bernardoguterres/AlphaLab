@@ -1,9 +1,10 @@
 """Flask REST API with request validation, error handling, and middleware."""
 
+import json
+import os
 import time
 import uuid
 from datetime import datetime, timezone
-from functools import wraps
 
 from flask import Flask, jsonify, request, g, Response
 from flask_cors import CORS
@@ -49,14 +50,12 @@ from ..utils.settings_manager import SettingsManager
 # Import strategy export schema for validation
 try:
     import sys
-    import os
 
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
-    from strategy_schema import StrategyExportSchema, export_strategy_to_json
+    from strategy_schema import StrategyExportSchema
 except ImportError:
     logger.warning("Could not import StrategyExportSchema - export validation disabled")
     StrategyExportSchema = None
-    export_strategy_to_json = None
 
 logger = setup_logger("alphalab.api")
 
@@ -717,8 +716,6 @@ def create_app() -> Flask:
                     )
 
             # Convert to JSON string
-            import json
-
             json_str = json.dumps(export_json, indent=2)
 
             # Return as downloadable file
@@ -804,7 +801,6 @@ def create_app() -> Flask:
         Reads bot token from TELEGRAM_BOT_TOKEN environment variable.
         NEVER accepts credentials via request body.
         """
-        import os
         import httpx
 
         bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -880,8 +876,6 @@ def create_app() -> Flask:
         Reads credentials from ALPACA_API_KEY and ALPACA_SECRET_KEY environment variables.
         NEVER accepts credentials via request body.
         """
-        import os
-
         api_key = os.environ.get("ALPACA_API_KEY")
         secret_key = os.environ.get("ALPACA_SECRET_KEY")
 
