@@ -5,7 +5,7 @@ from typing import Optional
 
 import numpy as np
 
-from .order import Order, OrderSide, OrderStatus, OrderType
+from .order import Order, OrderSide, OrderStatus
 from ..utils.logger import setup_logger
 
 logger = setup_logger("alphalab.portfolio")
@@ -227,27 +227,6 @@ class Portfolio:
     def _get_execution_price(
         self, order: Order, market_price: float
     ) -> Optional[float]:
-        if order.order_type == OrderType.MARKET:
-            return market_price
-        if order.order_type == OrderType.LIMIT:
-            if order.limit_price is None:
-                return market_price
-            if order.side == OrderSide.BUY and market_price <= order.limit_price:
-                return market_price
-            if order.side == OrderSide.SELL and market_price >= order.limit_price:
-                return market_price
-            return None
-        if order.order_type == OrderType.STOP_LOSS:
-            if order.stop_price is None:
-                return None
-            if order.side == OrderSide.SELL and market_price <= order.stop_price:
-                return market_price
-            return None
-        if order.order_type == OrderType.TRAILING_STOP:
-            stop = self.trailing_stops.get(order.ticker)
-            if stop and market_price <= stop:
-                return market_price
-            return None
         return market_price
 
     def _check_drawdown_halt(self, current_value: float):

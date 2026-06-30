@@ -16,12 +16,8 @@ class AppSection:
 @dataclass
 class DataConfig:
     cache_dir: str = "data/cache"
-    raw_dir: str = "data/raw"
-    processed_dir: str = "data/processed"
-    default_interval: str = "1d"
     max_retries: int = 3
     cache_expiry_hours: int = 24
-    max_cache_age_days: int = 7
 
 
 @dataclass
@@ -29,8 +25,6 @@ class BacktestConfig:
     initial_capital: float = 100_000.0
     commission: float = 0.0
     slippage: float = 0.05
-    max_position_size_percent: float = 20.0
-    cash_reserve_percent: float = 5.0
     risk_free_rate: float = 0.04
 
 
@@ -38,7 +32,6 @@ class BacktestConfig:
 class ApiConfig:
     host: str = "127.0.0.1"
     port: int = 5000
-    rate_limit: int = 100
     cors_origins: List[str] = field(default_factory=lambda: ["http://localhost:8080"])
 
 
