@@ -80,9 +80,6 @@ class FeatureEngineer:
         # ADX (14-day)
         df = FeatureEngineer._compute_adx(df, period=14)
 
-        # Parabolic SAR
-        df = FeatureEngineer._compute_psar(df)
-
         return df
 
     @staticmethod
@@ -110,55 +107,6 @@ class FeatureEngineer:
         df["ADX"] = dx.ewm(alpha=1 / period, adjust=False).mean()
         df["Plus_DI"] = plus_di
         df["Minus_DI"] = minus_di
-        return df
-
-    @staticmethod
-    def _compute_psar(
-        df: pd.DataFrame, af_start: float = 0.02, af_max: float = 0.2
-    ) -> pd.DataFrame:
-        high = df["High"].values
-        low = df["Low"].values
-        n = len(df)
-        psar = np.full(n, np.nan)
-        if n < 2:
-            df["PSAR"] = psar
-            return df
-
-        bull = True
-        af = af_start
-        ep = high[0]
-        psar[0] = low[0]
-
-        for i in range(1, n):
-            prev_psar = psar[i - 1]
-            if bull:
-                psar[i] = prev_psar + af * (ep - prev_psar)
-                psar[i] = min(psar[i], low[i - 1])
-                if i >= 2:
-                    psar[i] = min(psar[i], low[i - 2])
-                if high[i] > ep:
-                    ep = high[i]
-                    af = min(af + af_start, af_max)
-                if low[i] < psar[i]:
-                    bull = False
-                    psar[i] = ep
-                    ep = low[i]
-                    af = af_start
-            else:
-                psar[i] = prev_psar + af * (ep - prev_psar)
-                psar[i] = max(psar[i], high[i - 1])
-                if i >= 2:
-                    psar[i] = max(psar[i], high[i - 2])
-                if low[i] < ep:
-                    ep = low[i]
-                    af = min(af + af_start, af_max)
-                if high[i] > psar[i]:
-                    bull = True
-                    psar[i] = ep
-                    ep = high[i]
-                    af = af_start
-
-        df["PSAR"] = psar
         return df
 
     # ------------------------------------------------------------------
@@ -338,22 +286,6 @@ class FeatureEngineer:
         if len(df) >= window:
             df["Resistance"] = high.rolling(window, min_periods=window).max()
             df["Support"] = low.rolling(window, min_periods=window).min()
-
-        # Fibonacci retracement levels (rolling 60-day swing)
-        fib_window = 60
-        if len(df) >= fib_window:
-            swing_high = high.rolling(fib_window, min_periods=fib_window).max()
-            swing_low = low.rolling(fib_window, min_periods=fib_window).min()
-            diff = swing_high - swing_low
-            df["Fib_0.236"] = swing_high - 0.236 * diff
-            df["Fib_0.382"] = swing_high - 0.382 * diff
-            df["Fib_0.500"] = swing_high - 0.500 * diff
-            df["Fib_0.618"] = swing_high - 0.618 * diff
-
-        # Pivot points (classic)
-        df["Pivot"] = (high.shift(1) + low.shift(1) + close.shift(1)) / 3
-        df["Pivot_R1"] = 2 * df["Pivot"] - low.shift(1)
-        df["Pivot_S1"] = 2 * df["Pivot"] - high.shift(1)
 
         # Gap analysis
         df["Gap"] = df["Open"] - close.shift(1)

@@ -26,7 +26,6 @@ class BacktestResults:
     signals: pd.DataFrame | None = None
     metrics: dict | None = None
     monte_carlo: dict | None = None
-    walk_forward: list[dict] | None = None
     benchmark: dict | None = None
 
     @property
@@ -46,7 +45,6 @@ class BacktestResults:
             "trades": self.trades,
             "metrics": self.metrics,
             "monte_carlo": self.monte_carlo,
-            "walk_forward": self.walk_forward,
             "benchmark": self.benchmark,
         }
 
