@@ -23,15 +23,19 @@ def _fetch_and_prepare(fetcher, ticker: str, start_date, end_date) -> tuple:
     validator = DataValidator()
     cleaned, report = validator.validate_and_clean(raw["data"], ticker)
     if not report.is_acceptable:
-        return None, None, (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": f"Data quality too low ({report.confidence:.2f})",
-                    "quality_report": report.to_dict(),
-                }
+        return (
+            None,
+            None,
+            (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": f"Data quality too low ({report.confidence:.2f})",
+                        "quality_report": report.to_dict(),
+                    }
+                ),
+                422,
             ),
-            422,
         )
 
     featured = FeatureEngineer().process(cleaned)

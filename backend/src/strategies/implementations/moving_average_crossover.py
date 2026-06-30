@@ -93,4 +93,3 @@ class MovingAverageCrossover(BaseStrategy):
             len(data),
         )
         return signals
-
