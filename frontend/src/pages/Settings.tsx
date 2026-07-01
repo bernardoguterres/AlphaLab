@@ -422,7 +422,7 @@ export default function Settings() {
         {!settings.alpaca.paper_trading && (
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
             <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-              ⚠️ Live trading mode enabled
+              Live trading mode enabled
             </p>
             <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
               Real money will be used. Ensure you have tested thoroughly in paper trading mode first.

@@ -24,7 +24,7 @@ pip install -r requirements.txt
 python run.py
 ```
 
-✅ Backend running at http://127.0.0.1:5000
+Backend running at http://127.0.0.1:5000
 
 ### 2. Frontend Setup (Web)
 
@@ -34,7 +34,7 @@ npm install
 npm run dev
 ```
 
-✅ Frontend running at http://localhost:8080
+Frontend running at http://localhost:8080
 
 ### 3. Desktop App Setup (Optional)
 
@@ -304,7 +304,7 @@ AlphaLab/
 │   ├── src-tauri/            # Tauri desktop wrapper
 │   │   ├── tauri.conf.json  # App configuration
 │   │   ├── icons/           # App icons
-│   │   └── target/release/bundle/  # 👈 Built installers here
+│ │ └── target/release/bundle/ # Built installers here
 │   ├── package.json
 │   ├── vite.config.ts        # Dev server on port 8080
 │   └── tailwind.config.ts

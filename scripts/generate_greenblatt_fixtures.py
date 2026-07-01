@@ -90,7 +90,7 @@ def main():
 
     fixture_path = FIXTURES_DIR / "aapl_weekly_fixture.csv"
     fixture_df.to_csv(fixture_path, index=False)
-    print(f"  ✓ {fixture_path.name}  ({len(fixture_df)} rows)")
+    print(f"{fixture_path.name} ({len(fixture_df)} rows)")
 
     # Write expected signals — only BUY/SELL bars (HOLD is implicit for everything else)
     expected_rows = []
@@ -110,7 +110,7 @@ def main():
     expected_df.to_csv(signals_path, index=False)
 
     non_hold = expected_df[expected_df["signal"] != "HOLD"]
-    print(f"  ✓ {signals_path.name}  ({len(expected_df)} rows, {len(non_hold)} non-HOLD signals)")
+    print(f"{signals_path.name} ({len(expected_df)} rows, {len(non_hold)} non-HOLD signals)")
     print()
     print("  Non-HOLD signals:")
     for _, r in non_hold.iterrows():

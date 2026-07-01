@@ -431,7 +431,7 @@ def print_results_table(all_results, title):
     print(f"{'-'*90}")
 
     for r in all_results:
-        deploy = "✅" if r["sharpe"] >= 1.5 and r["total_trades"] >= 5 and abs(r["max_drawdown_pct"]) <= 20 else "  "
+        deploy = "" if r["sharpe"] >= 1.5 and r["total_trades"] >= 5 and abs(r["max_drawdown_pct"]) <= 20 else ""
         print(f"{deploy}{r['strategy']:<20} {r['ticker']:<6} {r['period']:<12} "
               f"{r['sharpe']:>7.2f} {r['cagr_pct']:>7.2f} {r['total_trades']:>7d} "
               f"{r['win_rate']*100:>7.1f} {r['max_drawdown_pct']:>8.1f} "
@@ -704,11 +704,11 @@ def main():
         avg_post = np.mean(post_cagrs) if post_cagrs else 0
         variance = abs(avg_pre - avg_post) / (abs(avg_pre) + 1e-9) * 100
 
-        deploy = "✅ DEPLOY" if (
+        deploy = "DEPLOY" if (
             np.mean([full_results.get(t, {}).get("sharpe", 0) for t in tickers]) >= 1.0 and
             sum(full_results.get(t, {}).get("total_trades", 0) for t in tickers) >= 20 and
             variance <= 100
-        ) else "⚠️ REVIEW"
+        ) else "REVIEW"
 
         print(f"  {name:<18} {'Pre CAGR':<10} {avg_pre:>8.1f}%   Post CAGR {avg_post:.1f}%   "
               f"Variance {variance:.0f}%   {deploy}")
@@ -721,7 +721,7 @@ def main():
     })
 
     print("\n" + "="*70)
-    print("  DONE — See ✅ marks for deployment-ready strategies")
+    print("DONE — See marks for deployment-ready strategies")
     print("="*70 + "\n")
 
 
