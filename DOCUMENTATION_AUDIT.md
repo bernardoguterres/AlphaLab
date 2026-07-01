@@ -134,7 +134,7 @@ Flask REST API on http://127.0.0.1:5000
 [Step-by-step guide - IDENTICAL to CLAUDE.md]
 ```
 
-**Duplication Level:** **80%** (strategy descriptions, parameters, "when to use"sections duplicated)
+**Duplication Level:** **80%** (strategy descriptions, parameters, "when to use" sections duplicated)
 
 **Recommendation:** **DELETE docs/STRATEGIES.md**
 - Strategy parameter tables can be read from code (`base_strategy.py`, implementation files)
@@ -181,7 +181,7 @@ You're running from the wrong directory...
 **Q: Can I add crypto/forex data?**
 ```
 
-**Duplication Level:** **50%** (some overlap in "gotchas"vs "common issues")
+**Duplication Level:** **50%** (some overlap in "gotchas" vs "common issues")
 
 **Recommendation:** **DELETE docs/TROUBLESHOOTING.md, merge FAQ into README**
 - Troubleshooting is useful for USERS, not AI
