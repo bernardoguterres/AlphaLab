@@ -27,7 +27,7 @@ def fetch_data(ticker, years=5):
     end_date = datetime.now()
     start_date = end_date - timedelta(days=365*years)
 
-    print(f"📥 Fetching {ticker} data ({start_date.date()} to {end_date.date()})...")
+    print(f"Fetching {ticker} data ({start_date.date()} to {end_date.date()})...")
 
     data = yf.download(ticker, start=start_date, end=end_date, progress=False)
 
@@ -35,15 +35,15 @@ def fetch_data(ticker, years=5):
     if isinstance(data.columns, pd.MultiIndex):
         data.columns = data.columns.get_level_values(0)
 
-    print(f"   ✅ {len(data)} bars fetched")
+        print(f"{len(data)} bars fetched")
     return data
 
 def add_features(data):
     """Add technical indicators."""
-    print("🔧 Adding technical indicators...")
+    print("Adding technical indicators...")
     engineer = FeatureEngineer()
     data_with_features = engineer.process(data)
-    print(f"   ✅ {len(data_with_features.columns)} features added")
+    print(f"{len(data_with_features.columns)} features added")
     return data_with_features
 
 def calculate_simple_metrics(data, signals):
@@ -112,7 +112,7 @@ def calculate_simple_metrics(data, signals):
 def backtest_strategy(strategy_class, params, data, ticker, strategy_name):
     """Run backtest for a strategy."""
     print(f"\n{'='*80}")
-    print(f"🧪 Testing {strategy_name} on {ticker}")
+    print(f"Testing {strategy_name} on {ticker}")
     print(f"{'='*80}")
     print(f"Parameters: {params}")
 
@@ -120,15 +120,15 @@ def backtest_strategy(strategy_class, params, data, ticker, strategy_name):
     try:
         strategy = strategy_class(params)
     except Exception as e:
-        print(f"❌ Failed to initialize strategy: {e}")
+        print(f"Failed to initialize strategy: {e}")
         return None
 
     # Generate signals
-    print("\n📊 Generating signals...")
+    print("\n Generating signals...")
     try:
         signals = strategy.generate_signals(data)
     except Exception as e:
-        print(f"❌ Failed to generate signals: {e}")
+        print(f"Failed to generate signals: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -138,7 +138,7 @@ def backtest_strategy(strategy_class, params, data, ticker, strategy_name):
     buys = (signals['signal'] == 1).sum()
     sells = (signals['signal'] == -1).sum()
 
-    print(f"\n📈 Signal Statistics:")
+    print(f"\n Signal Statistics:")
     print(f"   Total bars: {len(data)}")
     print(f"   Total signals: {total_signals}")
     print(f"   BUY signals: {buys}")
@@ -147,15 +147,15 @@ def backtest_strategy(strategy_class, params, data, ticker, strategy_name):
     print(f"   Trades/month (est): {total_signals / (len(data) / 21):.1f}")
 
     if total_signals < 10:
-        print("\n   ⚠️  Very few signals - strategy may be too strict")
+        print("\n Very few signals - strategy may be too strict")
         return None
 
     # Calculate metrics
-    print("\n💰 Performance Metrics:")
+    print("\n Performance Metrics:")
     metrics = calculate_simple_metrics(data, signals)
 
     if metrics is None:
-        print("   ❌ No completed trades")
+        print("No completed trades")
         return None
 
     print(f"   Total Trades: {metrics['total_trades']}")
@@ -166,17 +166,17 @@ def backtest_strategy(strategy_class, params, data, ticker, strategy_name):
     print(f"   Sharpe (approx): {metrics['sharpe_approx']:.2f}")
 
     # Assessment
-    print(f"\n✅ Assessment:")
+    print(f"\n Assessment:")
     trades_ok = metrics['total_trades'] >= 30
     win_rate_ok = metrics['win_rate_pct'] >= 40
     sharpe_ok = metrics['sharpe_approx'] >= 0.8
 
-    print(f"   Trades >= 30: {'✅' if trades_ok else '❌'} ({metrics['total_trades']})")
-    print(f"   Win Rate >= 40%: {'✅' if win_rate_ok else '❌'} ({metrics['win_rate_pct']:.1f}%)")
-    print(f"   Sharpe >= 0.8: {'✅' if sharpe_ok else '❌'} ({metrics['sharpe_approx']:.2f})")
+    print(f"Trades >= 30: {'' if trades_ok else ''} ({metrics['total_trades']})")
+    print(f"Win Rate >= 40%: {'' if win_rate_ok else ''} ({metrics['win_rate_pct']:.1f}%)")
+    print(f"Sharpe >= 0.8: {'' if sharpe_ok else ''} ({metrics['sharpe_approx']:.2f})")
 
     passed = trades_ok and win_rate_ok and sharpe_ok
-    print(f"\n   Overall: {'✅ PASS - Ready for deployment!' if passed else '❌ NEEDS IMPROVEMENT'}")
+    print(f"\n Overall: {'PASS - Ready for deployment!' if passed else 'NEEDS IMPROVEMENT'}")
 
     return {
         'strategy': strategy_name,
@@ -248,12 +248,12 @@ def main():
         try:
             raw_data = fetch_data(ticker, years=5)
             if len(raw_data) < 200:
-                print(f"❌ Insufficient data for {ticker}")
+                print(f"Insufficient data for {ticker}")
                 continue
 
             data = add_features(raw_data)
         except Exception as e:
-            print(f"❌ Failed to fetch/process data for {ticker}: {e}")
+            print(f"Failed to fetch/process data for {ticker}: {e}")
             continue
 
         # Test each strategy
@@ -275,11 +275,11 @@ def main():
     print("="*80)
 
     if len(all_results) == 0:
-        print("\n❌ No successful backtests")
+        print("\n No successful backtests")
         return
 
     # Group by strategy
-    print("\n📊 Results by Strategy:\n")
+    print("\n Results by Strategy:\n")
 
     for strategy_config in strategies:
         strategy_name = strategy_config['name']
@@ -294,7 +294,7 @@ def main():
         passed_count = sum(1 for r in strategy_results if r['passed'])
 
         for r in strategy_results:
-            status = "✅" if r['passed'] else "❌"
+            status = "" if r['passed'] else ""
             m = r['metrics']
             print(f"  {status} {r['ticker']:<6} | Trades: {m['total_trades']:>3} | "
                   f"Win%: {m['win_rate_pct']:>5.1f}% | Sharpe: {m['sharpe_approx']:>5.2f} | "
@@ -304,14 +304,14 @@ def main():
 
     # Best performers
     print("\n" + "="*80)
-    print("🏆 BEST PERFORMERS")
+    print("BEST PERFORMERS")
     print("="*80)
 
     passing_results = [r for r in all_results if r['passed']]
 
     if len(passing_results) == 0:
-        print("\n❌ No strategies passed all criteria")
-        print("\n💡 Recommendations:")
+        print("\n No strategies passed all criteria")
+        print("\n Recommendations:")
         print("   1. Try relaxing thresholds further (RSI 35/65)")
         print("   2. Test on shorter timeframe (1Hour or 15Min)")
         print("   3. Adjust stop loss / take profit")
@@ -319,7 +319,7 @@ def main():
         # Sort by Sharpe ratio
         passing_results.sort(key=lambda x: x['metrics']['sharpe_approx'], reverse=True)
 
-        print(f"\n✅ {len(passing_results)} strategy-ticker combinations passed!\n")
+        print(f"\n {len(passing_results)} strategy-ticker combinations passed!\n")
 
         for i, r in enumerate(passing_results[:5], 1):  # Top 5
             m = r['metrics']
@@ -329,13 +329,13 @@ def main():
 
         # Recommend deployment
         best = passing_results[0]
-        print(f"\n🎯 RECOMMENDED FOR DEPLOYMENT:")
+        print(f"\n RECOMMENDED FOR DEPLOYMENT:")
         print(f"   Strategy: {best['strategy']}")
         print(f"   Ticker: {best['ticker']}")
         print(f"   Expected: {best['metrics']['total_trades'] / 5:.0f} trades/year")
         print(f"   Win Rate: {best['metrics']['win_rate_pct']:.1f}%")
         print(f"   Sharpe: {best['metrics']['sharpe_approx']:.2f}")
-        print(f"\n   ✅ Ready to export to AlphaLive!")
+        print(f"\n Ready to export to AlphaLive!")
 
     # Save results
     results_file = Path(__file__).parent / 'backtest_results.json'
@@ -345,7 +345,7 @@ def main():
             'results': all_results
         }, f, indent=2, default=str)
 
-    print(f"\n💾 Results saved to: {results_file}")
+        print(f"\n Results saved to: {results_file}")
     print()
 
 if __name__ == "__main__":

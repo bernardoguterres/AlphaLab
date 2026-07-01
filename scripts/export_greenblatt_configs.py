@@ -197,7 +197,7 @@ def main():
             json.dump(cfg, f, indent=2)
         perf = cfg["metadata"]["performance"]
         years = int(BACKTEST_END[:4]) - int(BACKTEST_START[:4])
-        print(f"  ✓ {filename}  (Sharpe={perf['sharpe_ratio']}, "
+        print(f"{filename} (Sharpe={perf['sharpe_ratio']}, "
               f"Return={perf['total_return_pct']:.0f}% over {years}y, "
               f"Trades={perf['total_trades']})")
 

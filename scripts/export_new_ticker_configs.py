@@ -180,10 +180,10 @@ def main():
         with open(out_path, "w") as f:
             json.dump(export_json, f, indent=2)
         perf = export_json["metadata"]["performance"]
-        print(f"  ✓ {filename}  (Sharpe={perf['sharpe_ratio']}, "
+        print(f"{filename} (Sharpe={perf['sharpe_ratio']}, "
               f"Return={perf['total_return_pct']}%, Trades={perf['total_trades']})")
 
-    print(f"\n✅ {len(exports)} configs exported to {ALPHALIVE_CONFIGS}")
+print(f"\n {len(exports)} configs exported to {ALPHALIVE_CONFIGS}")
 
 
 if __name__ == "__main__":

@@ -49,7 +49,7 @@ def run_backtest(strategy_class, params, data, ticker, period_name):
     sells = (signals["signal"] == -1).sum()
     days = len(data)
 
-    print(f"\n📊 Signal Statistics:")
+    print(f"\n Signal Statistics:")
     print(f"   Total bars: {days}")
     print(f"   Total signals: {total_signals}")
     print(f"   BUY signals: {buys}")
@@ -58,7 +58,7 @@ def run_backtest(strategy_class, params, data, ticker, period_name):
     print(f"   Trades per month (est): {total_signals / (days / 21):.1f}")
 
     if total_signals == 0:
-        print("   ⚠️  NO SIGNALS - Strategy too strict!")
+        print("NO SIGNALS - Strategy too strict!")
         return None
 
     # Run backtest
@@ -77,7 +77,7 @@ def run_backtest(strategy_class, params, data, ticker, period_name):
     metrics = metrics_calc.calculate_all(results)
 
     # Print key metrics
-    print(f"\n📈 Performance Metrics:")
+    print(f"\n Performance Metrics:")
     print(f"   Total Return: {metrics['total_return_pct']:.2f}%")
     print(f"   Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
     print(f"   Sortino Ratio: {metrics['sortino_ratio']:.2f}")
@@ -87,19 +87,19 @@ def run_backtest(strategy_class, params, data, ticker, period_name):
     print(f"   Total Trades: {metrics['total_trades']}")
 
     # Assessment
-    print(f"\n✅ Assessment:")
+    print(f"\n Assessment:")
     sharpe_ok = metrics['sharpe_ratio'] > 1.2
     win_rate_ok = metrics['win_rate_pct'] > 45
     drawdown_ok = metrics['max_drawdown_pct'] > -15
     trades_ok = metrics['total_trades'] > 30  # At least 30 trades in 5 years
 
-    print(f"   Sharpe > 1.2: {'✅' if sharpe_ok else '❌'} ({metrics['sharpe_ratio']:.2f})")
-    print(f"   Win Rate > 45%: {'✅' if win_rate_ok else '❌'} ({metrics['win_rate_pct']:.1f}%)")
-    print(f"   Drawdown > -15%: {'✅' if drawdown_ok else '❌'} ({metrics['max_drawdown_pct']:.1f}%)")
-    print(f"   Trades > 30: {'✅' if trades_ok else '❌'} ({metrics['total_trades']})")
+    print(f"Sharpe > 1.2: {'' if sharpe_ok else ''} ({metrics['sharpe_ratio']:.2f})")
+    print(f"Win Rate > 45%: {'' if win_rate_ok else ''} ({metrics['win_rate_pct']:.1f}%)")
+    print(f"Drawdown > -15%: {'' if drawdown_ok else ''} ({metrics['max_drawdown_pct']:.1f}%)")
+    print(f"Trades > 30: {'' if trades_ok else ''} ({metrics['total_trades']})")
 
     passed = sharpe_ok and win_rate_ok and drawdown_ok and trades_ok
-    print(f"\n   Overall: {'✅ PASS' if passed else '❌ FAIL'}")
+    print(f"\n Overall: {'PASS' if passed else 'FAIL'}")
 
     return {
         'strategy': strategy_class.name,
@@ -143,15 +143,15 @@ def main():
     })
 
     if raw_data is None or len(raw_data) < 200:
-        print(f"❌ Failed to fetch sufficient data for {ticker}")
+        print(f"Failed to fetch sufficient data for {ticker}")
         return
 
-    print(f"✅ Fetched {len(raw_data)} bars")
+        print(f"Fetched {len(raw_data)} bars")
 
     # Add technical indicators
     print("Adding technical indicators...")
     data = engineer.process(raw_data)
-    print(f"✅ Added features. Data shape: {data.shape}")
+    print(f"Added features. Data shape: {data.shape}")
 
     # Strategy configurations
     strategies = [
@@ -213,7 +213,7 @@ def main():
     print("-"*80)
 
     for r in results:
-        status = "✅ PASS" if r['passed'] else "❌ FAIL"
+        status = "PASS" if r['passed'] else "FAIL"
         print(f"{r['strategy']:<25} {r['signals']:<10} {r['metrics']['sharpe_ratio']:<8.2f} "
               f"{r['metrics']['win_rate_pct']:<8.1f} {r['metrics']['max_drawdown_pct']:<10.1f} {status}")
 
@@ -225,21 +225,21 @@ def main():
     passing_strategies = [r for r in results if r['passed']]
 
     if len(passing_strategies) == 0:
-        print("\n❌ None of the strategies passed all criteria.")
+        print("\n None of the strategies passed all criteria.")
         print("   Consider:")
         print("   1. Further relaxing RSI thresholds (35/65)")
         print("   2. Switching to 15Min or 1Hour timeframe for more signals")
         print("   3. Combining strategies in a portfolio")
     else:
-        print(f"\n✅ {len(passing_strategies)} strategies passed!")
+        print(f"\n {len(passing_strategies)} strategies passed!")
 
         # Find best by Sharpe
         best = max(passing_strategies, key=lambda x: x['metrics']['sharpe_ratio'])
-        print(f"\n🏆 Best Strategy: {best['strategy']}")
+        print(f"\n Best Strategy: {best['strategy']}")
         print(f"   Sharpe: {best['metrics']['sharpe_ratio']:.2f}")
         print(f"   Return: {best['metrics']['total_return_pct']:.1f}%")
         print(f"   Signals: {best['signals']} ({best['signals'] / (len(data) / 21):.1f}/month)")
-        print(f"\n   ✅ READY FOR EXPORT TO ALPHALIVE")
+        print(f"\n READY FOR EXPORT TO ALPHALIVE")
 
     print()
 

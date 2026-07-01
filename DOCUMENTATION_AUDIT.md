@@ -44,9 +44,9 @@
 - More extensive curl examples
 - Error code reference table
 
-**Duplication Level:** ⚠️ **90%** (nearly identical content)
+**Duplication Level:** **90%** (nearly identical content)
 
-**Recommendation:** ✅ **DELETE docs/API.md**
+**Recommendation:** **DELETE docs/API.md**
 - AI can read `backend/src/api/routes.py` and `validators.py` directly
 - CLAUDE.md can link to code files instead of duplicating schemas
 - Keep minimal endpoint summary in CLAUDE.md for quick reference
@@ -83,9 +83,9 @@ Flask REST API on http://127.0.0.1:5000
 - Pydantic Validation
 ```
 
-**Duplication Level:** ⚠️ **70%** (high-level overview duplicated, ARCHITECTURE.md has more depth on design decisions)
+**Duplication Level:** **70%** (high-level overview duplicated, ARCHITECTURE.md has more depth on design decisions)
 
-**Recommendation:** ⚠️ **DELETE docs/ARCHITECTURE.md, keep design decisions in CLAUDE.md**
+**Recommendation:** **DELETE docs/ARCHITECTURE.md, keep design decisions in CLAUDE.md**
 - Architecture overview is already in CLAUDE.md (shorter version)
 - Design decisions (no look-ahead bias, execution costs) are valuable → **move to CLAUDE.md "Key Design Decisions"** section
 - Performance table → can be removed (not critical for AI)
@@ -134,9 +134,9 @@ Flask REST API on http://127.0.0.1:5000
 [Step-by-step guide - IDENTICAL to CLAUDE.md]
 ```
 
-**Duplication Level:** ⚠️ **80%** (strategy descriptions, parameters, "when to use" sections duplicated)
+**Duplication Level:** **80%** (strategy descriptions, parameters, "when to use"sections duplicated)
 
-**Recommendation:** ⚠️ **DELETE docs/STRATEGIES.md**
+**Recommendation:** **DELETE docs/STRATEGIES.md**
 - Strategy parameter tables can be read from code (`base_strategy.py`, implementation files)
 - **Keep 1-line summary per strategy in CLAUDE.md** (current version is good)
 - **Remove detailed parameter tables from CLAUDE.md** → AI can read code
@@ -181,9 +181,9 @@ You're running from the wrong directory...
 **Q: Can I add crypto/forex data?**
 ```
 
-**Duplication Level:** ⚠️ **50%** (some overlap in "gotchas" vs "common issues")
+**Duplication Level:** **50%** (some overlap in "gotchas"vs "common issues")
 
-**Recommendation:** ⚠️ **DELETE docs/TROUBLESHOOTING.md, merge FAQ into README**
+**Recommendation:** **DELETE docs/TROUBLESHOOTING.md, merge FAQ into README**
 - Troubleshooting is useful for USERS, not AI
 - Move 3-4 most common issues to README "Troubleshooting" section
 - Move FAQ questions to README "FAQ" section
@@ -198,9 +198,9 @@ You're running from the wrong directory...
 - Covers all pages, features, edge cases
 - Very detailed (every button, every form field)
 
-**Duplication Level:** ✅ **0%** (no duplication, unique content)
+**Duplication Level:** **0%** (no duplication, unique content)
 
-**Recommendation:** ⚠️ **CONSIDER REPLACING with Playwright E2E tests**
+**Recommendation:** **CONSIDER REPLACING with Playwright E2E tests**
 - Manual checklists are hard to maintain and don't prevent regressions
 - 100+ checkboxes is excessive for manual testing
 - **Short-term:** Keep file, but note it's deprecated in favor of E2E tests
@@ -219,9 +219,9 @@ You're running from the wrong directory...
 - Interpretation guidance ("Good Sharpe > 1.0")
 - No duplication with CLAUDE.md
 
-**Duplication Level:** ✅ **0%** (unique content, not in CLAUDE.md)
+**Duplication Level:** **0%** (unique content, not in CLAUDE.md)
 
-**Recommendation:** ✅ **KEEP** (valuable user reference, no duplication)
+**Recommendation:** **KEEP** (valuable user reference, no duplication)
 
 ---
 
@@ -233,9 +233,9 @@ You're running from the wrong directory...
 - Migration guide, version policy
 - Critical contract between projects
 
-**Duplication Level:** ✅ **5%** (brief mention in CLAUDE.md, full spec in STRATEGY_SCHEMA.md)
+**Duplication Level:** **5%** (brief mention in CLAUDE.md, full spec in STRATEGY_SCHEMA.md)
 
-**Recommendation:** ✅ **KEEP** (critical contract, version-controlled spec)
+**Recommendation:** **KEEP** (critical contract, version-controlled spec)
 
 ---
 
@@ -245,22 +245,22 @@ You're running from the wrong directory...
 
 | Section | Lines | Keep? | Reason |
 |---------|-------|-------|--------|
-| **Project Overview** | 70 | ✅ Yes | AI needs to know what AlphaLab is |
-| **Architecture** | 60 | ⚠️ Shrink | Redundant with code structure, can be 20 lines |
-| **Running the App** | 80 | ✅ Yes | AI needs to know how to run tests, start servers |
-| **Key Design Decisions** | 50 | ✅ Yes | Non-obvious choices (no look-ahead bias, next-bar execution) |
-| **Code Conventions** | 90 | ✅ Yes | Critical for AI to write code in project style |
-| **Adding a Strategy** | 50 | ✅ Yes | AI needs to know how to extend system |
-| **Adding an API Endpoint** | 40 | ✅ Yes | AI needs to know Flask patterns |
-| **Settings Management** | 200 | ⚠️ Shrink | Too detailed, can be 50 lines with link to code |
-| **Risk Settings** | 80 | ⚠️ Shrink | Frontend details, can be 20 lines |
-| **Strategy Export Schema** | 150 | ❌ Delete | Link to STRATEGY_SCHEMA.md instead |
-| **Frontend Features** | 200 | ⚠️ Shrink | Too detailed, can be 50 lines (AI can read code) |
-| **Strategy Behavior** | 80 | ✅ Yes | Empirical results from real testing |
-| **Known Gotchas** | 90 | ⚠️ Shrink | Keep top 5 gotchas, delete rest |
-| **Test Structure** | 180 | ⚠️ Shrink | Test list can be 50 lines, delete detailed test descriptions |
-| **Project Structure** | 40 | ✅ Yes | Quick reference tree |
-| **Documentation List** | 60 | ⚠️ Shrink | 10 lines max, just link to files |
+| **Project Overview** | 70 | Yes | AI needs to know what AlphaLab is |
+| **Architecture** | 60 | Shrink | Redundant with code structure, can be 20 lines |
+| **Running the App** | 80 | Yes | AI needs to know how to run tests, start servers |
+| **Key Design Decisions** | 50 | Yes | Non-obvious choices (no look-ahead bias, next-bar execution) |
+| **Code Conventions** | 90 | Yes | Critical for AI to write code in project style |
+| **Adding a Strategy** | 50 | Yes | AI needs to know how to extend system |
+| **Adding an API Endpoint** | 40 | Yes | AI needs to know Flask patterns |
+| **Settings Management** | 200 | Shrink | Too detailed, can be 50 lines with link to code |
+| **Risk Settings** | 80 | Shrink | Frontend details, can be 20 lines |
+| **Strategy Export Schema** | 150 | Delete | Link to STRATEGY_SCHEMA.md instead |
+| **Frontend Features** | 200 | Shrink | Too detailed, can be 50 lines (AI can read code) |
+| **Strategy Behavior** | 80 | Yes | Empirical results from real testing |
+| **Known Gotchas** | 90 | Shrink | Keep top 5 gotchas, delete rest |
+| **Test Structure** | 180 | Shrink | Test list can be 50 lines, delete detailed test descriptions |
+| **Project Structure** | 40 | Yes | Quick reference tree |
+| **Documentation List** | 60 | Shrink | 10 lines max, just link to files |
 
 **Total Savings:** 150 (Strategy Export) + 150 (Settings) + 150 (Frontend) + 60 (Risk) + 130 (Tests) + 50 (Documentation) = **690 lines**
 
@@ -305,7 +305,7 @@ rm docs/STRATEGIES.md  # Optional, see alternative below
 - `backend/configs/app_settings.json` — Non-sensitive settings only
 
 **Security:**
-- ⚠️ NEVER store API keys in `app_settings.json`
+- NEVER store API keys in `app_settings.json`
 - ALL credentials MUST be environment variables
 - API endpoints REJECT requests with forbidden fields (api_key, secret_key, bot_token, password)
 - GET `/api/settings/notifications` returns `*_configured: true/false` flags only
@@ -452,7 +452,7 @@ sections_to_shrink = {
 - `backend/configs/app_settings.json` — Non-sensitive settings only
 
 **Security:**
-- ⚠️ NEVER store API keys in `app_settings.json`
+- NEVER store API keys in `app_settings.json`
 - ALL credentials MUST be environment variables
 - API endpoints REJECT requests with forbidden fields
 - GET `/api/settings/notifications` returns `*_configured` flags only
@@ -535,20 +535,20 @@ AlphaLab/
 ## Benefits Summary
 
 ### For AI (Claude)
-✅ **42% less context to load** (60KB → 35KB)
-✅ **Faster response times** (less text to process)
-✅ **Less duplication** (single source of truth)
-✅ **Links to code** instead of duplicating schemas
+**42% less context to load** (60KB → 35KB)
+**Faster response times** (less text to process)
+**Less duplication** (single source of truth)
+**Links to code** instead of duplicating schemas
 
 ### For Users
-✅ **Easier to find docs** (README has all user-facing content)
-✅ **Less outdated info** (fewer places to update)
-✅ **Clear separation** (README = users, CLAUDE.md = developers/AI)
+**Easier to find docs** (README has all user-facing content)
+**Less outdated info** (fewer places to update)
+**Clear separation** (README = users, CLAUDE.md = developers/AI)
 
 ### For Maintainers
-✅ **Less maintenance burden** (4 fewer files to update)
-✅ **No schema duplication** (STRATEGY_SCHEMA.md is source of truth)
-✅ **Easier to keep in sync** (change once, not 3 times)
+**Less maintenance burden** (4 fewer files to update)
+**No schema duplication** (STRATEGY_SCHEMA.md is source of truth)
+**Easier to keep in sync** (change once, not 3 times)
 
 ---
 
@@ -572,13 +572,13 @@ AlphaLab/
 
 | Original Location | Content Type | New Location | Reason |
 |-------------------|-------------|--------------|--------|
-| `docs/API.md` | API endpoint reference | ❌ DELETED | AI reads code directly |
-| `docs/ARCHITECTURE.md` | System design | ❌ DELETED | Redundant with CLAUDE.md |
+| `docs/API.md` | API endpoint reference | DELETED | AI reads code directly |
+| `docs/ARCHITECTURE.md` | System design | DELETED | Redundant with CLAUDE.md |
 | `docs/TROUBLESHOOTING.md` | Common issues + FAQ | → `README.md` | User-facing, belongs in README |
 | `docs/STRATEGIES.md` | Strategy details | → `README.md` (condensed) | User-facing, 1 paragraph per strategy |
-| `docs/SMOKE_TEST.md` | Manual test checklist | ⚠️ DEPRECATE | Replace with E2E tests (future) |
-| `docs/METRICS_GUIDE.md` | Metric explanations | ✅ KEEP | User reference, no duplication |
-| `docs/STRATEGY_SCHEMA.md` | JSON schema v1.0 | ✅ KEEP | Critical contract |
+| `docs/SMOKE_TEST.md` | Manual test checklist | DEPRECATE | Replace with E2E tests (future) |
+| `docs/METRICS_GUIDE.md` | Metric explanations | KEEP | User reference, no duplication |
+| `docs/STRATEGY_SCHEMA.md` | JSON schema v1.0 | KEEP | Critical contract |
 | `CLAUDE.md` (Settings section) | API endpoint details | → Condensed (200 → 50 lines) | AI reads code for details |
 | `CLAUDE.md` (Schema section) | Schema specification | → Link to STRATEGY_SCHEMA.md | Single source of truth |
 | `CLAUDE.md` (Frontend section) | Page/component list | → Condensed (200 → 50 lines) | AI reads code for details |

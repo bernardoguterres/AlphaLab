@@ -450,10 +450,10 @@ def main():
     print()
 
     if consistent_tickers:
-        print("  ✓ Export candidates (all passed):", ", ".join(consistent_tickers))
+        print("Export candidates (all passed):", ", ".join(consistent_tickers))
         print("  Next step: AlphaLab → batch backtest → export JSON → place in AlphaLive/configs/production/")
     else:
-        print("  ✗ No candidates passed both thresholds.")
+        print("No candidates passed both thresholds.")
         print("  Review parameters or expand the screener universe.")
     print()
 
