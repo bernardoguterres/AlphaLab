@@ -10,7 +10,9 @@ from ..data.validator import DataValidator
 from ..data.processor import FeatureEngineer
 
 
-def _fetch_and_prepare(fetcher, ticker: str, start_date, end_date, interval: str = "1d") -> tuple:
+def _fetch_and_prepare(
+    fetcher, ticker: str, start_date, end_date, interval: str = "1d"
+) -> tuple:
     """Fetch, validate, and feature-engineer data for a ticker.
 
     Returns (featured_df, report, None) on success or (None, None, flask_response_tuple) on failure.
@@ -74,7 +76,9 @@ def _build_export_json(
         "sharpe_ratio": round(metrics.get("risk", {}).get("sharpe_ratio", 0.0), 2),
         "sortino_ratio": round(metrics.get("risk", {}).get("sortino_ratio", 0.0), 2),
         "total_return_pct": round(results.get("total_return_pct", 0.0), 2),
-        "max_drawdown_pct": round(metrics.get("drawdown", {}).get("max_drawdown", 0.0), 2),
+        "max_drawdown_pct": round(
+            metrics.get("drawdown", {}).get("max_drawdown", 0.0), 2
+        ),
         "win_rate_pct": round(metrics.get("trades", {}).get("win_rate", 0.0) * 100, 2),
         "profit_factor": round(metrics.get("trades", {}).get("profit_factor", 0.0), 2),
         "total_trades": results.get("total_trades", 0),

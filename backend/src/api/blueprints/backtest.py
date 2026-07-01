@@ -98,7 +98,9 @@ def run_backtest():
     strategy_cls = STRATEGY_MAP.get(body.strategy)
     if not strategy_cls:
         return (
-            jsonify({"status": "error", "message": f"Unknown strategy: {body.strategy}"}),
+            jsonify(
+                {"status": "error", "message": f"Unknown strategy: {body.strategy}"}
+            ),
             400,
         )
 
@@ -129,7 +131,9 @@ def run_backtest():
             "end_date": body.end_date,
             "initial_capital": body.initial_capital,
             "params": body.params or {},
-            "risk_settings": (body.risk_settings.model_dump() if body.risk_settings else None),
+            "risk_settings": (
+                body.risk_settings.model_dump() if body.risk_settings else None
+            ),
             "interval": interval,
         },
     }
@@ -146,7 +150,9 @@ def optimize_strategy():
     fetcher = current_app.extensions["fetcher"]
     body = OptimizeRequest(**request.get_json(force=True))
 
-    featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
+    featured, report, err = _fetch_and_prepare(
+        fetcher, body.ticker, body.start_date, body.end_date
+    )
     if err:
         return err
 
@@ -184,7 +190,9 @@ def parameter_heatmap():
     fetcher = current_app.extensions["fetcher"]
     body = HeatmapRequest(**request.get_json(force=True))
 
-    featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
+    featured, report, err = _fetch_and_prepare(
+        fetcher, body.ticker, body.start_date, body.end_date
+    )
     if err:
         return err
 
@@ -249,7 +257,9 @@ def compare_strategies():
     fetcher = current_app.extensions["fetcher"]
     body = CompareRequest(**request.get_json(force=True))
 
-    featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
+    featured, report, err = _fetch_and_prepare(
+        fetcher, body.ticker, body.start_date, body.end_date
+    )
     if err:
         return err
 
@@ -299,7 +309,9 @@ def batch_backtest():
     strategy_cls = STRATEGY_MAP.get(body.strategy)
     if not strategy_cls:
         return (
-            jsonify({"status": "error", "message": f"Unknown strategy: {body.strategy}"}),
+            jsonify(
+                {"status": "error", "message": f"Unknown strategy: {body.strategy}"}
+            ),
             400,
         )
 
@@ -363,7 +375,9 @@ def batch_backtest():
 
     total_runtime = time.time() - start_time
     num_profitable = sum(1 for r in results if r["total_return_pct"] > 0)
-    avg_sharpe = sum(r["sharpe_ratio"] for r in results) / len(results) if results else 0
+    avg_sharpe = (
+        sum(r["sharpe_ratio"] for r in results) / len(results) if results else 0
+    )
     best_ticker = results[0] if results else None
     worst_ticker = results[-1] if results else None
 
@@ -377,7 +391,9 @@ def batch_backtest():
         "best_ticker": best_ticker["ticker"] if best_ticker else None,
         "best_sharpe": round(best_ticker["sharpe_ratio"], 2) if best_ticker else None,
         "worst_ticker": worst_ticker["ticker"] if worst_ticker else None,
-        "worst_sharpe": (round(worst_ticker["sharpe_ratio"], 2) if worst_ticker else None),
+        "worst_sharpe": (
+            round(worst_ticker["sharpe_ratio"], 2) if worst_ticker else None
+        ),
         "runtime_seconds": round(total_runtime, 1),
     }
 
@@ -402,7 +418,9 @@ def export_strategy():
     stored = results_store.get(body.backtest_id)
     if not stored:
         return (
-            jsonify({"status": "error", "message": f"Backtest {body.backtest_id} not found"}),
+            jsonify(
+                {"status": "error", "message": f"Backtest {body.backtest_id} not found"}
+            ),
             404,
         )
 
