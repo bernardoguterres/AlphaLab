@@ -116,6 +116,7 @@ class BacktestRequest(BaseModel):
     position_sizing: str = "equal_weight"
     monte_carlo_runs: int = 0
     risk_settings: Optional[RiskSettings] = None
+    interval: Optional[str] = None
 
     @field_validator("strategy")
     @classmethod
@@ -146,6 +147,13 @@ class BacktestRequest(BaseModel):
     def validate_sizing(cls, v):
         if v not in ("equal_weight", "risk_parity", "volatility_weighted"):
             raise ValueError("Invalid position sizing method")
+        return v
+
+    @field_validator("interval")
+    @classmethod
+    def validate_interval(cls, v):
+        if v is not None and v not in ("1d", "1wk", "1mo"):
+            raise ValueError("Interval must be one of: 1d, 1wk, 1mo")
         return v
 
 
@@ -182,9 +190,7 @@ class OptimizeRequest(BaseModel):
     def validate_target(cls, v):
         allowed = ("sharpe_ratio", "total_return_pct", "max_drawdown_pct", "win_rate")
         if v not in allowed:
-            raise ValueError(
-                f"Optimization target must be one of: {', '.join(allowed)}"
-            )
+            raise ValueError(f"Optimization target must be one of: {', '.join(allowed)}")
         return v
 
     @field_validator("n_folds")
@@ -263,6 +269,7 @@ class BatchBacktestRequest(BaseModel):
     params: Optional[dict] = None
     position_sizing: str = "equal_weight"
     risk_settings: Optional[RiskSettings] = None
+    interval: Optional[str] = None
 
     @field_validator("tickers")
     @classmethod
@@ -304,6 +311,13 @@ class BatchBacktestRequest(BaseModel):
     def validate_sizing(cls, v):
         if v not in ("equal_weight", "risk_parity", "volatility_weighted"):
             raise ValueError("Invalid position sizing method")
+        return v
+
+    @field_validator("interval")
+    @classmethod
+    def validate_interval(cls, v):
+        if v is not None and v not in ("1d", "1wk", "1mo"):
+            raise ValueError("Interval must be one of: 1d, 1wk, 1mo")
         return v
 
 
