@@ -190,7 +190,9 @@ class OptimizeRequest(BaseModel):
     def validate_target(cls, v):
         allowed = ("sharpe_ratio", "total_return_pct", "max_drawdown_pct", "win_rate")
         if v not in allowed:
-            raise ValueError(f"Optimization target must be one of: {', '.join(allowed)}")
+            raise ValueError(
+                f"Optimization target must be one of: {', '.join(allowed)}"
+            )
         return v
 
     @field_validator("n_folds")
