@@ -10,13 +10,13 @@ from ..data.validator import DataValidator
 from ..data.processor import FeatureEngineer
 
 
-def _fetch_and_prepare(fetcher, ticker: str, start_date, end_date) -> tuple:
+def _fetch_and_prepare(fetcher, ticker: str, start_date, end_date, interval: str = "1d") -> tuple:
     """Fetch, validate, and feature-engineer data for a ticker.
 
     Returns (featured_df, report, None) on success or (None, None, flask_response_tuple) on failure.
     """
     try:
-        raw = fetcher.fetch(ticker, start_date, end_date)
+        raw = fetcher.fetch(ticker, start_date, end_date, interval)
     except DataFetchError as e:
         return None, None, (jsonify({"status": "error", "message": str(e)}), 400)
 
@@ -43,6 +43,12 @@ def _fetch_and_prepare(fetcher, ticker: str, start_date, end_date) -> tuple:
     return featured, report, None
 
 
+_INTERVAL_TO_TIMEFRAME = {
+    "1d": "1Day",
+    "1wk": "1Week",
+}
+
+
 def _build_export_json(
     backtest_id: str,
     ticker: str,
@@ -54,10 +60,13 @@ def _build_export_json(
     results: dict,
     config,
     risk_settings: dict = None,
+    interval: str = "1d",
 ) -> dict:
     """Build export JSON following the schema v1.0.
 
-    Maps backtest results to the StrategyExportSchema format.
+    Maps backtest results to the StrategyExportSchema format. `timeframe` is
+    derived from the interval the backtest actually ran on, so the export
+    never claims a timeframe the data didn't back up.
     """
     metrics = results.get("metrics", {})
 
@@ -65,9 +74,7 @@ def _build_export_json(
         "sharpe_ratio": round(metrics.get("risk", {}).get("sharpe_ratio", 0.0), 2),
         "sortino_ratio": round(metrics.get("risk", {}).get("sortino_ratio", 0.0), 2),
         "total_return_pct": round(results.get("total_return_pct", 0.0), 2),
-        "max_drawdown_pct": round(
-            metrics.get("drawdown", {}).get("max_drawdown", 0.0), 2
-        ),
+        "max_drawdown_pct": round(metrics.get("drawdown", {}).get("max_drawdown", 0.0), 2),
         "win_rate_pct": round(metrics.get("trades", {}).get("win_rate", 0.0) * 100, 2),
         "profit_factor": round(metrics.get("trades", {}).get("profit_factor", 0.0), 2),
         "total_trades": results.get("total_trades", 0),
@@ -108,7 +115,7 @@ def _build_export_json(
             "description": f"{strategy_name.replace('_', ' ').title()} strategy for {ticker}",
         },
         "ticker": ticker,
-        "timeframe": "1Day",
+        "timeframe": _INTERVAL_TO_TIMEFRAME.get(interval, "1Day"),
         "risk": risk,
         "execution": execution,
         "safety_limits": safety_limits,

@@ -56,6 +56,29 @@ STRATEGY_MAP = {
     "greenblatt_weekly": GreenblattWeekly,
 }
 
+# Strategies that require a non-daily bar interval when the caller doesn't
+# explicitly specify one. GreenblattWeekly is designed to run on weekly bars
+# and has no internal daily->weekly resampling of its own.
+_DEFAULT_INTERVAL_BY_STRATEGY = {
+    "greenblatt_weekly": "1wk",
+}
+
+
+def _resolve_interval(strategy_name: str, requested_interval: str | None) -> str:
+    """Resolve the bar interval to fetch for a backtest.
+
+    Args:
+        strategy_name: Strategy identifier (e.g. "greenblatt_weekly")
+        requested_interval: Interval explicitly requested by the caller, if any
+
+    Returns:
+        "1d", "1wk", or "1mo"
+    """
+    if requested_interval is not None:
+        return requested_interval
+    return _DEFAULT_INTERVAL_BY_STRATEGY.get(strategy_name, "1d")
+
+
 backtest_bp = Blueprint("backtest", __name__)
 
 
@@ -64,9 +87,10 @@ def run_backtest():
     fetcher = current_app.extensions["fetcher"]
     results_store = current_app.extensions["results_store"]
     body = BacktestRequest(**request.get_json(force=True))
+    interval = _resolve_interval(body.strategy, body.interval)
 
     featured, report, err = _fetch_and_prepare(
-        fetcher, body.ticker, body.start_date, body.end_date
+        fetcher, body.ticker, body.start_date, body.end_date, interval
     )
     if err:
         return err
@@ -74,9 +98,7 @@ def run_backtest():
     strategy_cls = STRATEGY_MAP.get(body.strategy)
     if not strategy_cls:
         return (
-            jsonify(
-                {"status": "error", "message": f"Unknown strategy: {body.strategy}"}
-            ),
+            jsonify({"status": "error", "message": f"Unknown strategy: {body.strategy}"}),
             400,
         )
 
@@ -107,9 +129,8 @@ def run_backtest():
             "end_date": body.end_date,
             "initial_capital": body.initial_capital,
             "params": body.params or {},
-            "risk_settings": (
-                body.risk_settings.model_dump() if body.risk_settings else None
-            ),
+            "risk_settings": (body.risk_settings.model_dump() if body.risk_settings else None),
+            "interval": interval,
         },
     }
 
@@ -125,9 +146,7 @@ def optimize_strategy():
     fetcher = current_app.extensions["fetcher"]
     body = OptimizeRequest(**request.get_json(force=True))
 
-    featured, report, err = _fetch_and_prepare(
-        fetcher, body.ticker, body.start_date, body.end_date
-    )
+    featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
     if err:
         return err
 
@@ -165,9 +184,7 @@ def parameter_heatmap():
     fetcher = current_app.extensions["fetcher"]
     body = HeatmapRequest(**request.get_json(force=True))
 
-    featured, report, err = _fetch_and_prepare(
-        fetcher, body.ticker, body.start_date, body.end_date
-    )
+    featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
     if err:
         return err
 
@@ -232,9 +249,7 @@ def compare_strategies():
     fetcher = current_app.extensions["fetcher"]
     body = CompareRequest(**request.get_json(force=True))
 
-    featured, report, err = _fetch_and_prepare(
-        fetcher, body.ticker, body.start_date, body.end_date
-    )
+    featured, report, err = _fetch_and_prepare(fetcher, body.ticker, body.start_date, body.end_date)
     if err:
         return err
 
@@ -270,6 +285,7 @@ def batch_backtest():
     """Run backtests across multiple tickers with the same strategy."""
     fetcher = current_app.extensions["fetcher"]
     body = BatchBacktestRequest(**request.get_json(force=True))
+    interval = _resolve_interval(body.strategy, body.interval)
 
     start_time = time.time()
     from ...data.validator import DataValidator
@@ -283,9 +299,7 @@ def batch_backtest():
     strategy_cls = STRATEGY_MAP.get(body.strategy)
     if not strategy_cls:
         return (
-            jsonify(
-                {"status": "error", "message": f"Unknown strategy: {body.strategy}"}
-            ),
+            jsonify({"status": "error", "message": f"Unknown strategy: {body.strategy}"}),
             400,
         )
 
@@ -294,7 +308,7 @@ def batch_backtest():
 
     for ticker in body.tickers:
         try:
-            raw = fetcher.fetch(ticker, body.start_date, body.end_date)
+            raw = fetcher.fetch(ticker, body.start_date, body.end_date, interval)
 
             if not raw.get("metadata", {}).get("from_cache", False):
                 time.sleep(0.5)
@@ -349,9 +363,7 @@ def batch_backtest():
 
     total_runtime = time.time() - start_time
     num_profitable = sum(1 for r in results if r["total_return_pct"] > 0)
-    avg_sharpe = (
-        sum(r["sharpe_ratio"] for r in results) / len(results) if results else 0
-    )
+    avg_sharpe = sum(r["sharpe_ratio"] for r in results) / len(results) if results else 0
     best_ticker = results[0] if results else None
     worst_ticker = results[-1] if results else None
 
@@ -365,9 +377,7 @@ def batch_backtest():
         "best_ticker": best_ticker["ticker"] if best_ticker else None,
         "best_sharpe": round(best_ticker["sharpe_ratio"], 2) if best_ticker else None,
         "worst_ticker": worst_ticker["ticker"] if worst_ticker else None,
-        "worst_sharpe": (
-            round(worst_ticker["sharpe_ratio"], 2) if worst_ticker else None
-        ),
+        "worst_sharpe": (round(worst_ticker["sharpe_ratio"], 2) if worst_ticker else None),
         "runtime_seconds": round(total_runtime, 1),
     }
 
@@ -392,9 +402,7 @@ def export_strategy():
     stored = results_store.get(body.backtest_id)
     if not stored:
         return (
-            jsonify(
-                {"status": "error", "message": f"Backtest {body.backtest_id} not found"}
-            ),
+            jsonify({"status": "error", "message": f"Backtest {body.backtest_id} not found"}),
             404,
         )
 
@@ -414,6 +422,7 @@ def export_strategy():
             results=results,
             config=config,
             risk_settings=req.get("risk_settings"),
+            interval=req.get("interval", "1d"),
         )
 
         if StrategyExportSchema:

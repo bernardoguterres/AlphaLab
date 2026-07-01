@@ -45,7 +45,7 @@ Version changes:
     "description": "Human-readable summary (optional)"
   },
   "ticker": "AAPL",
-  "timeframe": "1Day | 1Hour | 15Min",
+  "timeframe": "1Day | 1Hour | 15Min | 1Week",
   "risk": {
     "stop_loss_pct": 2.0,
     "take_profit_pct": 5.0,
@@ -102,7 +102,7 @@ Version changes:
 | `schema_version` | `string` | ✅ Yes | Schema version (currently "1.0") |
 | `strategy` | `object` | ✅ Yes | Strategy configuration block |
 | `ticker` | `string` | ✅ Yes | Primary ticker symbol (e.g., "AAPL", "SPY") |
-| `timeframe` | `string` | ✅ Yes | One of: "1Day", "1Hour", "15Min" |
+| `timeframe` | `string` | ✅ Yes | One of: "1Day", "1Hour", "15Min", "1Week" |
 | `risk` | `object` | ✅ Yes | Risk management parameters |
 | `execution` | `object` | ✅ Yes | Order execution settings |
 | `safety_limits` | `object` | ⚪ Optional | Stopping conditions (defaults applied if missing) |
