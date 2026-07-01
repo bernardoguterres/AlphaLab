@@ -178,12 +178,8 @@ class ParameterOptimizer:
                         monte_carlo_runs=0,
                     )
 
-                    test_metrics = metrics_calc.calculate_all(
-                        test_result.equity_curve, test_result.trades
-                    )
-
-                    score = self._extract_metric(
-                        test_metrics, test_result, optimization_target
+                    score = self._score_fold_result(
+                        test_result, metrics_calc, optimization_target
                     )
                     fold_scores.append(score)
 
@@ -279,6 +275,20 @@ class ParameterOptimizer:
             return metrics["trades"]["win_rate"]
         else:
             return metrics["risk"]["sharpe_ratio"]  # Default to Sharpe
+
+    def _score_fold_result(self, backtest_result, metrics_calc, target: str) -> float:
+        """Score a single fold backtest result against the optimization target.
+
+        Avoids calling calculate_all (5 metric groups) when the target is
+        directly available on the backtest result object. calculate_all is
+        called only when the target metric requires it.
+        """
+        if target == "total_return_pct":
+            return backtest_result.total_return_pct
+        metrics = metrics_calc.calculate_all(
+            backtest_result.equity_curve, backtest_result.trades
+        )
+        return self._extract_metric(metrics, backtest_result, target)
 
     def generate_heatmap(
         self,
