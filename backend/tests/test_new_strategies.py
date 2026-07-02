@@ -50,9 +50,12 @@ def _make_test_data(n=300, trend=True):
 class TestBollingerBreakout:
     """Tests for Bollinger Breakout strategy."""
 
-    def test_buy_signal_on_upper_band_break(self):
-        """Test that buy signal is generated on upper band breakout."""
-        data = _make_test_data(n=300, trend=True)
+    @pytest.mark.parametrize("trend", [True, False])
+    def test_generates_valid_signals(self, trend):
+        """Test that BollingerBreakout produces a well-formed signals frame
+        on both trending (upper-band-break-prone) and mean-reverting
+        (lower-band-break-prone) data."""
+        data = _make_test_data(n=300, trend=trend)
 
         strategy = BollingerBreakout(
             {
@@ -67,28 +70,6 @@ class TestBollingerBreakout:
 
         result = strategy.generate_signals(data)
 
-        # Result is a DataFrame with 'signal' column
-        assert "signal" in result.columns
-        assert len(result) == len(data)
-
-    def test_sell_signal_on_lower_band_break(self):
-        """Test that sell signal is generated on lower band breakout."""
-        data = _make_test_data(n=300, trend=False)
-
-        strategy = BollingerBreakout(
-            {
-                "bb_period": 20,
-                "bb_std_dev": 2.0,
-                "confirmation_bars": 2,
-                "volume_filter": False,
-                "volume_threshold": 1.5,
-                "cooldown_days": 3,
-            }
-        )
-
-        result = strategy.generate_signals(data)
-
-        # Strategy should run successfully
         assert "signal" in result.columns
         assert len(result) == len(data)
 
@@ -183,28 +164,8 @@ class TestBollingerBreakout:
 class TestVWAPReversion:
     """Tests for VWAP Reversion strategy."""
 
-    def test_buy_signal_below_vwap_deviation(self):
-        """Test that buy signal is generated when price is below VWAP."""
-        data = _make_test_data(n=300, trend=False)
-
-        strategy = VWAPReversion(
-            {
-                "vwap_period": 20,
-                "deviation_threshold": 2.0,
-                "rsi_period": 14,
-                "oversold": 30,
-                "overbought": 70,
-                "cooldown_days": 3,
-            }
-        )
-
-        result = strategy.generate_signals(data)
-
-        assert "signal" in result.columns
-        assert len(result) == len(data)
-
-    def test_sell_signal_above_vwap_deviation(self):
-        """Test that sell signal is generated when price is above VWAP."""
+    def test_generates_valid_signals_on_mean_reverting_data(self):
+        """Test that VWAPReversion produces a well-formed signals frame."""
         data = _make_test_data(n=300, trend=False)
 
         strategy = VWAPReversion(
@@ -242,27 +203,6 @@ class TestVWAPReversion:
 
             result = strategy.generate_signals(data)
             assert "signal" in result.columns
-
-    def test_exit_at_vwap(self):
-        """Test that exits occur when price returns to VWAP."""
-        data = _make_test_data(n=300, trend=False)
-
-        strategy = VWAPReversion(
-            {
-                "vwap_period": 20,
-                "deviation_threshold": 2.0,
-                "rsi_period": 14,
-                "oversold": 30,
-                "overbought": 70,
-                "cooldown_days": 3,
-            }
-        )
-
-        result = strategy.generate_signals(data)
-
-        # Strategy should produce valid signals
-        assert "signal" in result.columns
-        assert len(result) == len(data)
 
     def test_parameter_validation(self):
         """Test that parameter validation works."""

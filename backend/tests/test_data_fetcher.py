@@ -64,16 +64,6 @@ class TestDataFetcher:
         assert len(result["data"]) > 0
         assert "metadata" in result
         assert result["metadata"]["records"] > 0
-
-    @patch("src.data.fetcher.yf.download")
-    @patch("src.data.fetcher.yf.Ticker")
-    def test_fetch_quality_score(self, mock_ticker, mock_download, tmp_path):
-        mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
-        mock_download.return_value = _mock_download()
-
-        fetcher = DataFetcher(cache_dir=str(tmp_path / "cache"))
-        result = fetcher.fetch("AAPL", "2023-01-01", "2023-12-31")
-
         assert 0 <= result["metadata"]["quality_score"] <= 1
 
     @patch("src.data.fetcher.yf.Ticker")

@@ -88,13 +88,9 @@ class TestRiskSettings:
         with pytest.raises(ValidationError):
             RiskSettings(stop_loss_pct=0.05)
 
-        # Invalid max position size
-        with pytest.raises(ValidationError):
-            RiskSettings(max_position_size_pct=150.0)
-
-        # Invalid max open positions
-        with pytest.raises(ValidationError):
-            RiskSettings(max_open_positions=100)
+        # Invalid max_position_size_pct and max_open_positions bounds are
+        # covered in detail by test_position_size_limits and
+        # test_max_open_positions_validation below.
 
     def test_stop_loss_and_take_profit_ranges(self):
         """Test that stop loss and take profit have valid ranges."""

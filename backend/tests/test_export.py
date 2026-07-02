@@ -19,44 +19,6 @@ except ImportError:
 class TestStrategyExport:
     """Tests for strategy export to AlphaLive."""
 
-    def test_export_generates_valid_json(self):
-        """Test that export generates valid JSON structure."""
-        config = {"app": {"version": "0.1.0"}}
-
-        export = _build_export_json(
-            backtest_id="test_123",
-            ticker="AAPL",
-            strategy_name="ma_crossover",
-            params={"short_window": 50, "long_window": 200},
-            start_date="2020-01-01",
-            end_date="2024-12-31",
-            initial_capital=100000,
-            results={
-                "total_return_pct": 25.5,
-                "total_trades": 10,
-                "metrics": {
-                    "risk": {
-                        "sharpe_ratio": 1.5,
-                        "sortino_ratio": 1.8,
-                        "calmar_ratio": 2.0,
-                    },
-                    "drawdown": {"max_drawdown": -15.2},
-                    "trades": {"win_rate": 0.6, "profit_factor": 1.8},
-                },
-            },
-            config=config,
-        )
-
-        # Verify basic structure
-        assert "schema_version" in export
-        assert "strategy" in export
-        assert "ticker" in export
-        assert "timeframe" in export
-        assert "risk" in export
-        assert "execution" in export
-        assert "safety_limits" in export
-        assert "metadata" in export
-
     def test_export_includes_all_required_fields(self):
         """Test that export includes all required fields."""
         config = {"app": {"version": "0.1.0"}}
@@ -84,6 +46,10 @@ class TestStrategyExport:
             },
             config=config,
         )
+
+        # Top-level structure
+        assert "schema_version" in export
+        assert "safety_limits" in export
 
         # Strategy section
         assert export["strategy"]["name"] == "ma_crossover"
