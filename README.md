@@ -214,7 +214,7 @@ cd frontend && npm run tauri:dev     # Desktop → native app window
 ### Run Tests
 
 ```bash
-# Backend tests (233 tests)
+# Backend tests (293 tests: 290 passing, 3 skipped), 91% coverage
 cd backend
 source venv/bin/activate
 pytest tests/ -v
@@ -438,7 +438,7 @@ python run.py
 1. Create a new branch: `git checkout -b feature/your-feature-name`
 2. Make your changes
 3. Run tests: `pytest tests/ -v`
-4. Ensure all 233 tests pass
+4. Ensure all 290 tests pass
 
 **Code style:**
 - Follow PEP 8
@@ -573,7 +573,7 @@ Before submitting, ensure:
 
 #### Backend
 - Flask REST API (127.0.0.1:5000)
-- 233 tests (230 passing, 3 skipped)
+- 293 tests (290 passing, 3 skipped), 91% coverage
 - 14 API endpoints with Pydantic validation
 - 8 trading strategies (MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, Bollinger RSI Combo, Trend Adaptive RSI, GreenblattWeekly)
 - 50+ technical indicators
@@ -602,7 +602,7 @@ Before submitting, ensure:
 
 - **Backend Code:** Python, Flask
 - **Frontend Code:** TypeScript, React
-- **Total Tests:** 233 (all passing)
+- **Total Tests:** 293 (290 passing, 3 skipped), 91% coverage
 - **API Endpoints:** 14
 - **Strategies:** 8
 - **Indicators:** 50+
