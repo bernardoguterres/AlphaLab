@@ -24,7 +24,7 @@ pip install -r requirements.txt
 python run.py
 ```
 
-Backend running at http://127.0.0.1:5000
+Backend running at http://127.0.0.1:5050
 
 ### 2. Frontend Setup (Web)
 
@@ -222,14 +222,14 @@ npm run test:watch  # Watch mode
 - Activate venv: `source venv/bin/activate`
 - Reinstall deps: `pip install -r requirements.txt`
 
-**Port 5000 in use:**
+**Port 5050 in use:**
 - Change port in `backend/config.yaml`
 - Update API URL in `frontend/src/services/api.ts`
 
 ### Frontend Issues
 
 **Frontend can't connect to backend:**
-- Check backend running: `curl http://127.0.0.1:5000/api/health`
+- Check backend running: `curl http://127.0.0.1:5050/api/health`
 - Check CORS in `backend/config.yaml` includes `localhost:8080`
 
 **Port 8080 in use:**
@@ -255,7 +255,7 @@ npm run tauri:build
 
 **App won't connect to backend:**
 1. Make sure backend is running: `cd backend && python run.py`
-2. Backend should be on `http://127.0.0.1:5000`
+2. Backend should be on `http://127.0.0.1:5050`
 3. Check `frontend/src/services/api.ts` for correct API URL
 
 **Port 8080 already in use:**
@@ -328,7 +328,7 @@ AlphaLab/
 - **Subsequent builds ~30 sec** (incremental compilation)
 - **.dmg is only 5.5MB** (Tauri is super lightweight!)
 - **Frontend changes** require rebuild, but backend changes work immediately (just restart `python run.py`)
-- **Backend runs on port 5000**, frontend dev server on port 8080
+- **Backend runs on port 5050**, frontend dev server on port 8080
 - **Tests:** 81 backend tests, all passing
 
 ---
