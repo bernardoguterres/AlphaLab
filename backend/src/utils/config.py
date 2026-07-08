@@ -52,11 +52,32 @@ class AppConfig:
     strategies: dict = field(default_factory=dict)
 
 
+def _apply_env_overrides(config: AppConfig) -> AppConfig:
+    """Override file-based config with env vars, for Railway/production deploys.
+
+    PORT, HOST, and DEBUG are the settings that must differ between local dev
+    and a hosted deploy; ALLOWED_ORIGINS lets the production frontend URL be
+    added without a code change once it's known.
+    """
+    if "PORT" in os.environ:
+        config.api.port = int(os.environ["PORT"])
+    if "HOST" in os.environ:
+        config.api.host = os.environ["HOST"]
+    if "DEBUG" in os.environ:
+        config.app.debug = os.environ["DEBUG"].lower() == "true"
+    extra_origins = os.environ.get("ALLOWED_ORIGINS", "")
+    if extra_origins:
+        config.api.cors_origins = config.api.cors_origins + [
+            o.strip() for o in extra_origins.split(",") if o.strip()
+        ]
+    return config
+
+
 def _build_config(raw: dict) -> AppConfig:
     def _get(d: dict, key: str, default) -> dict:
         return d.get(key) or default
 
-    return AppConfig(
+    config = AppConfig(
         app=AppSection(**_get(raw, "app", {})),
         data=DataConfig(**_get(raw, "data", {})),
         backtest=BacktestConfig(**_get(raw, "backtest", {})),
@@ -64,6 +85,7 @@ def _build_config(raw: dict) -> AppConfig:
         logging=LoggingConfig(**_get(raw, "logging", {})),
         strategies=raw.get("strategies", {}),
     )
+    return _apply_env_overrides(config)
 
 
 _config: AppConfig | None = None
