@@ -89,7 +89,7 @@ Understanding what each metric means and how to interpret backtest results.
 | **Up Capture** | % of market gains captured when market rises | >100% = outperforms in up markets |
 | **Down Capture** | % of market losses captured when market falls | <100% = protects in down markets |
 
-**Alpha** is the holy grail — excess return that can't be explained by market exposure. The `alpha_p_value` tells you if alpha is statistically significant (p < 0.05 = significant).
+**Alpha** is the holy grail - excess return that can't be explained by market exposure. The `alpha_p_value` tells you if alpha is statistically significant (p < 0.05 = significant).
 
 **Ideal profile:** High up capture (>100%) + low down capture (<80%) = you participate in rallies but are protected in crashes.
 
@@ -113,7 +113,7 @@ Understanding what each metric means and how to interpret backtest results.
 
 ### Important Caveats
 - Past performance does not predict future results
-- Backtests are optimistic — real trading has more friction
+- Backtests are optimistic - real trading has more friction
 - Overfitting to historical data is the biggest risk
 - Use Monte Carlo and walk-forward to stress-test results
-- Transaction costs compound over time — fewer trades is often better
+- Transaction costs compound over time - fewer trades is often better

@@ -20,7 +20,7 @@ import sys
 import os
 
 # ---------------------------------------------------------------------------
-# Path setup — make the AlphaLab backend importable from any working directory
+# Path setup - make the AlphaLab backend importable from any working directory
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND = os.path.join(SCRIPT_DIR, "backend")
@@ -128,7 +128,7 @@ def fetch_data(ticker: str, start: str, end: str) -> pd.DataFrame:
         raise RuntimeError(f"yfinance returned no data for {ticker} [{start}, {end}]")
 
     # yfinance may return a MultiIndex if a single ticker is passed with
-    # certain library versions — flatten if needed.
+    # certain library versions - flatten if needed.
     if isinstance(raw.columns, pd.MultiIndex):
         raw.columns = [col[0] for col in raw.columns]
 

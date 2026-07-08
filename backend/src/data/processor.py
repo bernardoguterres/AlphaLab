@@ -38,7 +38,7 @@ class FeatureEngineer:
             raise ValueError(f"Missing required columns: {missing}")
 
         if len(df) < 30:
-            logger.warning("Only %d rows — some indicators will be NaN", len(df))
+            logger.warning("Only %d rows - some indicators will be NaN", len(df))
 
         df = self._add_trend_indicators(df)
         df = self._add_momentum_indicators(df)

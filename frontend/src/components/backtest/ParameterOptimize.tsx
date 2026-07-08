@@ -484,7 +484,7 @@ export default function ParameterOptimize({
                                 color: colorIntensity > 50 ? "white" : "black",
                               }}
                             >
-                              {cell !== null ? cell.toFixed(2) : "—"}
+                              {cell !== null ? cell.toFixed(2) : "-"}
                             </td>
                           );
                         })}

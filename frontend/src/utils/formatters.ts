@@ -1,10 +1,10 @@
 export function formatPercent(value: number | undefined | null, decimals = 2): string {
-  if (value == null || isNaN(value)) return "—";
+  if (value == null || isNaN(value)) return "-";
   return `${value >= 0 ? "+" : ""}${value.toFixed(decimals)}%`;
 }
 
 export function formatCurrency(value: number | undefined | null): string {
-  if (value == null || isNaN(value)) return "—";
+  if (value == null || isNaN(value)) return "-";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -14,7 +14,7 @@ export function formatCurrency(value: number | undefined | null): string {
 }
 
 export function formatNumber(value: number | undefined | null, decimals = 2): string {
-  if (value == null || isNaN(value)) return "—";
+  if (value == null || isNaN(value)) return "-";
   return value.toFixed(decimals);
 }
 

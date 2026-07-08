@@ -31,7 +31,7 @@ def migrate_schema(config: Dict[str, Any]) -> Dict[str, Any]:
     logger.info(f"Migrating schema from version {version}")
 
     if version == "1.0":
-        # Current version — apply backward compatibility enhancements
+        # Current version - apply backward compatibility enhancements
         config = _apply_v1_0_defaults(config)
         return config
 
@@ -74,7 +74,7 @@ def _apply_v1_0_defaults(config: Dict[str, Any]) -> Dict[str, Any]:
             "broker_degraded_mode_threshold_failures": 3,
         }
     else:
-        # Partial safety_limits — fill in missing fields
+        # Partial safety_limits - fill in missing fields
         defaults = {
             "max_trades_per_day": 20,
             "max_api_calls_per_hour": 500,

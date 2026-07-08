@@ -188,7 +188,7 @@ export default function Settings() {
             <div className="border-t pt-4">
               <h4 className="font-semibold mb-2">Important Security Notes</h4>
               <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li><strong>NEVER commit your .env file to git</strong> — it contains secrets</li>
+                <li><strong>NEVER commit your .env file to git</strong> - it contains secrets</li>
                 <li>API keys are stored as environment variables only (not in the UI or database)</li>
                 <li>This Settings page saves only alert toggles and thresholds (non-sensitive)</li>
                 <li>Restart the backend after updating .env for changes to take effect</li>
@@ -218,7 +218,7 @@ export default function Settings() {
             <>
               <XCircle className="h-5 w-5 text-red-600" />
               <span className="text-sm font-medium">
-                TELEGRAM_BOT_TOKEN not set — add to your .env file
+                TELEGRAM_BOT_TOKEN not set - add to your .env file
               </span>
             </>
           )}
@@ -377,7 +377,7 @@ export default function Settings() {
               <>
                 <XCircle className="h-5 w-5 text-red-600" />
                 <span className="text-sm font-medium">
-                  ALPACA_API_KEY not set — add to your .env file
+                  ALPACA_API_KEY not set - add to your .env file
                 </span>
               </>
             )}
@@ -393,7 +393,7 @@ export default function Settings() {
               <>
                 <XCircle className="h-5 w-5 text-red-600" />
                 <span className="text-sm font-medium">
-                  ALPACA_SECRET_KEY not set — add to your .env file
+                  ALPACA_SECRET_KEY not set - add to your .env file
                 </span>
               </>
             )}

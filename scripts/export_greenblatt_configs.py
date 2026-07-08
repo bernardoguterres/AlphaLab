@@ -58,7 +58,7 @@ STRATEGY_PARAMS = {
 
 # Risk settings tuned for weekly value strategies on a small account.
 # stop_loss_pct=25 acts as safety net below the strategy's own 20% trailing stop.
-# take_profit_pct=100 effectively disabled — strategy holds until trailing stop fires.
+# take_profit_pct=100 effectively disabled - strategy holds until trailing stop fires.
 # max_position_size_pct=33 allows three equal positions on a $1k account.
 RISK = {
     "stop_loss_pct": 25.0,
@@ -203,7 +203,7 @@ def main():
 
     print(f"\n  All configs written to: {ALPHALIVE_CONFIGS}")
     print("\n  Next steps:")
-    print("  1. cd AlphaLive && pytest tests/test_signal_parity.py — verify no regressions")
+    print("  1. cd AlphaLive && pytest tests/test_signal_parity.py - verify no regressions")
     print("  2. Add greenblatt_weekly parity test (Priority 4 in MASTER_PLAN)")
     print("  3. Deploy to Railway in DRY_RUN mode first, then paper, then live")
     print()

@@ -67,7 +67,7 @@ class BaseStrategy(ABC):
 
     @staticmethod
     def calculate_signal_quality(signals: pd.DataFrame) -> dict:
-        """Evaluate signal quality — flag overtrading or sparse signals."""
+        """Evaluate signal quality - flag overtrading or sparse signals."""
         if signals.empty or "signal" not in signals.columns:
             return {"trades": 0, "quality": "no_signals"}
 

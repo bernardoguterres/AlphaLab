@@ -1,4 +1,4 @@
-"""Performance metrics calculator — industry-standard backtesting analytics."""
+"""Performance metrics calculator - industry-standard backtesting analytics."""
 
 from typing import Optional
 
