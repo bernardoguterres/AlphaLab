@@ -1,0 +1,12 @@
+server {
+    listen ${PORT};
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # SPA fallback — app uses react-router's BrowserRouter, so any unknown
+    # path must resolve to index.html rather than a raw 404.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
