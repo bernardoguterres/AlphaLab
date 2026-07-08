@@ -1,4 +1,4 @@
-"""Momentum Breakout strategy — buy on high breakout with volume surge."""
+"""Momentum Breakout strategy - buy on high breakout with volume surge."""
 
 import numpy as np
 import pandas as pd

@@ -20,17 +20,17 @@
 
 This schema defines the JSON contract for exporting battle-tested strategies from AlphaLab to AlphaLive for live execution. It ensures:
 
-1. **Type safety** — Pydantic (backend) and TypeScript (frontend) enforce validation
-2. **Traceability** — Metadata links live strategies to backtest results
-3. **Risk control** — Standardized risk parameters prevent over-leveraging
-4. **Safety** — Configurable stopping conditions protect against runaway signals
+1. **Type safety** - Pydantic (backend) and TypeScript (frontend) enforce validation
+2. **Traceability** - Metadata links live strategies to backtest results
+3. **Risk control** - Standardized risk parameters prevent over-leveraging
+4. **Safety** - Configurable stopping conditions protect against runaway signals
 
 ## Schema Version
 
 **Current Version:** `1.0`
 
 Version changes:
-- **1.0** (2026-03-08) — Initial release with 5 strategies, safety_limits block
+- **1.0** (2026-03-08) - Initial release with 5 strategies, safety_limits block
 
 ---
 
@@ -122,15 +122,15 @@ All percentages are in **absolute percent** (e.g., 2.0 = 2%, not 0.02).
 
 | Field | Type | Required | Range | Default | Description |
 |-------|------|----------|-------|---------|-------------|
-| `stop_loss_pct` | `float` | Yes | 0.1 - 50.0 | — | Max loss per position (% of entry price) |
-| `take_profit_pct` | `float` | Yes | 0.1 - 200.0 | — | Profit target per position (% of entry price) |
-| `max_position_size_pct` | `float` | Yes | 1.0 - 100.0 | — | Max % of portfolio per position |
-| `max_daily_loss_pct` | `float` | Yes | 0.1 - 50.0 | — | Max portfolio loss per day (halts trading if exceeded) |
-| `max_open_positions` | `int` | Yes | 1 - 50 | — | Max concurrent positions per ticker |
-| `portfolio_max_positions` | `int` | Yes | 1 - 100 | — | Max total concurrent positions across all tickers |
-| `trailing_stop_enabled` | `bool` | Yes | true/false | — | Enable trailing stop-loss |
-| `trailing_stop_pct` | `float` | Conditional | 0.1 - 50.0 | — | Trailing stop distance (required if enabled=true) |
-| `commission_per_trade` | `float` | Yes | 0.0 - 100.0 | — | Broker commission per trade (USD) |
+| `stop_loss_pct` | `float` | Yes | 0.1 - 50.0 | - | Max loss per position (% of entry price) |
+| `take_profit_pct` | `float` | Yes | 0.1 - 200.0 | - | Profit target per position (% of entry price) |
+| `max_position_size_pct` | `float` | Yes | 1.0 - 100.0 | - | Max % of portfolio per position |
+| `max_daily_loss_pct` | `float` | Yes | 0.1 - 50.0 | - | Max portfolio loss per day (halts trading if exceeded) |
+| `max_open_positions` | `int` | Yes | 1 - 50 | - | Max concurrent positions per ticker |
+| `portfolio_max_positions` | `int` | Yes | 1 - 100 | - | Max total concurrent positions across all tickers |
+| `trailing_stop_enabled` | `bool` | Yes | true/false | - | Enable trailing stop-loss |
+| `trailing_stop_pct` | `float` | Conditional | 0.1 - 50.0 | - | Trailing stop distance (required if enabled=true) |
+| `commission_per_trade` | `float` | Yes | 0.0 - 100.0 | - | Broker commission per trade (USD) |
 
 ### Execution Block
 
@@ -142,7 +142,7 @@ All percentages are in **absolute percent** (e.g., 2.0 = 2%, not 0.02).
 
 ### Safety Limits Block
 
-**NEW in v1.0** — Optional block with sensible defaults. Prevents runaway strategies.
+**NEW in v1.0** - Optional block with sensible defaults. Prevents runaway strategies.
 
 | Field | Type | Required | Range | Default | Description |
 |-------|------|----------|-------|---------|-------------|
@@ -344,10 +344,10 @@ Mean reversion based on deviations from VWAP (Volume Weighted Average Price).
 
 The `safety_limits` block provides **per-strategy customization** of stopping conditions that protect against:
 
-1. **Signal bugs** — Runaway loops generating thousands of trades
-2. **API rate limits** — Broker throttling/bans from excessive calls
-3. **Performance degradation** — Slow signal generation blocking main loop
-4. **Broker outages** — Extended API failures
+1. **Signal bugs** - Runaway loops generating thousands of trades
+2. **API rate limits** - Broker throttling/bans from excessive calls
+3. **Performance degradation** - Slow signal generation blocking main loop
+4. **Broker outages** - Extended API failures
 
 ### Behavior
 
@@ -397,12 +397,12 @@ The `safety_limits` block provides **per-strategy customization** of stopping co
 
 ### Cross-Field Validation
 
-1. **Strategy parameters** — Must match strategy type (validated by Pydantic union discriminator)
-2. **Trailing stop** — If `trailing_stop_enabled=true`, `trailing_stop_pct` is required
-3. **Limit orders** — If `order_type="limit"`, `limit_offset_pct` is required
-4. **MA windows** — `short_window < long_window` (for ma_crossover)
-5. **RSI thresholds** — `oversold < overbought` (for rsi_mean_reversion)
-6. **Timeframe compatibility** — VWAP strategies require intraday timeframes (1Hour or 15Min)
+1. **Strategy parameters** - Must match strategy type (validated by Pydantic union discriminator)
+2. **Trailing stop** - If `trailing_stop_enabled=true`, `trailing_stop_pct` is required
+3. **Limit orders** - If `order_type="limit"`, `limit_offset_pct` is required
+4. **MA windows** - `short_window < long_window` (for ma_crossover)
+5. **RSI thresholds** - `oversold < overbought` (for rsi_mean_reversion)
+6. **Timeframe compatibility** - VWAP strategies require intraday timeframes (1Hour or 15Min)
 
 ### Data Integrity
 
@@ -553,11 +553,11 @@ The `safety_limits` block provides **per-strategy customization** of stopping co
 
 ### Version Bump Rules
 
-- **MAJOR** — Breaking changes (remove required field, change field type, incompatible validation)
+- **MAJOR** - Breaking changes (remove required field, change field type, incompatible validation)
   - Example: Remove `ticker` field, change `timeframe` from string to enum
   - AlphaLive **must reject** schemas with incompatible major version
 
-- **MINOR** — Backward-compatible additions (new optional fields, new strategies, new enum values)
+- **MINOR** - Backward-compatible additions (new optional fields, new strategies, new enum values)
   - Example: Add `safety_limits` block (v1.0 → v1.1), add new strategy "vwap_reversion"
   - AlphaLive **should accept** older minor versions (ignore unknown fields)
 

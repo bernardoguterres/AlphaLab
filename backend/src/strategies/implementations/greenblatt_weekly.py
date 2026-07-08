@@ -1,4 +1,4 @@
-"""Greenblatt Weekly strategy — weekly entry timing for value stocks.
+"""Greenblatt Weekly strategy - weekly entry timing for value stocks.
 
 Designed to run on WEEKLY bars (interval="1wk").
 Use after FundamentalScreener has identified quality candidates.
@@ -7,7 +7,7 @@ Entry (any one):
   - Weekly RSI < rsi_oversold (default 35)
   - 10-week SMA crosses above 50-week SMA (weekly golden cross)
 
-Exit — in priority order:
+Exit - in priority order:
   1. Trailing stop: close drops more than trailing_stop_pct below the
      position's peak price (default 20%). Always fires immediately.
   2. RSI overbought (optional, off by default): close after min_hold_bars
@@ -17,7 +17,7 @@ Exit — in priority order:
 
 Default behaviour: hold for at least 52 weeks (~1 year), only exit on a
 20% trailing drawdown from peak. This mirrors how Greenblatt's published
-results actually work — let quality businesses compound, cut the losers.
+results actually work - let quality businesses compound, cut the losers.
 RSI/SMA exits are available as optional levers but are disabled by default
 because backtests showed they cut winners too early.
 """

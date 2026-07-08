@@ -52,3 +52,6 @@ CLAUDE.md
 
 # Backtest output artifacts — regenerate locally, don't commit
 backtest_results.json
+
+# Internal planning/audit notes (not for public repo)
+/DOCUMENTATION_AUDIT.md

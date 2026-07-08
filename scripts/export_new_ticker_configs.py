@@ -3,7 +3,7 @@
 Export production configs for GLD, IWM, XLK to AlphaLive.
 
 Runs real AlphaLab backtests (2015-2024) and exports properly formatted
-JSON configs — the same way the AlphaLab UI export button works.
+JSON configs - the same way the AlphaLab UI export button works.
 
 Usage:
     cd AlphaLab

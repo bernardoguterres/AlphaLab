@@ -87,7 +87,7 @@ class TestPortfolio:
         p.execute_order(buy, {"AAPL": 100.0})
         # Record peak value
         p.record_value(None, {"AAPL": 100.0})
-        # Price crashes — portfolio drops >5%
+        # Price crashes - portfolio drops >5%
         p.record_value(None, {"AAPL": 90.0})
         val = p.get_portfolio_value({"AAPL": 90.0})
         p._check_drawdown_halt(val)

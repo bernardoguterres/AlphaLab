@@ -4,7 +4,7 @@ Desktop application for backtesting algorithmic trading strategies with producti
 
 ## Why AlphaLab?
 
-Most backtesting tools either oversimplify execution (ignoring slippage, commissions, and position limits) or require expensive subscriptions. AlphaLab provides institutional-quality backtesting with realistic execution modeling, 30+ performance metrics, and Monte Carlo analysis — all running locally on your machine with free Yahoo Finance data.
+Most backtesting tools either oversimplify execution (ignoring slippage, commissions, and position limits) or require expensive subscriptions. AlphaLab provides institutional-quality backtesting with realistic execution modeling, 30+ performance metrics, and Monte Carlo analysis - all running locally on your machine with free Yahoo Finance data.
 
 ## Architecture
 
@@ -40,8 +40,8 @@ AlphaLab is your **strategy development platform**. It works together with **Alp
 |------|---------|-------------|
 | **[AlphaLab](https://github.com/bernardoguterres/AlphaLab)** (this repo) | Strategy development & backtesting | As needed (not 24/7) |
 | **[AlphaLive](https://github.com/bernardoguterres/AlphaLive)** | Live trading execution | 24/7 during trading hours |
-| **[AlphaSignal](https://github.com/bernardoguterres/AlphaSignal)** | Financial RAG — sentiment signals from SEC filings | Optional enrichment layer |
-| **[DeepLOB](https://github.com/bernardoguterres/DeepLOB)** | CNN+LSTM LOB prediction — execution timing filter | Optional enrichment layer |
+| **[AlphaSignal](https://github.com/bernardoguterres/AlphaSignal)** | Financial RAG - sentiment signals from SEC filings | Optional enrichment layer |
+| **[DeepLOB](https://github.com/bernardoguterres/DeepLOB)** | CNN+LSTM LOB prediction - execution timing filter | Optional enrichment layer |
 
 ### How They Work Together
 
@@ -115,26 +115,26 @@ AlphaLab is the development platform in a three-repo algorithmic trading system:
 | Repo | Role |
 |------|------|
 | **[AlphaLab](https://github.com/bernardoguterres/AlphaLab)** (this repo) | Backtest strategies, optimise parameters, export to AlphaLive |
-| **[AlphaLive](https://github.com/bernardoguterres/AlphaLive)** | 24/7 execution engine — loads strategy JSON and trades automatically via Alpaca |
-| **[AlphaSignal](https://github.com/bernardoguterres/AlphaSignal)** | Financial RAG layer — ingests SEC EDGAR filings and news, exposes sentiment signals via REST API |
-| **[DeepLOB](https://github.com/bernardoguterres/DeepLOB)** | CNN+Inception+LSTM mid-price predictor — served as a REST endpoint, queried by AlphaLive as an execution timing filter |
+| **[AlphaLive](https://github.com/bernardoguterres/AlphaLive)** | 24/7 execution engine - loads strategy JSON and trades automatically via Alpaca |
+| **[AlphaSignal](https://github.com/bernardoguterres/AlphaSignal)** | Financial RAG layer - ingests SEC EDGAR filings and news, exposes sentiment signals via REST API |
+| **[DeepLOB](https://github.com/bernardoguterres/DeepLOB)** | CNN+Inception+LSTM mid-price predictor - served as a REST endpoint, queried by AlphaLive as an execution timing filter |
 
-**AlphaSignal as a signal source:** AlphaSignal's `/sentiment/{ticker}` endpoint returns sentiment scores derived from SEC 10-K/10-Q filings and financial news. These can be consumed as strategy features during backtesting in AlphaLab — for example, suppressing a buy signal when sentiment is strongly negative, or weighting position size by sentiment confidence. AlphaSignal runs as a separate service; AlphaLab queries it over HTTP and degrades gracefully if it's unavailable.
+**AlphaSignal as a signal source:** AlphaSignal's `/sentiment/{ticker}` endpoint returns sentiment scores derived from SEC 10-K/10-Q filings and financial news. These can be consumed as strategy features during backtesting in AlphaLab - for example, suppressing a buy signal when sentiment is strongly negative, or weighting position size by sentiment confidence. AlphaSignal runs as a separate service; AlphaLab queries it over HTTP and degrades gracefully if it's unavailable.
 
 **DeepLOB as an execution timing filter:** DeepLOB predicts mid-price direction from limit order book snapshots using a CNN+Inception+LSTM architecture trained on the FI-2010 benchmark. AlphaLive queries it (alongside AlphaSignal) via a concurrent pre-execution gate before placing each order.
 
 ## Features
 
-- **Market Data Pipeline** — Fetch, validate, and cache stock data from Yahoo Finance with automatic retry and quality scoring
-- **50+ Technical Indicators** — SMA, EMA, MACD, RSI, Bollinger Bands, ATR, OBV, Fibonacci levels, and more
-- **8 Built-in Strategies** — MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, Bollinger RSI Combo, Trend Adaptive RSI, plus **GreenblattWeekly** (value factor, weekly bars via Greenblatt Magic Formula screening)
-- **Fundamental Screener** — Greenblatt Magic Formula ranking (earnings yield + ROE) via free yfinance data, exportable candidate list for weekly strategy backtests
-- **Realistic Backtesting** — Next-bar execution (no look-ahead bias), configurable slippage and commissions, position limits
-- **30+ Performance Metrics** — Sharpe, Sortino, Calmar, max drawdown, VaR, win rate, profit factor, benchmark comparison
-- **Monte Carlo Simulation** — Randomized entry timing to assess outcome distributions
-- **Walk-Forward Validation** — Rolling train/test splits to detect overfitting
-- **Comprehensive Backtesting Tools** — Batch runner, results visualization, strategy comparison across 5 years of data
-- **REST API** — Flask endpoints with Pydantic validation for frontend integration
+- **Market Data Pipeline** - Fetch, validate, and cache stock data from Yahoo Finance with automatic retry and quality scoring
+- **50+ Technical Indicators** - SMA, EMA, MACD, RSI, Bollinger Bands, ATR, OBV, Fibonacci levels, and more
+- **8 Built-in Strategies** - MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, Bollinger RSI Combo, Trend Adaptive RSI, plus **GreenblattWeekly** (value factor, weekly bars via Greenblatt Magic Formula screening)
+- **Fundamental Screener** - Greenblatt Magic Formula ranking (earnings yield + ROE) via free yfinance data, exportable candidate list for weekly strategy backtests
+- **Realistic Backtesting** - Next-bar execution (no look-ahead bias), configurable slippage and commissions, position limits
+- **30+ Performance Metrics** - Sharpe, Sortino, Calmar, max drawdown, VaR, win rate, profit factor, benchmark comparison
+- **Monte Carlo Simulation** - Randomized entry timing to assess outcome distributions
+- **Walk-Forward Validation** - Rolling train/test splits to detect overfitting
+- **Comprehensive Backtesting Tools** - Batch runner, results visualization, strategy comparison across 5 years of data
+- **REST API** - Flask endpoints with Pydantic validation for frontend integration
 
 ## Tech Stack
 
@@ -291,7 +291,7 @@ curl -X POST http://127.0.0.1:5000/api/strategies/backtest \
 ---
 
 ### 6. Bollinger RSI Combo (`bollinger_rsi_combo`)
-**Dual confirmation mean reversion.** Entry requires BOTH price ≤ BB lower band AND RSI < oversold threshold (default 45). Exit when price ≥ BB middle band OR RSI > overbought threshold (default 55). More selective than pure RSI — catches bounces off dynamic support with momentum confirmation.
+**Dual confirmation mean reversion.** Entry requires BOTH price ≤ BB lower band AND RSI < oversold threshold (default 45). Exit when price ≥ BB middle band OR RSI > overbought threshold (default 55). More selective than pure RSI - catches bounces off dynamic support with momentum confirmation.
 
 **Key params:** `bb_period` (20), `bb_std` (2.0), `rsi_period` (14), `rsi_oversold` (45), `rsi_overbought` (55), `exit_at_middle` (true)
 
@@ -301,9 +301,9 @@ curl -X POST http://127.0.0.1:5000/api/strategies/backtest \
 
 ### 7. Trend Adaptive RSI (`trend_adaptive_rsi`)
 **Market regime-aware RSI.** Detects trend using SMA(50) slope and adjusts entry/exit thresholds accordingly:
-- **Uptrend** (price > SMA, SMA rising): Buy RSI 45, Sell 65 — buys dips rather than waiting for extreme oversold
-- **Downtrend** (price < SMA, SMA falling): Buy RSI 35, Sell 55 — fades bounces
-- **Range**: Buy RSI 35, Sell 65 — standard mean reversion
+- **Uptrend** (price > SMA, SMA rising): Buy RSI 45, Sell 65 - buys dips rather than waiting for extreme oversold
+- **Downtrend** (price < SMA, SMA falling): Buy RSI 35, Sell 55 - fades bounces
+- **Range**: Buy RSI 35, Sell 65 - standard mean reversion
 
 Trades in all market conditions instead of going quiet during trends.
 
@@ -313,7 +313,7 @@ Trades in all market conditions instead of going quiet during trends.
 
 ---
 
-### 8. Greenblatt Weekly (`greenblatt_weekly`) — value factor, weekly bars
+### 8. Greenblatt Weekly (`greenblatt_weekly`) - value factor, weekly bars
 
 **Designed for ~1 year holding periods.** Use after running the Greenblatt screener (`POST /api/screener/greenblatt`) to identify quality candidates. Entry timing on weekly bars only.
 
@@ -322,8 +322,8 @@ Trades in all market conditions instead of going quiet during trends.
 - 10-week SMA crosses above 50-week SMA (weekly golden cross)
 
 **Exit:**
-- **Default (always active):** Price drops 20% below position peak — trailing stop fires immediately, bypasses minimum hold
-- **Opt-in (disabled by default):** Weekly RSI > 65, or 10w/50w SMA death-cross — only fires after minimum hold elapsed
+- **Default (always active):** Price drops 20% below position peak - trailing stop fires immediately, bypasses minimum hold
+- **Opt-in (disabled by default):** Weekly RSI > 65, or 10w/50w SMA death-cross - only fires after minimum hold elapsed
 
 **Key params:** `fast_sma` (10w), `slow_sma` (50w), `rsi_oversold` (35), `rsi_overbought` (65), `min_hold_bars` (52 weeks), `trailing_stop_pct` (0.20)
 
@@ -382,17 +382,17 @@ AlphaLab/
 ## Documentation
 
 **Getting Started:**
-- [SETUP.md](SETUP.md) — Installation and setup instructions
-- [Metrics Guide](docs/METRICS_GUIDE.md) — What each metric means (Sharpe, Sortino, drawdown, etc.)
-- [Strategy Export Schema](docs/STRATEGY_SCHEMA.md) — JSON schema for AlphaLive integration
+- [SETUP.md](SETUP.md) - Installation and setup instructions
+- [Metrics Guide](docs/METRICS_GUIDE.md) - What each metric means (Sharpe, Sortino, drawdown, etc.)
+- [Strategy Export Schema](docs/STRATEGY_SCHEMA.md) - JSON schema for AlphaLive integration
 
 **For Contributors:**
-- [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute to the project
-- [CLAUDE.md](CLAUDE.md) — Development guide for AI assistants (not in public repo)
+- [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute to the project
+- [CLAUDE.md](CLAUDE.md) - Development guide for AI assistants (not in public repo)
 
 ## Configuration
 
-All settings are in `backend/config.yaml` — initial capital, slippage, commission rates, strategy defaults, API port, and logging.
+All settings are in `backend/config.yaml` - initial capital, slippage, commission rates, strategy defaults, API port, and logging.
 
 ## Roadmap
 
@@ -668,7 +668,7 @@ A: yfinance supports some crypto (e.g., `BTC-USD`) and forex pairs. The system h
 A: See "Adding a New Strategy" section above. Create a file in `backend/src/strategies/implementations/`, inherit from `BaseStrategy`, implement the required methods, and register it in the API.
 
 **Q: Why does my strategy show negative Sharpe ratio?**
-A: Negative Sharpe means the strategy lost money on a risk-adjusted basis (returns below risk-free rate). This isn't a bug—it means the strategy isn't profitable. Try different parameters, a different stock, or a different strategy.
+A: Negative Sharpe means the strategy lost money on a risk-adjusted basis (returns below risk-free rate). This isn't a bug - it means the strategy isn't profitable. Try different parameters, a different stock, or a different strategy.
 
 **Q: How accurate are the backtest results?**
 A: AlphaLab uses next-bar execution (no look-ahead bias), realistic slippage (0.05%), and configurable commissions to model real-world conditions. However, backtests can't predict future market conditions. Always validate strategies with walk-forward testing and paper trading before going live.
@@ -677,4 +677,4 @@ A: AlphaLab uses next-bar execution (no look-ahead bias), realistic slippage (0.
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
+MIT - see [LICENSE](LICENSE)

@@ -1,9 +1,9 @@
 """Walk-Forward Validation for GreenblattWeekly Strategy.
 
-Phase 1 — Screener: ranks a universe of stocks by Greenblatt Magic Formula
+Phase 1 - Screener: ranks a universe of stocks by Greenblatt Magic Formula
           (earnings yield + ROE) and picks the top 6 candidates.
 
-Phase 2 — Validation: runs two rolling walk-forward windows on each candidate
+Phase 2 - Validation: runs two rolling walk-forward windows on each candidate
           using the GreenblattWeekly strategy on weekly bars.
 
           Window 1: Train 2010–2017 (8y)  |  Test 2018–2020 (3y)
@@ -90,9 +90,9 @@ WINDOWS = [
 
 # Thresholds for CONSISTENT verdict
 SHARPE_THRESHOLD = 0.8
-CAGR_THRESHOLD   = 13.0   # % — must beat buy-and-hold SPY
+CAGR_THRESHOLD   = 13.0   # % - must beat buy-and-hold SPY
 
-# BacktestEngine drawdown halt at 40% — correct for weekly value strategies
+# BacktestEngine drawdown halt at 40% - correct for weekly value strategies
 MAX_DRAWDOWN_PCT = 40
 
 # ---------------------------------------------------------------------------
@@ -265,7 +265,7 @@ def _row(ticker_lbl, window_lbl, phase, period, m):
 def main():
     print()
     print("=" * 80)
-    print("  AlphaLab — GreenblattWeekly Walk-Forward Validation")
+    print("  AlphaLab - GreenblattWeekly Walk-Forward Validation")
     print(f"  Universe   : {len(UNIVERSE)} tickers")
     print(f"  Candidates : top {TOP_N_CANDIDATES} by Greenblatt rank")
     print(f"  Strategy   : GreenblattWeekly (weekly bars, 52w min hold, 20% trailing stop)")
@@ -297,7 +297,7 @@ def main():
         top_candidates = [_FakeSR(t) for t in ["META", "LLY", "NVDA", "JPM", "AAPL", "V"]]
 
     if not top_candidates:
-        print("  No candidates returned — aborting.")
+        print("  No candidates returned - aborting.")
         return
 
     print(f"\n  Screener results (top {len(top_candidates)}):")
@@ -336,7 +336,7 @@ def main():
 
     active_tickers = [t for t in candidate_tickers if t not in failed_tickers]
     if not active_tickers:
-        print("  No data available for any candidate — aborting.")
+        print("  No data available for any candidate - aborting.")
         return
 
     # ------------------------------------------------------------------
@@ -444,9 +444,9 @@ def main():
         print(f"              {'':22}  CAGR:   {cagr_str}")
 
     print()
-    print("  CONSISTENT = OOS Sharpe ≥ {:.1f} AND CAGR ≥ {:.0f}% in BOTH windows — safe to export to AlphaLive.".format(
+    print("  CONSISTENT = OOS Sharpe ≥ {:.1f} AND CAGR ≥ {:.0f}% in BOTH windows - safe to export to AlphaLive.".format(
         SHARPE_THRESHOLD, CAGR_THRESHOLD))
-    print("  UNSTABLE   = Fails one or more thresholds — do NOT deploy.")
+    print("  UNSTABLE   = Fails one or more thresholds - do NOT deploy.")
     print()
 
     if consistent_tickers:

@@ -1,7 +1,7 @@
 """Settings manager for non-sensitive application settings.
 
 IMPORTANT: This module handles ONLY non-sensitive settings (alert toggles, thresholds).
-API keys and secrets must NEVER be stored here — use environment variables only.
+API keys and secrets must NEVER be stored here - use environment variables only.
 """
 
 import json
@@ -13,7 +13,7 @@ from ..utils.logger import setup_logger
 
 logger = setup_logger("alphalab.settings")
 
-# Settings file location (safe to commit — contains NO secrets)
+# Settings file location (safe to commit - contains NO secrets)
 SETTINGS_FILE = Path(__file__).parent.parent.parent / "configs" / "app_settings.json"
 
 

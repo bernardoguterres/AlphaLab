@@ -114,7 +114,7 @@ class RSIMeanReversion(BaseStrategy):
                     if close.iloc[i] > data["BB_Lower"].iloc[i]:
                         continue
 
-                # ADX filter — only trade when ADX confirms momentum
+                # ADX filter - only trade when ADX confirms momentum
                 if p["use_adx_filter"] and "ADX" in data.columns:
                     adx_val = data["ADX"].iloc[i]
                     if adx_val != adx_val:  # NaN

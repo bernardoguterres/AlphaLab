@@ -31,7 +31,7 @@ class CacheManager:
                     return json.load(f)
             except (json.JSONDecodeError, OSError) as exc:
                 logger.warning(
-                    "Cache metadata at %s is corrupt or unreadable (%s) — "
+                    "Cache metadata at %s is corrupt or unreadable (%s) - "
                     "starting with empty cache. Run clear_expired() to clean up.",
                     self._meta_path,
                     exc,

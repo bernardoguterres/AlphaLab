@@ -1,4 +1,4 @@
-"""Flask application factory — registers blueprints and middleware."""
+"""Flask application factory - registers blueprints and middleware."""
 
 import time
 import uuid

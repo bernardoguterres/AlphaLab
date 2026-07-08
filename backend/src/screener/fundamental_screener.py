@@ -75,7 +75,7 @@ class FundamentalScreener:
 
         if len(qualified) < 2:
             logger.warning(
-                f"Only {len(qualified)} tickers passed filters — "
+                f"Only {len(qualified)} tickers passed filters - "
                 "consider loosening min_market_cap_b or max_debt_to_equity"
             )
             return qualified
@@ -117,7 +117,7 @@ class FundamentalScreener:
                 return None
             return info
         except Exception as exc:
-            logger.warning(f"{ticker}: fetch failed — {exc}")
+            logger.warning(f"{ticker}: fetch failed - {exc}")
             return None
 
     def _parse(self, ticker: str, info: dict) -> ScreenerResult | None:

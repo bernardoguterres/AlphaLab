@@ -287,7 +287,7 @@ export default function Backtest() {
           <>
             <div className="flex items-center justify-between">
               <h2 className="font-display text-lg font-bold">
-                Results — {currentResult.ticker || ticker} · {strategyDisplayName(currentResult.strategy)}
+                Results - {currentResult.ticker || ticker} · {strategyDisplayName(currentResult.strategy)}
               </h2>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSaveToHistory}>

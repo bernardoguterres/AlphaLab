@@ -67,7 +67,7 @@ class Portfolio:
         """
         if self.halted:
             order.status = OrderStatus.REJECTED
-            order.reason = "Trading halted — max drawdown exceeded"
+            order.reason = "Trading halted - max drawdown exceeded"
             self._log_trade(order, timestamp)
             return order
 

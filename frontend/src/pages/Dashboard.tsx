@@ -55,14 +55,14 @@ export default function Dashboard() {
         />
         <MetricCard
           label="Best Strategy"
-          value={bestStrategy ? strategyDisplayName(bestStrategy.strategy) : "—"}
+          value={bestStrategy ? strategyDisplayName(bestStrategy.strategy) : "-"}
           subValue={bestStrategy ? formatPercent(bestStrategy.total_return_pct) : undefined}
           icon={<TrendingUp className="h-4 w-4" />}
           colorClass={bestStrategy && bestStrategy.total_return_pct > 0 ? "text-gain" : undefined}
         />
         <MetricCard
           label="Last Backtest"
-          value={lastBacktest ? formatPercent(lastBacktest.total_return_pct) : "—"}
+          value={lastBacktest ? formatPercent(lastBacktest.total_return_pct) : "-"}
           subValue={lastBacktest ? `${lastBacktest.ticker} · ${strategyDisplayName(lastBacktest.strategy)}` : undefined}
           icon={<Clock className="h-4 w-4" />}
           colorClass={lastBacktest ? pnlColor(lastBacktest.total_return_pct) : undefined}

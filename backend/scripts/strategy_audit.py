@@ -209,7 +209,7 @@ class ADXRSIStrategy(BaseStrategy):
 
     Improves plain RSI by only entering when ADX confirms the move is
     part of a real trend (not just noise). Removes the SMA50 directional
-    filter — mean reversion works regardless of trend direction.
+    filter - mean reversion works regardless of trend direction.
 
     BUY:  RSI < oversold AND ADX > threshold (strong down-trend = reliable bounce)
     EXIT: RSI crosses above 50 (momentum recovered) OR max holding period
@@ -508,7 +508,7 @@ def main():
             "pre": results_pre, "post": results_post, "full": results_full
         }
         print_results_table(results_pre + results_post,
-                            f"Momentum Breakout — {config_name}")
+                            f"Momentum Breakout - {config_name}")
         agg = aggregate_stats(results_full)
         print(f"  AGGREGATE FULL PERIOD: Sharpe={agg['avg_sharpe']:.2f} | "
               f"CAGR={agg['avg_cagr_pct']:.1f}% | "
@@ -550,7 +550,7 @@ def main():
             "pre": results_pre, "post": results_post, "full": results_full
         }
         print_results_table(results_pre + results_post,
-                            f"VWAP Reversion — {config_name}")
+                            f"VWAP Reversion - {config_name}")
         agg = aggregate_stats(results_full)
         print(f"  AGGREGATE FULL PERIOD: Sharpe={agg['avg_sharpe']:.2f} | "
               f"CAGR={agg['avg_cagr_pct']:.1f}% | "
@@ -559,11 +559,11 @@ def main():
               f"MaxDD={agg['worst_drawdown']:.1f}%")
 
     # =======================================================================
-    # TASK 3: New Strategy — ADX + RSI Filter
+    # TASK 3: New Strategy - ADX + RSI Filter
     # =======================================================================
 
     print("\n\n" + "="*70)
-    print("TASK 3: NEW STRATEGY — ADX + RSI FILTER")
+    print("TASK 3: NEW STRATEGY - ADX + RSI FILTER")
     print("="*70)
     print("Concept: RSI mean reversion only when ADX confirms meaningful trend")
     print("Why: Filters out RSI signals in choppy/directionless markets")
@@ -603,11 +603,11 @@ def main():
                   f"MaxDD={agg_v['worst_drawdown']:.1f}%")
 
     # =======================================================================
-    # TASK 4: New Strategy — MACD Momentum
+    # TASK 4: New Strategy - MACD Momentum
     # =======================================================================
 
     print("\n\n" + "="*70)
-    print("TASK 4: NEW STRATEGY — MACD MOMENTUM")
+    print("TASK 4: NEW STRATEGY - MACD MOMENTUM")
     print("="*70)
     print("Concept: Ride sustained trends via MACD histogram crossovers")
     print("Why: Captures momentum moves, low correlation with RSI mean reversion")
@@ -649,7 +649,7 @@ def main():
     # =======================================================================
 
     print("\n\n" + "="*90)
-    print("  FINAL SUMMARY — DEPLOYMENT RECOMMENDATIONS")
+    print("  FINAL SUMMARY - DEPLOYMENT RECOMMENDATIONS")
     print("="*90)
     print(f"\n  Current baseline: 21.31%/year combined across AAPL, MSFT, SPY, QQQ\n")
 
@@ -721,7 +721,7 @@ def main():
     })
 
     print("\n" + "="*70)
-    print("DONE — See marks for deployment-ready strategies")
+    print("DONE - See marks for deployment-ready strategies")
     print("="*70 + "\n")
 
 

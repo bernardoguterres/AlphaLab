@@ -2,8 +2,8 @@
 """Generate weekly AAPL fixture + expected signals for AlphaLive parity test.
 
 Produces two files in AlphaLive/tests/fixtures/:
-  aapl_weekly_fixture.csv          — AAPL weekly OHLCV 2015-2024 (lowercase cols)
-  expected_signals_greenblatt_weekly.csv — bar_index, signal, confidence, reason
+  aapl_weekly_fixture.csv - AAPL weekly OHLCV 2015-2024 (lowercase cols)
+  expected_signals_greenblatt_weekly.csv - bar_index, signal, confidence, reason
 
 Usage:
     cd AlphaLab
@@ -72,14 +72,14 @@ def main():
     # Using the full raw dataset ensures both engines warm up from the same bar 0.
     print(f"[2/3] Engineering features + generating AlphaLab signals …", end=" ", flush=True)
     fe = FeatureEngineer()
-    featured = fe.process(raw)   # NO dropna — keep all bars including warmup period
+    featured = fe.process(raw)   # NO dropna - keep all bars including warmup period
 
     strategy = GreenblattWeekly(STRATEGY_PARAMS.copy())
     strategy.validate_params()
     signals_df = strategy.generate_signals(featured)
     print(f"done ({len(featured)} bars total, AlphaLab skips NaN bars internally)")
 
-    # 3. Write fixture — AlphaLive expects raw OHLCV with lowercase column names.
+    # 3. Write fixture - AlphaLive expects raw OHLCV with lowercase column names.
     # Include all bars (incl. warmup) so AlphaLive's indicator computation matches AlphaLab.
     print(f"[3/3] Writing fixture files …")
 
@@ -92,7 +92,7 @@ def main():
     fixture_df.to_csv(fixture_path, index=False)
     print(f"{fixture_path.name} ({len(fixture_df)} rows)")
 
-    # Write expected signals — only BUY/SELL bars (HOLD is implicit for everything else)
+    # Write expected signals - only BUY/SELL bars (HOLD is implicit for everything else)
     expected_rows = []
     signal_map = {1: "BUY", -1: "SELL", 0: "HOLD"}
 

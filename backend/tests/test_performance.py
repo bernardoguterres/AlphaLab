@@ -146,7 +146,7 @@ def test_signal_generation_500_bars_under_5_seconds(medium_dataset):
     """
     Regression test: Single signal generation from 500 bars must be <5s.
 
-    This is the CRITICAL path for AlphaLive — if this exceeds 5s in production,
+    This is the CRITICAL path for AlphaLive - if this exceeds 5s in production,
     the bot blocks the main loop and misses market opportunities.
 
     If this fails:
@@ -186,7 +186,7 @@ def test_portfolio_optimization_6_strategies_under_60_seconds():
     """
     Regression test: Optimizing 6 strategy allocations should complete in <60s.
 
-    scipy.optimize can be slow — if this fails, consider:
+    scipy.optimize can be slow - if this fails, consider:
     - Reducing number of optimizer iterations (maxiter parameter)
     - Using faster optimization method (SLSQP vs Sequential Least Squares)
     - Caching correlation matrix calculations

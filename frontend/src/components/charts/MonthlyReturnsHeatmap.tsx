@@ -135,7 +135,7 @@ export function MonthlyReturnsHeatmap({ equityCurve }: MonthlyReturnsHeatmapProp
                 if (value === undefined) {
                   return (
                     <td key={monthIdx} className="border border-border px-2 py-1.5 text-center bg-gray-100">
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">-</span>
                     </td>
                   );
                 }
