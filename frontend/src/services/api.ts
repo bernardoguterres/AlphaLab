@@ -21,7 +21,7 @@ import type {
 } from "@/types";
 
 const api = axios.create({
-  baseURL: "http://127.0.0.1:5000/api",
+  baseURL: "http://127.0.0.1:5050/api",
   timeout: 120000,
   headers: { "Content-Type": "application/json" },
 });

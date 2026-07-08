@@ -51,11 +51,12 @@ strategies:
 
 api:
   host: "127.0.0.1"
-  port: 5000
+  port: 5050
   cors_origins:
     - "http://localhost:3000"
     - "http://localhost:5173"
     - "http://localhost:8080"
+    - "http://localhost:8081"
     - "http://localhost:1420"
 
 logging:
