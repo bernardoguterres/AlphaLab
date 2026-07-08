@@ -57,9 +57,7 @@ class TestGreenblattScreenEndpoint:
 
     def test_successful_screen_returns_ranked_candidates(self, client):
         fake_results = [_fake_result("AAPL", 1), _fake_result("MSFT", 2)]
-        with patch(
-            "src.api.blueprints.screener.FundamentalScreener"
-        ) as mock_cls:
+        with patch("src.api.blueprints.screener.FundamentalScreener") as mock_cls:
             mock_instance = MagicMock()
             mock_instance.screen.return_value = fake_results
             mock_cls.return_value = mock_instance
@@ -85,9 +83,7 @@ class TestGreenblattScreenEndpoint:
         assert kwargs["universe"] == ["AAPL", "MSFT"]
 
     def test_custom_filters_passed_through(self, client):
-        with patch(
-            "src.api.blueprints.screener.FundamentalScreener"
-        ) as mock_cls:
+        with patch("src.api.blueprints.screener.FundamentalScreener") as mock_cls:
             mock_instance = MagicMock()
             mock_instance.screen.return_value = []
             mock_cls.return_value = mock_instance
@@ -123,9 +119,7 @@ class TestGreenblattScreenEndpoint:
         assert "yfinance down" in resp.get_json()["message"]
 
     def test_empty_qualified_results(self, client):
-        with patch(
-            "src.api.blueprints.screener.FundamentalScreener"
-        ) as mock_cls:
+        with patch("src.api.blueprints.screener.FundamentalScreener") as mock_cls:
             mock_instance = MagicMock()
             mock_instance.screen.return_value = []
             mock_cls.return_value = mock_instance

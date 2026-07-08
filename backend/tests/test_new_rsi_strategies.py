@@ -137,7 +137,7 @@ class TestBollingerRSICombo:
     def test_exit_on_rsi_overbought(self):
         idx = pd.date_range("2022-01-01", periods=3)
         data = pd.DataFrame(
-                {
+            {
                 "Close": [12, 8, 8.5],
                 "BB_Lower": [9, 9, 9],
                 "BB_Middle": [12, 12, 12],

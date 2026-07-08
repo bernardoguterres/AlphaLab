@@ -21,9 +21,7 @@ def client(tmp_path, monkeypatch):
     # Point every SettingsManager() call at an isolated tmp file so tests
     # don't clobber the real backend/configs/app_settings.json.
     settings_file = tmp_path / "app_settings.json"
-    with patch(
-        "src.api.blueprints.settings_bp.SettingsManager"
-    ) as mock_mgr_cls:
+    with patch("src.api.blueprints.settings_bp.SettingsManager") as mock_mgr_cls:
         from src.utils.settings_manager import SettingsManager as RealMgr
 
         real = RealMgr(settings_file)
@@ -159,9 +157,7 @@ class TestAlpacaTestEndpoint:
         mock_client = MagicMock()
         mock_client.get_account.return_value = mock_account
 
-        with patch(
-            "alpaca.trading.client.TradingClient", return_value=mock_client
-        ):
+        with patch("alpaca.trading.client.TradingClient", return_value=mock_client):
             resp = client.post("/api/settings/alpaca/test")
         assert resp.status_code == 200
         body = resp.get_json()
