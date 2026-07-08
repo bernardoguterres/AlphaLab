@@ -1,7 +1,7 @@
 app:
   name: AlphaLab
   version: 0.1.0
-  debug: true
+  debug: false
 
 data:
   cache_dir: "data/cache"
