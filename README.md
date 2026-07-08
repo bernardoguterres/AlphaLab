@@ -11,7 +11,7 @@ Most backtesting tools either oversimplify execution (ignoring slippage, commiss
 ```mermaid
 flowchart TD
     A[User: Define Strategy Parameters] --> B[React Frontend<br/>localhost:8080]
-    B --> C[Flask REST API<br/>localhost:5000]
+    B --> C[Flask REST API<br/>localhost:5050]
     C --> D[Data Fetcher<br/>Yahoo Finance]
     D --> E[Data Validator<br/>Quality Scoring]
     E --> F[Feature Engineer<br/>50+ Indicators]
@@ -138,7 +138,7 @@ AlphaLab is the development platform in a three-repo algorithmic trading system:
 
 ## Tech Stack
 
-- **Backend**: Python, Flask, pandas, numpy, scipy, yfinance, stockstats, Pydantic
+- **Backend**: Python, Flask, pandas, numpy, scipy, yfinance, stockstats, Pydantic, httpx, alpaca-py
 - **Frontend**: React, TypeScript, Vite, shadcn/ui, Tailwind CSS, Recharts, Zustand
 - **Desktop**: Tauri (Rust) - Native macOS/Windows/Linux app with <10MB footprint
 
@@ -158,7 +158,7 @@ pip install -r requirements.txt
 python run.py
 ```
 
-The API starts at `http://127.0.0.1:5000`.
+The API starts at `http://127.0.0.1:5050`.
 
 ### Frontend Setup
 
@@ -242,7 +242,7 @@ For full API documentation, see the [Flask routes source code](backend/src/api/r
 ### Example: Run a Backtest
 
 ```bash
-curl -X POST http://127.0.0.1:5000/api/strategies/backtest \
+curl -X POST http://127.0.0.1:5050/api/strategies/backtest \
   -H "Content-Type: application/json" \
   -d '{
     "ticker": "AAPL",
@@ -572,7 +572,7 @@ Before submitting, ensure:
 ### What's Included
 
 #### Backend
-- Flask REST API (127.0.0.1:5000)
+- Flask REST API (127.0.0.1:5050)
 - 293 tests (290 passing, 3 skipped), 91% coverage
 - 14 API endpoints with Pydantic validation
 - 8 trading strategies (MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, Bollinger RSI Combo, Trend Adaptive RSI, GreenblattWeekly)
