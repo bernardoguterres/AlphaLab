@@ -342,14 +342,16 @@ AlphaLab/
 ├── backend/                    # Flask REST API (Python)
 │   ├── src/
 │   │   ├── data/              # Fetching, validation, feature engineering
-│   │   ├── strategies/        # BaseStrategy + 6 implementations
+│   │   ├── strategies/        # BaseStrategy + 8 implementations
 │   │   ├── backtest/          # Engine, portfolio, metrics, orders
 │   │   ├── api/               # Flask routes + Pydantic validators
 │   │   └── utils/             # Logger, config, exceptions
-│   ├── tests/                 # 81 pytest tests
+│   ├── tests/                 # 293 tests (290 passing, 3 skipped), 91% coverage
 │   ├── config.yaml
 │   ├── requirements.txt
-│   ├── run.py
+│   ├── run.py                 # Local dev entry point (Flask dev server)
+│   ├── wsgi.py                 # Production entry point (gunicorn)
+│   ├── Dockerfile              # Railway deploy (gunicorn)
 │   ├── backtest_runner.py     # Batch backtest tool (tests all strategies)
 │   └── backtest_results.json  # 5-year backtest results (12 strategy-ticker combos)
 ├── frontend/                   # React UI (TypeScript + Vite + Tauri)
@@ -363,13 +365,12 @@ AlphaLab/
 │   ├── src-tauri/             # Tauri desktop app config
 │   ├── package.json
 │   ├── vite.config.ts
-│   └── tailwind.config.ts
+│   ├── tailwind.config.ts
+│   ├── Dockerfile              # Railway deploy (Node build → nginx static serve)
+│   └── nginx.conf.template     # SPA fallback + Railway's dynamic $PORT
 ├── docs/                       # Technical documentation
-│   ├── API.md
-│   ├── ARCHITECTURE.md
-│   ├── STRATEGIES.md
 │   ├── METRICS_GUIDE.md
-│   └── TROUBLESHOOTING.md
+│   └── STRATEGY_SCHEMA.md
 ├── README.md                   # This file
 ├── SETUP.md                    # Setup instructions
 ├── TAURI_SETUP.md              # Desktop app rebuild guide
@@ -392,7 +393,11 @@ AlphaLab/
 
 ## Configuration
 
-All settings are in `backend/config.yaml` - initial capital, slippage, commission rates, strategy defaults, API port, and logging.
+All settings are in `backend/config.yaml` - initial capital, slippage, commission rates, strategy defaults, API port, and logging. `PORT`, `HOST`, `DEBUG`, and `ALLOWED_ORIGINS` env vars override the file, for deploying without code changes.
+
+## Deployment
+
+Both `backend/` and `frontend/` have a `Dockerfile` for deploying to Railway as two services (backend via gunicorn, frontend as a static Node-build → nginx serve). See `../DEPLOYMENT_READINESS.md` (repo root, one level up) for the full checklist - env vars, build vars, and what's already fixed vs. what's still a manual step.
 
 ## Roadmap
 
