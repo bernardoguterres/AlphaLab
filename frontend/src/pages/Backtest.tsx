@@ -348,17 +348,17 @@ export default function Backtest() {
             <EmptyState
               icon={LineChartIcon}
               title="Configure a strategy to see results"
-              description="Follow the workflow on the left, then run a backtest — your equity curve, drawdown, and metrics will appear here."
+              description="Follow the workflow on the left, then run a backtest - your equity curve, drawdown, and metrics will appear here."
             />
 
-            {/* Ghost metric preview row — shows the shape of what's coming, no fake numbers */}
+            {/* Ghost metric preview row - shows the shape of what's coming, no fake numbers */}
             <div className="grid grid-cols-3 xl:grid-cols-6 gap-3 opacity-50 pointer-events-none select-none">
-              <MetricCard label="Total Return" value="—" icon={<TrendingUp className="h-4 w-4" />} />
-              <MetricCard label="CAGR" value="—" />
-              <MetricCard label="Sharpe Ratio" value="—" icon={<Target className="h-4 w-4" />} />
-              <MetricCard label="Max Drawdown" value="—" />
-              <MetricCard label="Win Rate" value="—" icon={<Percent className="h-4 w-4" />} />
-              <MetricCard label="Total Trades" value="—" />
+              <MetricCard label="Total Return" value="-" icon={<TrendingUp className="h-4 w-4" />} />
+              <MetricCard label="CAGR" value="-" />
+              <MetricCard label="Sharpe Ratio" value="-" icon={<Target className="h-4 w-4" />} />
+              <MetricCard label="Max Drawdown" value="-" />
+              <MetricCard label="Win Rate" value="-" icon={<Percent className="h-4 w-4" />} />
+              <MetricCard label="Total Trades" value="-" />
             </div>
 
             {/* Ghost equity curve preview */}
@@ -410,23 +410,23 @@ export default function Backtest() {
                 <ul className="space-y-2.5 text-xs text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
-                    <span><span className="text-foreground font-medium">Equity Curve</span> — portfolio value vs. buy-and-hold benchmark</span>
+                    <span><span className="text-foreground font-medium">Equity Curve</span> - portfolio value vs. buy-and-hold benchmark</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
-                    <span><span className="text-foreground font-medium">Drawdown</span> — peak-to-trough decline over time</span>
+                    <span><span className="text-foreground font-medium">Drawdown</span> - peak-to-trough decline over time</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
-                    <span><span className="text-foreground font-medium">Monthly Returns</span> — heatmap of gains/losses by month</span>
+                    <span><span className="text-foreground font-medium">Monthly Returns</span> - heatmap of gains/losses by month</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
-                    <span><span className="text-foreground font-medium">Trade Log</span> — every entry/exit with P&L</span>
+                    <span><span className="text-foreground font-medium">Trade Log</span> - every entry/exit with P&L</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
-                    <span><span className="text-foreground font-medium">Detailed Metrics</span> — 30+ risk, return, and consistency stats</span>
+                    <span><span className="text-foreground font-medium">Detailed Metrics</span> - 30+ risk, return, and consistency stats</span>
                   </li>
                 </ul>
               </div>

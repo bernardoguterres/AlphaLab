@@ -288,7 +288,7 @@ export default function ParameterOptimize({
           </Button>
         </div>
 
-        {/* Results Summary — real once optimizeResult exists, honest ghost preview until then */}
+        {/* Results Summary - real once optimizeResult exists, honest ghost preview until then */}
         {optimizeResult ? (
           <div className="card-elevated p-4 sm:p-5 space-y-4">
             <div className="flex items-center justify-between">
@@ -360,7 +360,7 @@ export default function ParameterOptimize({
             <EmptyState
               icon={Trophy}
               title="No optimization run yet"
-              description="Set your parameter ranges and run an optimization — the best combination and score will appear here."
+              description="Set your parameter ranges and run an optimization - the best combination and score will appear here."
               size="sm"
               preview={
                 <div className="rounded-lg border border-border/50 bg-secondary/20 p-4 opacity-70 space-y-2">
@@ -480,7 +480,7 @@ export default function ParameterOptimize({
             )}
           </Button>
 
-          {/* Heatmap Display — real once generated, honest ghost grid until then */}
+          {/* Heatmap Display - real once generated, honest ghost grid until then */}
           {heatmapResult ? (
             <div className="pt-2">
               <div className="text-xs text-muted-foreground mb-2">

@@ -50,7 +50,7 @@ CLAUDE.md
 /data/
 /logs/
 
-# Backtest output artifacts — regenerate locally, don't commit
+# Backtest output artifacts - regenerate locally, don't commit
 backtest_results.json
 
 # Internal planning/audit notes (not for public repo)

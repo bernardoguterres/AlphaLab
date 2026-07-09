@@ -96,7 +96,7 @@ export default function DataManager() {
     t.ticker.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Real derived stats — no fake numbers
+  // Real derived stats - no fake numbers
   const uniqueTickerCount = new Set(cachedTickers.map((t) => t.ticker)).size;
   const totalRecords = cachedTickers.reduce((sum, t) => sum + (t.records || 0), 0);
   const mostRecentUpdate = cachedTickers.reduce<string | null>((latest, t) => {
@@ -110,7 +110,7 @@ export default function DataManager() {
   const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
   const datasetsWithValidTimestamp = cachedTickers.filter((t) => !isNaN(new Date(t.last_updated).getTime()));
   const freshCount = datasetsWithValidTimestamp.filter((t) => now - new Date(t.last_updated).getTime() <= sevenDaysMs).length;
-  // Only meaningful once at least one dataset actually has a parseable last_updated value —
+  // Only meaningful once at least one dataset actually has a parseable last_updated value -
   // otherwise "0%" would misleadingly read as "stale" when it's really "unknown".
   const freshnessPct = datasetsWithValidTimestamp.length > 0
     ? Math.round((freshCount / datasetsWithValidTimestamp.length) * 100)
@@ -164,7 +164,7 @@ export default function DataManager() {
         <MetricCard label="Total Records" value={totalRecords.toLocaleString()} icon={<Database className="h-4 w-4" />} tone="gain" accent />
         <MetricCard
           label="Last Refresh"
-          value={mostRecentUpdate ? formatDate(mostRecentUpdate) : "—"}
+          value={mostRecentUpdate ? formatDate(mostRecentUpdate) : "-"}
           subValue={
             mostRecentUpdate
               ? "Most recently cached dataset"

@@ -373,22 +373,17 @@ AlphaLab/
 │   ├── METRICS_GUIDE.md
 │   └── STRATEGY_SCHEMA.md
 ├── README.md                   # This file
-├── SETUP.md                    # Setup instructions
-├── CONTRIBUTING.md             # Contribution guidelines
 ├── CLAUDE.md                   # Development guide
-├── LICENSE
 └── .gitignore
 ```
 
 ## Documentation
 
-**Getting Started:**
-- [SETUP.md](SETUP.md) - Installation and setup instructions
+**Getting Started:** see the [Quick Start](#quick-start) section above for install/run instructions.
 - [Metrics Guide](docs/METRICS_GUIDE.md) - What each metric means (Sharpe, Sortino, drawdown, etc.)
 - [Strategy Export Schema](docs/STRATEGY_SCHEMA.md) - JSON schema for AlphaLive integration
 
 **For Contributors:**
-- [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute to the project
 - [CLAUDE.md](CLAUDE.md) - Development guide for AI assistants (not in public repo)
 
 ## Configuration
@@ -429,7 +424,7 @@ We welcome contributions! Here's how to get started:
    cd alphalab
    ```
 3. **Set up the development environment:**
-   - Follow [SETUP.md](SETUP.md) for backend and frontend setup
+   - Follow the [Quick Start](#quick-start) section above for backend and frontend setup
 
 ### Backend Development
 
@@ -682,4 +677,4 @@ A: AlphaLab uses next-bar execution (no look-ahead bias), realistic slippage (0.
 
 ## License
 
-MIT - see [LICENSE](LICENSE)
+All rights reserved. This is proprietary, original work - no license is granted for use, copying, or redistribution.

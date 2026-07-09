@@ -23,10 +23,10 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
 } from "recharts";
 
-// Colorblind-friendly palette — also used to number selected strategies in the picker
+// Colorblind-friendly palette - also used to number selected strategies in the picker
 const CHART_COLORS = ["#2563eb", "#dc2626", "#16a34a", "#ca8a04", "#9333ea"];
 
-// Decorative-only ghost series for the pre-run overlay preview — never rendered as real data.
+// Decorative-only ghost series for the pre-run overlay preview - never rendered as real data.
 const GHOST_SERIES_A = [30, 32, 31, 35, 34, 38, 42, 40, 45, 48, 47, 52, 55, 53, 58];
 const GHOST_SERIES_B = [30, 29, 31, 30, 33, 32, 36, 35, 39, 38, 42, 41, 45, 44, 48];
 
@@ -242,9 +242,9 @@ export default function Compare() {
               <div className="max-w-3xl mx-auto space-y-4">
                 {/* Ghost metric comparison cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 opacity-50 pointer-events-none select-none">
-                  <MetricCard label="Best Sharpe" value="—" icon={<TrendingUp className="h-4 w-4" />} />
-                  <MetricCard label="Best Return" value="—" icon={<Percent className="h-4 w-4" />} />
-                  <MetricCard label="Lowest Drawdown" value="—" icon={<Shield className="h-4 w-4" />} />
+                  <MetricCard label="Best Sharpe" value="-" icon={<TrendingUp className="h-4 w-4" />} />
+                  <MetricCard label="Best Return" value="-" icon={<Percent className="h-4 w-4" />} />
+                  <MetricCard label="Lowest Drawdown" value="-" icon={<Shield className="h-4 w-4" />} />
                 </div>
 
                 {/* Ghost overlapping equity curves */}
@@ -267,7 +267,7 @@ export default function Compare() {
                   </svg>
                 </div>
 
-                {/* Ghost ranking table — real selected strategy names, skeleton metrics */}
+                {/* Ghost ranking table - real selected strategy names, skeleton metrics */}
                 <div className="rounded-lg border border-border/40 overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>

@@ -103,7 +103,7 @@ export default function Settings() {
     );
   }
 
-  // How many of the 2 known Alpaca credential flags are actually configured — real, derived.
+  // How many of the 2 known Alpaca credential flags are actually configured - real, derived.
   const alpacaKeysConfigured = [settings.alpaca.api_key_configured, settings.alpaca.secret_key_configured].filter(Boolean).length;
 
   return (
@@ -233,7 +233,7 @@ export default function Settings() {
               <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/[0.06] p-3">
                 <ShieldAlert className="h-4 w-4 text-warning shrink-0 mt-0.5" />
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground text-xs">
-                  <li><strong className="text-foreground">Never commit your .env file to git</strong> — it contains secrets</li>
+                  <li><strong className="text-foreground">Never commit your .env file to git</strong> - it contains secrets</li>
                   <li>API keys are stored as environment variables only (not in the UI or database)</li>
                   <li>This page saves only alert toggles and thresholds (non-sensitive)</li>
                   <li>Restart the backend after updating .env for changes to take effect</li>
@@ -478,7 +478,7 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Safety / execution risk module — presentation only, no logic change */}
+        {/* Safety / execution risk module - presentation only, no logic change */}
         <div
           className={cn(
             "card-elevated p-5",
@@ -494,7 +494,7 @@ export default function Settings() {
               <p className="text-xs text-muted-foreground">Current risk posture for live order execution</p>
             </div>
             <StatusBadge
-              label={settings.alpaca.paper_trading ? "Safe — Paper Mode" : "At Risk — Live Mode"}
+              label={settings.alpaca.paper_trading ? "Safe - Paper Mode" : "At Risk - Live Mode"}
               tone={settings.alpaca.paper_trading ? "gain" : "loss"}
               dot
               pulse={!settings.alpaca.paper_trading}
@@ -532,7 +532,7 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Save footer — sticky within the scroll container */}
+        {/* Save footer - sticky within the scroll container */}
         <div className="sticky bottom-0 -mx-4 sm:-mx-6 lg:-mx-10 xl:-mx-14 mt-2">
           <div className="bg-background/90 backdrop-blur-md border-t border-border px-4 sm:px-6 lg:px-10 xl:px-14 py-3.5 flex justify-end">
             <Button onClick={handleSave} disabled={isSaving} size="lg" className="gap-2">
