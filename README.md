@@ -14,7 +14,7 @@ flowchart TD
     B --> C[Flask REST API<br/>localhost:5050]
     C --> D[Data Fetcher<br/>Yahoo Finance]
     D --> E[Data Validator<br/>Quality Scoring]
-    E --> F[Feature Engineer<br/>50+ Indicators]
+    E --> F[Feature Engineer<br/>SMA/RSI/ADX/BB/ATR]
     F --> G[Strategy Engine<br/>8 Built-in Strategies]
     G --> H[Backtest Engine<br/>Next-bar Execution]
     H --> I[Portfolio Manager<br/>Slippage + Commission]
@@ -126,7 +126,7 @@ AlphaLab is the development platform in a three-repo algorithmic trading system:
 ## Features
 
 - **Market Data Pipeline** - Fetch, validate, and cache stock data from Yahoo Finance with automatic retry and quality scoring
-- **50+ Technical Indicators** - SMA, EMA, MACD, RSI, Bollinger Bands, ATR, OBV, Fibonacci levels, and more
+- **Technical Indicators** - SMA (10/20/50/100/200), RSI, ADX (+DI lines), Bollinger Bands, ATR - the set actually consumed by the built-in strategies
 - **8 Built-in Strategies** - MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, Bollinger RSI Combo, Trend Adaptive RSI, plus **GreenblattWeekly** (value factor, weekly bars via Greenblatt Magic Formula screening)
 - **Fundamental Screener** - Greenblatt Magic Formula ranking (earnings yield + ROE) via free yfinance data, exportable candidate list for weekly strategy backtests
 - **Realistic Backtesting** - Next-bar execution (no look-ahead bias), configurable slippage and commissions, position limits
@@ -215,7 +215,7 @@ cd frontend && npm run tauri:dev     # Desktop → native app window
 ### Run Tests
 
 ```bash
-# Backend tests (293 tests: 290 passing, 3 skipped), 91% coverage
+# Backend tests (292 tests: 289 passing, 3 skipped), 91% coverage
 cd backend
 source venv/bin/activate
 pytest tests/ -v
@@ -347,7 +347,7 @@ AlphaLab/
 │   │   ├── backtest/          # Engine, portfolio, metrics, orders
 │   │   ├── api/               # Flask routes + Pydantic validators
 │   │   └── utils/             # Logger, config, exceptions
-│   ├── tests/                 # 293 tests (290 passing, 3 skipped), 91% coverage
+│   ├── tests/                 # 292 tests (289 passing, 3 skipped), 91% coverage
 │   ├── config.yaml
 │   ├── requirements.txt
 │   ├── run.py                 # Local dev entry point (Flask dev server)
@@ -578,10 +578,10 @@ Before submitting, ensure:
 
 #### Backend
 - Flask REST API (127.0.0.1:5050)
-- 293 tests (290 passing, 3 skipped), 91% coverage
+- 292 tests (289 passing, 3 skipped), 91% coverage
 - 14 API endpoints with Pydantic validation
 - 8 trading strategies (MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, Bollinger RSI Combo, Trend Adaptive RSI, GreenblattWeekly)
-- 50+ technical indicators
+- Technical indicators: SMA, RSI, ADX, Bollinger Bands, ATR
 - 30+ performance metrics
 - Data caching with parquet
 - Python virtual environment configured
@@ -607,10 +607,10 @@ Before submitting, ensure:
 
 - **Backend Code:** Python, Flask
 - **Frontend Code:** TypeScript, React
-- **Total Tests:** 293 (290 passing, 3 skipped), 91% coverage
+- **Total Tests:** 292 (289 passing, 3 skipped), 91% coverage
 - **API Endpoints:** 14
 - **Strategies:** 8
-- **Indicators:** 50+
+- **Indicators:** SMA, RSI, ADX, Bollinger Bands, ATR
 - **Metrics:** 30+
 - **Desktop Installer:** 5.5MB
 

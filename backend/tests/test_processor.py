@@ -34,7 +34,7 @@ class TestFeatureEngineer:
         fe = FeatureEngineer()
         result = fe.process(df)
         # Check some expected columns
-        for col in ["SMA_20", "EMA_12", "MACD", "RSI", "ATR", "OBV", "Return"]:
+        for col in ["SMA_20", "RSI", "ATR", "ADX", "BB_Upper"]:
             assert col in result.columns, f"Missing column: {col}"
 
     def test_rsi_bounded(self):
@@ -75,16 +75,22 @@ class TestFeatureEngineer:
         # Should still produce a DataFrame, just with many NaNs
         assert len(result) == 20
 
-    def test_gap_analysis(self):
-        df = _make_ohlcv()
-        fe = FeatureEngineer()
-        result = fe.process(df)
-        assert "Gap" in result.columns
-        assert "Gap_Pct" in result.columns
-
     def test_no_unused_indicators(self):
         df = _make_ohlcv()
         fe = FeatureEngineer()
         result = fe.process(df)
-        for removed in ["Pivot", "Pivot_R1", "Pivot_S1", "Fib_0.236", "PSAR"]:
-            assert removed not in result.columns, f"{removed} should have been removed"
+        removed = [
+            "Pivot", "Pivot_R1", "Pivot_S1", "Fib_0.236", "PSAR",
+            "EMA_12", "EMA_26", "EMA_50", "EMA_200",
+            "MACD", "MACD_Signal", "MACD_Hist",
+            "Stoch_K", "Stoch_D", "Williams_R", "ROC_10", "CMO",
+            "BB_Width", "HV_30", "HV_60", "HV_90",
+            "Keltner_Upper", "Keltner_Lower",
+            "OBV", "VWMA_10", "VWMA_20", "MFI", "AD", "Volume_SMA_20",
+            "Return", "Log_Return", "Return_Mean_20", "Return_Std_20",
+            "Return_Mean_60", "Return_Std_60", "Skew_30", "Kurt_30",
+            "Benchmark_Return", "Beta_60", "Corr_60",
+            "Resistance", "Support", "Gap", "Gap_Pct",
+        ]
+        for col in removed:
+            assert col not in result.columns, f"{col} should have been removed"
