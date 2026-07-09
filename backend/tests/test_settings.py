@@ -52,10 +52,12 @@ class TestSettingsManager:
         loaded = mgr.load_settings()
 
         # Configured flags are added when loading
+        assert "bot_token_configured" in loaded["telegram"]
         assert "api_key_configured" in loaded["alpaca"]
         assert "secret_key_configured" in loaded["alpaca"]
 
         # Remove configured flags for comparison
+        loaded["telegram"].pop("bot_token_configured")
         loaded["alpaca"].pop("api_key_configured")
         loaded["alpaca"].pop("secret_key_configured")
 

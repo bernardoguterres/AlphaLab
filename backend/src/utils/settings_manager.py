@@ -105,6 +105,10 @@ class SettingsManager:
         if "alpaca" not in settings_copy:
             settings_copy["alpaca"] = {}
 
+        settings_copy["telegram"]["bot_token_configured"] = bool(
+            os.environ.get("TELEGRAM_BOT_TOKEN")
+        )
+
         settings_copy["alpaca"]["api_key_configured"] = bool(
             os.environ.get("ALPACA_API_KEY")
         )
@@ -117,6 +121,9 @@ class SettingsManager:
     def _remove_configured_flags(self, settings: Dict[str, Any]) -> Dict[str, Any]:
         """Remove configured flags before saving (they are computed from env vars)."""
         settings_copy = json.loads(json.dumps(settings))  # Deep copy
+
+        if "telegram" in settings_copy:
+            settings_copy["telegram"].pop("bot_token_configured", None)
 
         if "alpaca" in settings_copy:
             settings_copy["alpaca"].pop("api_key_configured", None)

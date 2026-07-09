@@ -14,6 +14,7 @@ class TelegramSettings(BaseModel):
     alert_drawdown: bool = True
     alert_signals: bool = False
     drawdown_threshold_pct: float = 5.0
+    bot_token_configured: Optional[bool] = None
 
     @field_validator("drawdown_threshold_pct")
     @classmethod
@@ -25,7 +26,7 @@ class TelegramSettings(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def reject_credentials(cls, data: Any) -> Any:
-        """Reject any credential-like fields."""
+        """Reject any credential-like fields (except *_configured flags)."""
         if isinstance(data, dict):
             forbidden_keys = {
                 "bot_token",
@@ -35,7 +36,11 @@ class TelegramSettings(BaseModel):
                 "password",
                 "secret",
             }
-            found = forbidden_keys & set(k.lower() for k in data.keys())
+            # Filter out *_configured fields (they're OK)
+            actual_keys = {
+                k.lower() for k in data.keys() if not k.endswith("_configured")
+            }
+            found = forbidden_keys & actual_keys
             if found:
                 raise ValueError(
                     f"API keys must be set as environment variables, not saved via this endpoint. "

@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -109,9 +110,24 @@ class CacheManager:
         self._save_meta()
 
     def list_cached(self) -> list[dict]:
-        """Return metadata for all cached entries."""
+        """Return metadata for all cached entries.
+
+        Field names match the `start_date`/`end_date` convention used by every
+        other API endpoint, rather than the internal meta dict's `start`/`end`/
+        `timestamp` keys used by get()/put()/clear_expired().
+        """
         return [
-            {**v, "key": k}
+            {
+                "ticker": v["ticker"],
+                "interval": v["interval"],
+                "start_date": v["start"],
+                "end_date": v["end"],
+                "records": v["records"],
+                "last_updated": datetime.fromtimestamp(
+                    v["timestamp"], tz=timezone.utc
+                ).isoformat(),
+                "key": k,
+            }
             for k, v in self._meta.items()
             if (self.cache_dir / f"{k}.parquet").exists()
         ]

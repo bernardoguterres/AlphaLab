@@ -336,6 +336,7 @@ export interface TelegramSettings {
   alert_drawdown: boolean;
   alert_signals: boolean;
   drawdown_threshold_pct: number;
+  bot_token_configured?: boolean;
 }
 
 export interface AlpacaSettings {

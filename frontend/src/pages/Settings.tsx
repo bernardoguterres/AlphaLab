@@ -267,11 +267,13 @@ export default function Settings() {
               />
             </div>
 
-            {/* Bot Token Status — honest: the backend doesn't currently expose whether
-                TELEGRAM_BOT_TOKEN is actually set, so we don't assert a configured/not-configured
-                state we can't verify. Use "Test Telegram Connection" below for ground truth. */}
+            {/* Bot Token Status */}
             <div className="flex items-center gap-2 p-3 bg-secondary/40 rounded-lg border border-border/60">
-              <StatusBadge label="Configuration unverified — use Test Connection below" tone="neutral" dot className="normal-case tracking-normal" />
+              {settings.telegram.bot_token_configured ? (
+                <StatusBadge label="Bot token set" tone="gain" dot className="normal-case" />
+              ) : (
+                <StatusBadge label="Bot token missing" tone="loss" dot className="normal-case" />
+              )}
             </div>
 
             {/* Alert Toggles */}
