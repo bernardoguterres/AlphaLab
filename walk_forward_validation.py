@@ -16,24 +16,13 @@ Usage:
     python walk_forward_validation.py
 """
 
-import sys
-import os
-
-# ---------------------------------------------------------------------------
-# Path setup - make the AlphaLab backend importable from any working directory
-# ---------------------------------------------------------------------------
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-BACKEND = os.path.join(SCRIPT_DIR, "backend")
-
-if BACKEND not in sys.path:
-    sys.path.insert(0, BACKEND)
-
-# ---------------------------------------------------------------------------
-# Standard library & third-party imports
-# ---------------------------------------------------------------------------
 import math
 import warnings
 warnings.filterwarnings("ignore")          # suppress pandas / scipy noise
+
+from scripts.wf_common import setup_backend_path, fmt, print_table_header, print_table_row
+
+setup_backend_path()
 
 import yfinance as yf
 import pandas as pd
@@ -220,72 +209,43 @@ def _empty_metrics_row(reason: str) -> dict:
 # Formatting helpers
 # ---------------------------------------------------------------------------
 
-COL_W = {
-    "strategy":    22,
-    "window":      10,
-    "phase":        7,
-    "period":      24,
-    "sharpe":       8,
-    "win_rate":     9,
-    "max_dd":       9,
-    "trades":       7,
-}
-
-
-def _fmt(value, fmt_str, na="  N/A  "):
-    """Format a numeric value, returning na string if NaN."""
-    if value is None:
-        return na
-    try:
-        if math.isnan(value):
-            return na
-        return format(value, fmt_str)
-    except (TypeError, ValueError):
-        return na
+COLUMNS = [
+    ("strategy", "Strategy", 22, "<"),
+    ("window", "Window", 10, "<"),
+    ("phase", "Phase", 7, "<"),
+    ("period", "Period", 24, "<"),
+    ("sharpe", "Sharpe", 8, ">"),
+    ("win_rate", "Win Rate", 9, ">"),
+    ("max_dd", "Max DD%", 9, ">"),
+    ("trades", "Trades", 7, ">"),
+]
 
 
 def print_header():
-    h = (
-        f"{'Strategy':<{COL_W['strategy']}} "
-        f"{'Window':<{COL_W['window']}} "
-        f"{'Phase':<{COL_W['phase']}} "
-        f"{'Period':<{COL_W['period']}} "
-        f"{'Sharpe':>{COL_W['sharpe']}} "
-        f"{'Win Rate':>{COL_W['win_rate']}} "
-        f"{'Max DD%':>{COL_W['max_dd']}} "
-        f"{'Trades':>{COL_W['trades']}}"
-    )
-    sep = "-" * len(h)
-    print(sep)
-    print(h)
-    print(sep)
-    return sep
+    return print_table_header(COLUMNS)
 
 
 def print_row(strategy_label, window_label, phase, period, m):
     """Print one result row."""
-    sharpe_str  = _fmt(m["sharpe"], ".4f")
-    max_dd_str  = _fmt(m["max_drawdown"], ".2f")
-    trades_str  = str(m["total_trades"]) if m["error"] is None else "N/A"
-
     wr = m["win_rate"]
     if m["error"] is not None or wr is None or (isinstance(wr, float) and math.isnan(wr)):
         win_rate_str = "  N/A  "
     else:
         win_rate_str = f"{wr * 100:.1f}%"
 
-    note = f"  [{m['error']}]" if m["error"] else ""
-
-    print(
-        f"{strategy_label:<{COL_W['strategy']}} "
-        f"{window_label:<{COL_W['window']}} "
-        f"{phase:<{COL_W['phase']}} "
-        f"{period:<{COL_W['period']}} "
-        f"{sharpe_str:>{COL_W['sharpe']}} "
-        f"{win_rate_str:>{COL_W['win_rate']}} "
-        f"{max_dd_str:>{COL_W['max_dd']}} "
-        f"{trades_str:>{COL_W['trades']}}"
-        f"{note}"
+    print_table_row(
+        COLUMNS,
+        {
+            "strategy": strategy_label,
+            "window": window_label,
+            "phase": phase,
+            "period": period,
+            "sharpe": fmt(m["sharpe"], ".4f"),
+            "win_rate": win_rate_str,
+            "max_dd": fmt(m["max_drawdown"], ".2f"),
+            "trades": str(m["total_trades"]) if m["error"] is None else "N/A",
+        },
+        note=f"  [{m['error']}]" if m["error"] else "",
     )
 
 
@@ -344,13 +304,13 @@ def main():
             print(f"    In-sample  {window['train_start']} → {window['train_end']}", end=" … ")
             in_m = run_one_backtest(sclass, sparams, featured_data,
                                     window["train_start"], window["train_end"])
-            print(f"Sharpe={_fmt(in_m['sharpe'], '.4f')}")
+            print(f"Sharpe={fmt(in_m['sharpe'], '.4f')}")
 
             # Out-of-sample (test window)
             print(f"    Out-sample {window['test_start']} → {window['test_end']}", end=" … ")
             out_m = run_one_backtest(sclass, sparams, featured_data,
                                      window["test_start"], window["test_end"])
-            print(f"Sharpe={_fmt(out_m['sharpe'], '.4f')}")
+            print(f"Sharpe={fmt(out_m['sharpe'], '.4f')}")
 
             all_results[sname][wlabel] = {
                 "in_sample":      in_m,
@@ -424,7 +384,7 @@ def main():
 
         verdict = "CONSISTENT" if all_pass else "UNSTABLE"
         sharpe_summary = "  |  ".join(
-            f"W{i+1}: {_fmt(s, '.4f')}" for i, s in enumerate(oos_sharpes)
+            f"W{i+1}: {fmt(s, '.4f')}" for i, s in enumerate(oos_sharpes)
         )
 
         marker = ">>>" if all_pass else "   "
