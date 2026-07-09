@@ -1,7 +1,5 @@
 """Feature engineering for market data using technical analysis indicators."""
 
-from typing import Optional
-
 import numpy as np
 import pandas as pd
 
@@ -11,22 +9,20 @@ logger = setup_logger("alphalab.processor")
 
 
 class FeatureEngineer:
-    """Compute technical indicators and statistical features on OHLCV data.
+    """Compute technical indicators used by the strategy implementations.
 
-    Uses stockstats and manual implementations to produce a wide feature
-    DataFrame suitable for strategy signal generation and backtesting.
+    Only computes indicators actually consumed by at least one strategy's
+    `required_columns()`/`generate_signals()`: SMA_10/20/50/100/200 (the last
+    three exist to support GreenblattWeekly's configurable fast_sma/slow_sma,
+    not just its 10/50 defaults - do not remove), RSI, ADX (+ DI lines),
+    Bollinger Bands, and ATR.
     """
 
-    def process(
-        self,
-        df: pd.DataFrame,
-        benchmark: Optional[pd.DataFrame] = None,
-    ) -> pd.DataFrame:
+    def process(self, df: pd.DataFrame) -> pd.DataFrame:
         """Add all features to the OHLCV DataFrame.
 
         Args:
             df: DataFrame with columns Open, High, Low, Close, Volume indexed by Date.
-            benchmark: Optional benchmark DataFrame (e.g. SPY) for beta/correlation.
 
         Returns:
             DataFrame with original OHLCV + all computed features.
@@ -43,9 +39,6 @@ class FeatureEngineer:
         df = self._add_trend_indicators(df)
         df = self._add_momentum_indicators(df)
         df = self._add_volatility_indicators(df)
-        df = self._add_volume_indicators(df)
-        df = self._add_statistical_features(df, benchmark)
-        df = self._add_advanced_features(df)
 
         logger.info(
             "Feature engineering complete: %d features, %d rows",
@@ -65,17 +58,6 @@ class FeatureEngineer:
         # SMA
         for w in (10, 20, 50, 100, 200):
             df[f"SMA_{w}"] = close.rolling(window=w, min_periods=w).mean()
-
-        # EMA
-        for w in (12, 26, 50, 200):
-            df[f"EMA_{w}"] = close.ewm(span=w, adjust=False).mean()
-
-        # MACD (12, 26, 9)
-        ema12 = close.ewm(span=12, adjust=False).mean()
-        ema26 = close.ewm(span=26, adjust=False).mean()
-        df["MACD"] = ema12 - ema26
-        df["MACD_Signal"] = df["MACD"].ewm(span=9, adjust=False).mean()
-        df["MACD_Hist"] = df["MACD"] - df["MACD_Signal"]
 
         # ADX (14-day)
         df = FeatureEngineer._compute_adx(df, period=14)
@@ -116,8 +98,6 @@ class FeatureEngineer:
     @staticmethod
     def _add_momentum_indicators(df: pd.DataFrame) -> pd.DataFrame:
         close = df["Close"]
-        high = df["High"]
-        low = df["Low"]
 
         # RSI (14)
         delta = close.diff()
@@ -128,26 +108,6 @@ class FeatureEngineer:
         rs = avg_gain / avg_loss.replace(0, np.nan)
         df["RSI"] = 100 - (100 / (1 + rs))
         df["RSI"] = df["RSI"].clip(0, 100)
-
-        # Stochastic Oscillator
-        low14 = low.rolling(14, min_periods=14).min()
-        high14 = high.rolling(14, min_periods=14).max()
-        denom = (high14 - low14).replace(0, np.nan)
-        df["Stoch_K"] = 100 * (close - low14) / denom
-        df["Stoch_D"] = df["Stoch_K"].rolling(3, min_periods=3).mean()
-
-        # Williams %R
-        df["Williams_R"] = -100 * (high14 - close) / denom
-
-        # Rate of Change
-        df["ROC_10"] = close.pct_change(periods=10, fill_method=None) * 100
-
-        # Chande Momentum Oscillator (9-day)
-        period = 9
-        up = delta.clip(lower=0).rolling(period, min_periods=period).sum()
-        down = (-delta.clip(upper=0)).rolling(period, min_periods=period).sum()
-        total = up + down
-        df["CMO"] = ((up - down) / total.replace(0, np.nan)) * 100
 
         return df
 
@@ -167,7 +127,6 @@ class FeatureEngineer:
         df["BB_Upper"] = sma20 + 2 * std20
         df["BB_Middle"] = sma20
         df["BB_Lower"] = sma20 - 2 * std20
-        df["BB_Width"] = (df["BB_Upper"] - df["BB_Lower"]) / sma20.replace(0, np.nan)
 
         # ATR (14)
         tr = pd.concat(
@@ -179,116 +138,5 @@ class FeatureEngineer:
             axis=1,
         ).max(axis=1)
         df["ATR"] = tr.ewm(alpha=1 / 14, adjust=False).mean()
-
-        # Historical volatility
-        log_ret = np.log(close / close.shift(1))
-        for w in (30, 60, 90):
-            df[f"HV_{w}"] = log_ret.rolling(w, min_periods=w).std() * np.sqrt(252)
-
-        # Keltner Channels
-        ema20 = close.ewm(span=20, adjust=False).mean()
-        df["Keltner_Upper"] = ema20 + 2 * df["ATR"]
-        df["Keltner_Lower"] = ema20 - 2 * df["ATR"]
-
-        return df
-
-    # ------------------------------------------------------------------
-    # Volume
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _add_volume_indicators(df: pd.DataFrame) -> pd.DataFrame:
-        close = df["Close"]
-        volume = df["Volume"]
-        high = df["High"]
-        low = df["Low"]
-
-        # OBV
-        direction = np.sign(close.diff()).fillna(0)
-        df["OBV"] = (volume * direction).cumsum()
-
-        # VWMA
-        for w in (10, 20):
-            vw = (close * volume).rolling(w, min_periods=w).sum()
-            vol_sum = volume.rolling(w, min_periods=w).sum()
-            df[f"VWMA_{w}"] = vw / vol_sum.replace(0, np.nan)
-
-        # Money Flow Index (14)
-        tp = (high + low + close) / 3
-        raw_mf = tp * volume
-        flow_dir = tp.diff()
-        pos_flow = raw_mf.where(flow_dir > 0, 0).rolling(14, min_periods=14).sum()
-        neg_flow = raw_mf.where(flow_dir <= 0, 0).rolling(14, min_periods=14).sum()
-        mfi_ratio = pos_flow / neg_flow.replace(0, np.nan)
-        df["MFI"] = 100 - (100 / (1 + mfi_ratio))
-
-        # Accumulation/Distribution
-        clv = ((close - low) - (high - close)) / (high - low).replace(0, np.nan)
-        df["AD"] = (clv.fillna(0) * volume).cumsum()
-
-        # Volume MA
-        df["Volume_SMA_20"] = volume.rolling(20, min_periods=20).mean()
-
-        return df
-
-    # ------------------------------------------------------------------
-    # Statistical
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _add_statistical_features(
-        df: pd.DataFrame, benchmark: Optional[pd.DataFrame] = None
-    ) -> pd.DataFrame:
-        close = df["Close"]
-
-        # Returns
-        df["Return"] = close.pct_change(fill_method=None)
-        df["Log_Return"] = np.log(close / close.shift(1))
-
-        # Rolling stats
-        for w in (20, 60):
-            df[f"Return_Mean_{w}"] = df["Return"].rolling(w, min_periods=w).mean()
-            df[f"Return_Std_{w}"] = df["Return"].rolling(w, min_periods=w).std()
-
-        # Skewness and kurtosis (30-day)
-        df["Skew_30"] = df["Return"].rolling(30, min_periods=30).skew()
-        df["Kurt_30"] = df["Return"].rolling(30, min_periods=30).kurt()
-
-        # Beta and correlation vs benchmark
-        if (
-            benchmark is not None
-            and "Close" in benchmark.columns
-            and len(benchmark) > 60
-        ):
-            bench_ret = (
-                benchmark["Close"].pct_change(fill_method=None).reindex(df.index)
-            )
-            df["Benchmark_Return"] = bench_ret
-            rolling_cov = df["Return"].rolling(60, min_periods=60).cov(bench_ret)
-            rolling_var = bench_ret.rolling(60, min_periods=60).var()
-            df["Beta_60"] = rolling_cov / rolling_var.replace(0, np.nan)
-            df["Corr_60"] = df["Return"].rolling(60, min_periods=60).corr(bench_ret)
-
-        return df
-
-    # ------------------------------------------------------------------
-    # Advanced
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _add_advanced_features(df: pd.DataFrame) -> pd.DataFrame:
-        close = df["Close"]
-        high = df["High"]
-        low = df["Low"]
-
-        # Support / Resistance (local minima/maxima over 20-day window)
-        window = 20
-        if len(df) >= window:
-            df["Resistance"] = high.rolling(window, min_periods=window).max()
-            df["Support"] = low.rolling(window, min_periods=window).min()
-
-        # Gap analysis
-        df["Gap"] = df["Open"] - close.shift(1)
-        df["Gap_Pct"] = df["Gap"] / close.shift(1).replace(0, np.nan) * 100
 
         return df
