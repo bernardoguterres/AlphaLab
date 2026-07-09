@@ -1,10 +1,10 @@
 # AlphaLab
 
-Desktop application for backtesting algorithmic trading strategies with production-grade execution simulation.
+Web application for backtesting algorithmic trading strategies with production-grade execution simulation. Deployable to Railway (backend + frontend, two services); also available as an optional native desktop build via Tauri for local/offline use.
 
 ## Why AlphaLab?
 
-Most backtesting tools either oversimplify execution (ignoring slippage, commissions, and position limits) or require expensive subscriptions. AlphaLab provides institutional-quality backtesting with realistic execution modeling, 30+ performance metrics, and Monte Carlo analysis - all running locally on your machine with free Yahoo Finance data.
+Most backtesting tools either oversimplify execution (ignoring slippage, commissions, and position limits) or require expensive subscriptions. AlphaLab provides institutional-quality backtesting with realistic execution modeling, 30+ performance metrics, and Monte Carlo analysis, using free Yahoo Finance data.
 
 ## Architecture
 
@@ -140,7 +140,8 @@ AlphaLab is the development platform in a three-repo algorithmic trading system:
 
 - **Backend**: Python, Flask, pandas, numpy, scipy, yfinance, stockstats, Pydantic, httpx, alpaca-py
 - **Frontend**: React, TypeScript, Vite, shadcn/ui, Tailwind CSS, Recharts, Zustand
-- **Desktop**: Tauri (Rust) - Native macOS/Windows/Linux app with <10MB footprint
+- **Deployment**: Railway, two services (backend via Docker + gunicorn, frontend via Docker + nginx static serve)
+- **Desktop (optional)**: Tauri (Rust) - native macOS/Windows/Linux app with <10MB footprint, for local/offline use outside the hosted deployment
 
 ## Quick Start
 
@@ -170,7 +171,7 @@ npm run dev
 ```
 The UI starts at `http://localhost:8080`.
 
-**Option 2: Desktop App (Tauri)**
+**Option 2: Desktop App (Tauri, optional local build)**
 
 Prerequisites (one-time):
 ```bash
@@ -373,7 +374,6 @@ AlphaLab/
 │   └── STRATEGY_SCHEMA.md
 ├── README.md                   # This file
 ├── SETUP.md                    # Setup instructions
-├── TAURI_SETUP.md              # Desktop app rebuild guide
 ├── CONTRIBUTING.md             # Contribution guidelines
 ├── CLAUDE.md                   # Development guide
 ├── LICENSE
@@ -595,7 +595,7 @@ Before submitting, ensure:
 - React Query for API calls
 - Tailwind CSS styling
 
-#### Desktop App (Tauri)
+#### Desktop App (Tauri, optional - separate from the Railway deployment setup)
 - Tauri configured and working
 - macOS .dmg installer (5.5MB)
 - Correct app icons installed (1024x1024 source)
