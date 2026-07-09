@@ -8,8 +8,6 @@ import type {
   CompareRequest,
   CompareResponse,
   FetchDataResponse,
-  PortfolioOptimizeRequest,
-  PortfolioOptimizeResponse,
   ParameterOptimizeRequest,
   ParameterOptimizeResponse,
   HeatmapRequest,
@@ -71,12 +69,6 @@ export async function runBatchBacktest(request: BatchBacktestRequest): Promise<B
   const { data } = await api.post("/strategies/batch-backtest", request, {
     timeout: 300000, // 5 minutes for batch operations
   });
-  if (data.status === "error") throw new Error(data.message);
-  return data;
-}
-
-export async function optimizePortfolio(request: PortfolioOptimizeRequest): Promise<PortfolioOptimizeResponse> {
-  const { data } = await api.post("/portfolio/optimize", request);
   if (data.status === "error") throw new Error(data.message);
   return data;
 }

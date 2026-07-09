@@ -43,14 +43,14 @@ export function CorrelationMatrix({ results }: CorrelationMatrixProps) {
     return { matrix: correlations, strategies: strats };
   }, [results]);
 
-  const getColorClass = (value: number) => {
-    if (value >= 0.8) return "bg-blue-600 text-white";
-    if (value >= 0.5) return "bg-blue-500 text-white";
-    if (value >= 0.2) return "bg-blue-400 text-white";
-    if (value > -0.2) return "bg-gray-200 text-gray-900";
-    if (value > -0.5) return "bg-red-400 text-white";
-    if (value > -0.8) return "bg-red-500 text-white";
-    return "bg-red-600 text-white";
+  const getColorStyle = (value: number): React.CSSProperties => {
+    if (value > -0.2 && value < 0.2) return { backgroundColor: "hsl(var(--secondary))", color: "hsl(var(--muted-foreground))" };
+    const intensity = Math.min(Math.abs(value), 1);
+    const alpha = 0.15 + intensity * 0.7;
+    return {
+      backgroundColor: `hsl(var(--primary) / ${value > 0 ? alpha : alpha * 0.5})`,
+      color: alpha > 0.5 && value > 0 ? "hsl(var(--primary-foreground))" : "hsl(var(--foreground))",
+    };
   };
 
   if (strategies.length < 2) {
@@ -63,13 +63,13 @@ export function CorrelationMatrix({ results }: CorrelationMatrixProps) {
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-lg border border-border/60">
         <table className="w-full text-xs border-collapse">
           <thead>
             <tr>
-              <th className="border border-border px-2 py-1.5"></th>
+              <th className="border border-border/50 px-2 py-1.5 bg-secondary/30"></th>
               {strategies.map((s) => (
-                <th key={s} className="border border-border px-2 py-1.5 text-center font-medium min-w-[80px]">
+                <th key={s} className="border border-border/50 px-2 py-1.5 text-center label-caps bg-secondary/30 min-w-[80px]">
                   {s.replace("_", " ").slice(0, 10)}
                 </th>
               ))}
@@ -78,7 +78,7 @@ export function CorrelationMatrix({ results }: CorrelationMatrixProps) {
           <tbody>
             {strategies.map((stratI, i) => (
               <tr key={stratI}>
-                <td className="border border-border px-2 py-1.5 font-medium text-left">
+                <td className="border border-border/50 px-2 py-1.5 font-medium text-left bg-secondary/30 label-caps">
                   {stratI.replace("_", " ").slice(0, 10)}
                 </td>
                 {strategies.map((stratJ, j) => {
@@ -86,10 +86,8 @@ export function CorrelationMatrix({ results }: CorrelationMatrixProps) {
                   return (
                     <td
                       key={stratJ}
-                      className={cn(
-                        "border border-border px-2 py-1.5 text-center font-mono-numbers font-medium",
-                        getColorClass(value)
-                      )}
+                      className="border border-border/50 px-2 py-1.5 text-center font-mono-numbers font-medium"
+                      style={getColorStyle(value)}
                       title={`Correlation: ${value.toFixed(3)}`}
                     >
                       {value.toFixed(2)}
@@ -106,9 +104,9 @@ export function CorrelationMatrix({ results }: CorrelationMatrixProps) {
       <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
         <span>Correlation:</span>
         <div className="flex gap-1">
-          <div className="bg-red-600 text-white px-2 py-1 rounded text-[10px]">-1</div>
-          <div className="bg-gray-200 text-gray-900 px-2 py-1 rounded text-[10px]">0</div>
-          <div className="bg-blue-600 text-white px-2 py-1 rounded text-[10px]">+1</div>
+          <div className="px-2 py-1 rounded text-[10px]" style={getColorStyle(-1)}>-1</div>
+          <div className="px-2 py-1 rounded text-[10px]" style={getColorStyle(0)}>0</div>
+          <div className="px-2 py-1 rounded text-[10px]" style={getColorStyle(1)}>+1</div>
         </div>
         <span className="ml-2">Lower correlation = better diversification</span>
       </div>

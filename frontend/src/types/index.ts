@@ -328,43 +328,6 @@ export interface HeatmapResponse {
   message?: string;
 }
 
-export interface PortfolioStrategy {
-  backtest_id: string;
-  ticker: string;
-  strategy: string;
-}
-
-export interface PortfolioConstraints {
-  max_weight_per_strategy: number;
-  min_weight_per_strategy: number;
-  target_return: number | null;
-}
-
-export interface PortfolioOptimizeRequest {
-  strategies: PortfolioStrategy[];
-  method: "max_sharpe" | "min_variance" | "equal_weight" | "risk_parity";
-  constraints?: PortfolioConstraints;
-}
-
-export interface EfficientFrontierPoint {
-  return: number;
-  risk: number;
-  sharpe_ratio: number;
-}
-
-export interface PortfolioOptimizeResponse {
-  status: "ok" | "error";
-  data: {
-    optimal_weights: number[];
-    expected_return: number;
-    expected_risk: number;
-    sharpe_ratio: number;
-    strategy_labels: string[];
-    efficient_frontier: EfficientFrontierPoint[];
-  };
-  message?: string;
-}
-
 export interface TelegramSettings {
   enabled: boolean;
   alert_trades: boolean;

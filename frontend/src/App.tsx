@@ -16,7 +16,7 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-function AppContent() {
+function MainApp() {
   const { setBackendOnline, setCachedTickers } = useBacktestStore();
 
   useEffect(() => {
@@ -58,7 +58,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AppContent />
+        <MainApp />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

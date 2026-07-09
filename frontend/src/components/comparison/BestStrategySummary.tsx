@@ -70,9 +70,9 @@ export function BestStrategySummary({ results }: BestStrategySummaryProps) {
   return (
     <div className="card-elevated p-5 space-y-4">
       {/* Overall Recommendation */}
-      <div className="flex items-center gap-3 pb-4 border-b">
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20">
-          <Trophy className="h-5 w-5 text-amber-500" />
+      <div className="flex items-center gap-3 pb-4 border-b border-border/50">
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-warning/15">
+          <Trophy className="h-5 w-5 text-warning" />
         </div>
         <div className="flex-1">
           <h3 className="text-sm font-semibold">Recommended Strategy</h3>
@@ -88,7 +88,7 @@ export function BestStrategySummary({ results }: BestStrategySummaryProps) {
       {/* Best on Each Metric */}
       <div className="grid grid-cols-2 gap-3">
         {/* Best Sharpe */}
-        <div className="flex items-start gap-2 p-3 bg-muted/30 rounded-lg">
+        <div className="flex items-start gap-2 p-3 bg-secondary/20 rounded-lg border border-border/50">
           <Target className="h-4 w-4 text-primary shrink-0 mt-0.5" />
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">Best Sharpe</p>
@@ -103,8 +103,8 @@ export function BestStrategySummary({ results }: BestStrategySummaryProps) {
 
         {/* Best Return */}
         <div className={cn(
-          "flex items-start gap-2 p-3 rounded-lg",
-          winners.return.value >= 0 ? "bg-green-500/10" : "bg-red-500/10"
+          "flex items-start gap-2 p-3 rounded-lg border border-border/50",
+          winners.return.value >= 0 ? "bg-gain/10" : "bg-loss/10"
         )}>
           {winners.return.value >= 0 ? (
             <TrendingUp className="h-4 w-4 text-gain shrink-0 mt-0.5" />
@@ -126,7 +126,7 @@ export function BestStrategySummary({ results }: BestStrategySummaryProps) {
         </div>
 
         {/* Best Drawdown */}
-        <div className="flex items-start gap-2 p-3 bg-muted/30 rounded-lg">
+        <div className="flex items-start gap-2 p-3 bg-secondary/20 rounded-lg border border-border/50">
           <TrendingDown className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">Best Drawdown</p>
@@ -140,7 +140,7 @@ export function BestStrategySummary({ results }: BestStrategySummaryProps) {
         </div>
 
         {/* Best Win Rate */}
-        <div className="flex items-start gap-2 p-3 bg-muted/30 rounded-lg">
+        <div className="flex items-start gap-2 p-3 bg-secondary/20 rounded-lg border border-border/50">
           <Percent className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">Best Win Rate</p>
@@ -155,7 +155,7 @@ export function BestStrategySummary({ results }: BestStrategySummaryProps) {
       </div>
 
       {/* Disclaimer */}
-      <div className="pt-3 border-t">
+      <div className="pt-3 border-t border-border/50">
         <p className="text-[10px] text-muted-foreground italic">
           Based on historical backtest. Past performance does not guarantee future results.
         </p>

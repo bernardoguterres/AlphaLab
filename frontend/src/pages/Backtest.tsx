@@ -14,6 +14,7 @@ import { RiskSettingsPanel } from "@/components/backtest/RiskSettingsPanel";
 import { BatchBacktest } from "@/components/backtest/BatchBacktest";
 import ParameterOptimize from "@/components/backtest/ParameterOptimize";
 import { formatPercent, formatCurrency, formatNumber, pnlColor, qualityColor, strategyDisplayName } from "@/utils/formatters";
+import { STRATEGY_META, STRATEGY_ACCENT_GRADIENT } from "@/utils/strategyMeta";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,12 +23,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Loader2, TrendingUp, TrendingDown, BarChart3, Target, Percent, Activity, ChevronDown, Save } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, BarChart3, Target, Percent, Activity, ChevronDown, Save, ListChecks, MousePointerClick, Play, LineChart as LineChartIcon, FlaskConical } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+
+const GHOST_EQUITY_BARS = [38, 42, 40, 46, 44, 50, 48, 55, 52, 60, 58, 66, 63, 70, 68, 76, 74, 82, 80, 88];
 
 export default function Backtest() {
-  const { currentResult, setCurrentResult, addToHistory } = useBacktestStore();
+  const { currentResult, setCurrentResult, addToHistory, isBackendOnline } = useBacktestStore();
 
   // Form state
   const [ticker, setTicker] = useState("AAPL");
@@ -118,23 +124,58 @@ export default function Backtest() {
   // Removed handleExportJSON - now using ExportButton component
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] overflow-hidden p-4">
-      <Tabs defaultValue="single" className="h-full">
-        <TabsList className="mb-4">
+    <div className="h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
+      {/* Command strip */}
+      <div className="shrink-0 border-b border-border bg-card/40 backdrop-blur-sm px-5 py-3.5 flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="rounded-lg bg-primary/10 text-primary p-2 shrink-0">
+            <FlaskConical className="h-4 w-4" />
+          </div>
+          <div>
+            <h1 className="font-display text-lg font-bold tracking-tight gradient-text leading-none">Backtest Studio</h1>
+            <p className="text-xs text-muted-foreground mt-1">Configure, validate, and run strategy tests before exporting to AlphaLive</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <StatusBadge
+            label={isBackendOnline ? "Backend Online" : "Backend Offline"}
+            tone={isBackendOnline ? "gain" : "loss"}
+            dot
+            pulse={isBackendOnline}
+            className="normal-case tracking-normal"
+          />
+          <StatusBadge
+            label={qualityScore !== null ? `Data Ready · ${(qualityScore * 100).toFixed(0)}%` : "Data Not Fetched"}
+            tone={qualityScore !== null ? "gain" : "neutral"}
+            className="normal-case tracking-normal"
+          />
+          <StatusBadge label={strategyDisplayName(strategy)} tone="primary" className="normal-case tracking-normal" />
+          <Button onClick={handleRunBacktest} disabled={isRunning} className="gap-2">
+            {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            Run Backtest
+          </Button>
+        </div>
+      </div>
+
+      <Tabs defaultValue="single" className="flex-1 min-h-0 flex flex-col">
+        <TabsList className="mx-5 mt-3 mb-0 w-fit shrink-0">
           <TabsTrigger value="single">Single Backtest</TabsTrigger>
           <TabsTrigger value="batch">Batch Backtest</TabsTrigger>
           <TabsTrigger value="optimize">Optimize Parameters</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="single" className="h-[calc(100%-3rem)] overflow-hidden">
+        <TabsContent value="single" className="flex-1 min-h-0 overflow-hidden mt-3">
           <div className="flex h-full overflow-hidden">
       {/* Left Panel - Configuration */}
-      <div className="w-[380px] shrink-0 border-r border-border overflow-y-auto p-5 space-y-5">
-        <h2 className="font-display text-lg font-bold">Configuration</h2>
+      <div className="w-[380px] shrink-0 border-r border-border bg-card/30 overflow-y-auto p-5 space-y-5">
+        <div>
+          <h2 className="section-label">Configuration</h2>
+          <p className="text-xs text-muted-foreground mt-1">Set up your backtest run</p>
+        </div>
 
         {/* Data Input */}
-        <section className="space-y-3">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Data Input</h3>
+        <section className="space-y-3 rounded-xl border border-border/70 bg-card/60 p-3.5">
+          <h3 className="section-label">1 · Data Input</h3>
           <div>
             <Label className="text-xs">Ticker Symbol</Label>
             <Input
@@ -170,7 +211,7 @@ export default function Backtest() {
             Fetch Data
           </Button>
           {qualityScore !== null && (
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-2 text-xs pt-0.5">
               <span className="text-muted-foreground">Quality Score:</span>
               <span className={cn("font-mono-numbers font-semibold", qualityColor(qualityScore))}>
                 {(qualityScore * 100).toFixed(1)}%
@@ -181,29 +222,48 @@ export default function Backtest() {
 
         {/* Strategy Selection */}
         <section className="space-y-3">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Strategy</h3>
+          <h3 className="section-label">2 · Strategy</h3>
           <div className="space-y-2">
-            {(Object.keys(STRATEGY_INFO) as StrategyType[]).map((key) => (
-              <button
-                key={key}
-                onClick={() => setStrategy(key)}
-                className={cn(
-                  "w-full text-left p-3 rounded-lg border transition-colors",
-                  strategy === key
-                    ? "border-primary bg-primary/10"
-                    : "border-border hover:border-muted-foreground/30"
-                )}
-              >
-                <div className="text-sm font-medium">{STRATEGY_INFO[key].name}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{STRATEGY_INFO[key].description}</div>
-              </button>
-            ))}
+            {(Object.keys(STRATEGY_INFO) as StrategyType[]).map((key) => {
+              const meta = STRATEGY_META[key];
+              const Icon = meta.icon;
+              const selected = strategy === key;
+              const gradient = STRATEGY_ACCENT_GRADIENT[meta.accent] ?? "from-primary to-lab-deep";
+              return (
+                <button
+                  key={key}
+                  onClick={() => setStrategy(key)}
+                  className={cn(
+                    "group w-full text-left p-3 rounded-xl border transition-all relative flex items-start gap-3",
+                    selected
+                      ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.3)]"
+                      : "border-border/70 bg-card/40 hover:border-muted-foreground/30 hover:bg-secondary/30"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "rounded-lg bg-gradient-to-br shrink-0 flex items-center justify-center text-white shadow transition-transform group-hover:scale-105 h-8 w-8",
+                      gradient
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold">{STRATEGY_INFO[key].name}</div>
+                    <span className="inline-block text-[9px] font-medium text-muted-foreground/80 bg-secondary/50 rounded-full px-1.5 py-0.5 mt-1">
+                      {meta.category}
+                    </span>
+                    <div className="text-xs text-muted-foreground mt-1 leading-snug">{STRATEGY_INFO[key].description}</div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </section>
 
         {/* Strategy Parameters */}
-        <section className="space-y-3">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Parameters</h3>
+        <section className="space-y-3 rounded-xl border border-border/70 bg-card/60 p-3.5">
+          <h3 className="section-label">3 · Parameters</h3>
           {strategy === "ma_crossover" && (
             <MACrossoverForm params={currentParams as MACrossoverParams} onChange={updateParam} />
           )}
@@ -223,13 +283,14 @@ export default function Backtest() {
 
         {/* Risk Settings */}
         <section className="space-y-2">
+          <h3 className="section-label mb-1">4 · Risk Settings</h3>
           <RiskSettingsPanel settings={riskSettings} onChange={setRiskSettings} />
         </section>
 
         {/* Advanced Settings */}
-        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Advanced Settings
+        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="rounded-xl border border-border/70 bg-card/60 p-3.5">
+          <CollapsibleTrigger className="flex items-center justify-between w-full section-label">
+            5 · Execution Assumptions
             <ChevronDown className={cn("h-3 w-3 transition-transform", advancedOpen && "rotate-180")} />
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-3 mt-3">
@@ -269,8 +330,13 @@ export default function Backtest() {
           </CollapsibleContent>
         </Collapsible>
 
-        <Button className="w-full gap-2" size="lg" onClick={handleRunBacktest} disabled={isRunning}>
-          {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
+        <Button
+          className="w-full gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-shadow"
+          size="lg"
+          onClick={handleRunBacktest}
+          disabled={isRunning}
+        >
+          {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
           {isRunning ? `Backtesting ${strategyDisplayName(strategy)} on ${ticker}...` : "Run Backtest"}
         </Button>
       </div>
@@ -278,17 +344,105 @@ export default function Backtest() {
       {/* Right Panel - Results */}
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
         {!currentResult ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <BarChart3 className="h-16 w-16 text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-semibold text-muted-foreground">No Results Yet</h3>
-            <p className="text-sm text-muted-foreground/70 mt-1">Configure your strategy and run a backtest to see results</p>
+          <div className="space-y-5">
+            <EmptyState
+              icon={LineChartIcon}
+              title="Configure a strategy to see results"
+              description="Follow the workflow on the left, then run a backtest — your equity curve, drawdown, and metrics will appear here."
+            />
+
+            {/* Ghost metric preview row — shows the shape of what's coming, no fake numbers */}
+            <div className="grid grid-cols-3 xl:grid-cols-6 gap-3 opacity-50 pointer-events-none select-none">
+              <MetricCard label="Total Return" value="—" icon={<TrendingUp className="h-4 w-4" />} />
+              <MetricCard label="CAGR" value="—" />
+              <MetricCard label="Sharpe Ratio" value="—" icon={<Target className="h-4 w-4" />} />
+              <MetricCard label="Max Drawdown" value="—" />
+              <MetricCard label="Win Rate" value="—" icon={<Percent className="h-4 w-4" />} />
+              <MetricCard label="Total Trades" value="—" />
+            </div>
+
+            {/* Ghost equity curve preview */}
+            <div className="card-elevated p-4">
+              <h3 className="section-label mb-3">Equity Curve Preview</h3>
+              <div className="h-40 rounded-lg border border-border/40 bg-secondary/10 flex items-end gap-1 p-4">
+                {GHOST_EQUITY_BARS.map((h, i) => (
+                  <Skeleton key={i} className="flex-1 rounded-sm" style={{ height: `${h}%` }} />
+                ))}
+              </div>
+            </div>
+
+            {/* Workflow checklist + what-you'll-see, side by side to fill the row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="card-elevated p-4">
+                <h4 className="section-label mb-3 flex items-center gap-1.5">
+                  <ListChecks className="h-3.5 w-3.5" /> Workflow
+                </h4>
+                <ol className="space-y-2.5">
+                  {[
+                    { label: "Select ticker and date range", done: true },
+                    { label: "Fetch data", done: qualityScore !== null },
+                    { label: "Choose strategy", done: true },
+                    { label: "Run backtest", done: isRunning },
+                    { label: "Review results", done: false },
+                  ].map((step, i) => (
+                    <li key={step.label} className="flex items-center gap-2.5 text-xs">
+                      <span
+                        className={cn(
+                          "flex items-center justify-center h-5 w-5 rounded-full text-[10px] font-bold shrink-0",
+                          step.done ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground border border-border"
+                        )}
+                      >
+                        {i + 1}
+                      </span>
+                      <span className={step.done ? "text-foreground" : "text-muted-foreground"}>{step.label}</span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="text-[10px] text-muted-foreground/70 mt-3 flex items-center gap-1.5">
+                  <MousePointerClick className="h-3 w-3" /> Tip: fetching data first shows a quality score before you run
+                </p>
+              </div>
+
+              <div className="card-elevated p-4">
+                <h4 className="section-label mb-3 flex items-center gap-1.5">
+                  <LineChartIcon className="h-3.5 w-3.5" /> What You'll See
+                </h4>
+                <ul className="space-y-2.5 text-xs text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
+                    <span><span className="text-foreground font-medium">Equity Curve</span> — portfolio value vs. buy-and-hold benchmark</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
+                    <span><span className="text-foreground font-medium">Drawdown</span> — peak-to-trough decline over time</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
+                    <span><span className="text-foreground font-medium">Monthly Returns</span> — heatmap of gains/losses by month</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
+                    <span><span className="text-foreground font-medium">Trade Log</span> — every entry/exit with P&L</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
+                    <span><span className="text-foreground font-medium">Detailed Metrics</span> — 30+ risk, return, and consistency stats</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg font-bold">
-                Results - {currentResult.ticker || ticker} · {strategyDisplayName(currentResult.strategy)}
-              </h2>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className={cn("rounded-lg p-2 shrink-0 bg-secondary/60", pnlColor(currentResult.total_return_pct))}>
+                  {currentResult.total_return_pct >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                </div>
+                <h2 className="font-display text-lg font-bold tracking-tight">
+                  {currentResult.ticker || ticker} · {strategyDisplayName(currentResult.strategy)}
+                </h2>
+              </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSaveToHistory}>
                   <Save className="h-3 w-3" /> Save
@@ -409,6 +563,15 @@ function ParamSlider({ label, value, onChange, min, max, step = 1 }: { label: st
         <span className="font-mono-numbers text-xs text-muted-foreground">{value}</span>
       </div>
       <Slider value={[value]} onValueChange={([v]) => onChange(v)} min={min} max={max} step={step} />
+    </div>
+  );
+}
+
+function ParamCheckbox({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <Checkbox checked={checked} onCheckedChange={(v) => onChange(!!v)} id={`chk-${label}`} />
+      <Label htmlFor={`chk-${label}`} className="text-xs">{label}</Label>
     </div>
   );
 }

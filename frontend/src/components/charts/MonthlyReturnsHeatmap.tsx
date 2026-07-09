@@ -85,16 +85,14 @@ export function MonthlyReturnsHeatmap({ equityCurve }: MonthlyReturnsHeatmapProp
     };
   }, [equityCurve]);
 
-  const getColorClass = (value: number) => {
-    if (value >= 10) return "bg-green-600 text-white";
-    if (value >= 5) return "bg-green-500 text-white";
-    if (value >= 2) return "bg-green-400 text-white";
-    if (value > 0) return "bg-green-300 text-gray-900";
-    if (value === 0) return "bg-gray-200 text-gray-700";
-    if (value > -2) return "bg-red-300 text-gray-900";
-    if (value > -5) return "bg-red-400 text-white";
-    if (value > -10) return "bg-red-500 text-white";
-    return "bg-red-600 text-white";
+  const getColorStyle = (value: number): React.CSSProperties => {
+    const intensity = Math.min(Math.abs(value) / 10, 1); // 0 -> 0.15, 10%+ -> 0.85 opacity
+    const alpha = 0.15 + intensity * 0.7;
+    if (value === 0) return { backgroundColor: "hsl(var(--secondary))", color: "hsl(var(--muted-foreground))" };
+    return {
+      backgroundColor: `hsl(var(--${value > 0 ? "gain" : "loss"}) / ${alpha})`,
+      color: alpha > 0.5 ? "hsl(var(--foreground))" : `hsl(var(--${value > 0 ? "gain" : "loss"}))`,
+    };
   };
 
   if (years.length === 0) {
@@ -106,19 +104,19 @@ export function MonthlyReturnsHeatmap({ equityCurve }: MonthlyReturnsHeatmapProp
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-lg border border-border/60">
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr>
-            <th className="sticky left-0 bg-background border border-border px-2 py-1.5 text-left font-semibold text-muted-foreground">
+            <th className="sticky left-0 bg-secondary/30 border border-border/50 px-2 py-1.5 text-left label-caps">
               Year
             </th>
             {MONTHS.map((month) => (
-              <th key={month} className="border border-border px-2 py-1.5 text-center font-medium text-muted-foreground min-w-[60px]">
+              <th key={month} className="border border-border/50 px-2 py-1.5 text-center label-caps min-w-[60px]">
                 {month}
               </th>
             ))}
-            <th className="border border-border px-2 py-1.5 text-center font-semibold text-muted-foreground bg-muted/50 min-w-[70px]">
+            <th className="border border-border/50 px-2 py-1.5 text-center label-caps bg-secondary/30 min-w-[70px]">
               Total
             </th>
           </tr>
@@ -126,7 +124,7 @@ export function MonthlyReturnsHeatmap({ equityCurve }: MonthlyReturnsHeatmapProp
         <tbody>
           {years.map((year) => (
             <tr key={year}>
-              <td className="sticky left-0 bg-background border border-border px-2 py-1.5 font-semibold">
+              <td className="sticky left-0 bg-card border border-border/50 px-2 py-1.5 font-semibold">
                 {year}
               </td>
               {MONTHS.map((_, monthIdx) => {
@@ -134,18 +132,16 @@ export function MonthlyReturnsHeatmap({ equityCurve }: MonthlyReturnsHeatmapProp
                 const value = monthlyReturns.get(key);
                 if (value === undefined) {
                   return (
-                    <td key={monthIdx} className="border border-border px-2 py-1.5 text-center bg-gray-100">
-                      <span className="text-muted-foreground">-</span>
+                    <td key={monthIdx} className="border border-border/50 px-2 py-1.5 text-center bg-secondary/10">
+                      <span className="text-muted-foreground/50">-</span>
                     </td>
                   );
                 }
                 return (
                   <td
                     key={monthIdx}
-                    className={cn(
-                      "border border-border px-2 py-1.5 text-center font-mono-numbers font-medium transition-colors",
-                      getColorClass(value)
-                    )}
+                    className="border border-border/50 px-2 py-1.5 text-center font-mono-numbers font-medium transition-colors"
+                    style={getColorStyle(value)}
                     title={`${MONTHS[monthIdx]} ${year}: ${value.toFixed(2)}%`}
                   >
                     {value.toFixed(1)}%
@@ -154,7 +150,7 @@ export function MonthlyReturnsHeatmap({ equityCurve }: MonthlyReturnsHeatmapProp
               })}
               <td
                 className={cn(
-                  "border border-border px-2 py-1.5 text-center font-mono-numbers font-bold bg-muted/50",
+                  "border border-border/50 px-2 py-1.5 text-center font-mono-numbers font-bold bg-secondary/30",
                   yearlyReturns.get(year)! >= 0 ? "text-gain" : "text-loss"
                 )}
               >
@@ -166,16 +162,16 @@ export function MonthlyReturnsHeatmap({ equityCurve }: MonthlyReturnsHeatmapProp
       </table>
 
       {/* Legend */}
-      <div className="mt-4 flex items-center justify-center gap-2 text-xs">
+      <div className="py-3 flex items-center justify-center gap-2 text-xs border-t border-border/50">
         <span className="text-muted-foreground">Color scale:</span>
         <div className="flex gap-1">
-          <div className="bg-red-600 text-white px-2 py-1 rounded">{"< -10%"}</div>
-          <div className="bg-red-500 text-white px-2 py-1 rounded">-5%</div>
-          <div className="bg-red-300 text-gray-900 px-2 py-1 rounded">-2%</div>
-          <div className="bg-gray-200 text-gray-700 px-2 py-1 rounded">0%</div>
-          <div className="bg-green-300 text-gray-900 px-2 py-1 rounded">+2%</div>
-          <div className="bg-green-500 text-white px-2 py-1 rounded">+5%</div>
-          <div className="bg-green-600 text-white px-2 py-1 rounded">{"> +10%"}</div>
+          <div className="px-2 py-1 rounded" style={getColorStyle(-12)}>{"< -10%"}</div>
+          <div className="px-2 py-1 rounded" style={getColorStyle(-5)}>-5%</div>
+          <div className="px-2 py-1 rounded" style={getColorStyle(-2)}>-2%</div>
+          <div className="px-2 py-1 rounded" style={getColorStyle(0)}>0%</div>
+          <div className="px-2 py-1 rounded" style={getColorStyle(2)}>+2%</div>
+          <div className="px-2 py-1 rounded" style={getColorStyle(5)}>+5%</div>
+          <div className="px-2 py-1 rounded" style={getColorStyle(12)}>{"> +10%"}</div>
         </div>
       </div>
     </div>

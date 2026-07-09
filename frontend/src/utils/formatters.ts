@@ -18,8 +18,11 @@ export function formatNumber(value: number | undefined | null, decimals = 2): st
   return value.toFixed(decimals);
 }
 
-export function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
+export function formatDate(dateStr: string | undefined | null): string {
+  if (!dateStr) return "—";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
