@@ -11,11 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Download, Check } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2, Download, Check, SlidersHorizontal, Trophy, ListOrdered, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
 import { formatPercent, formatNumber } from "@/utils/formatters";
+import { cn } from "@/lib/utils";
 
 interface ParameterOptimizeProps {
   ticker: string;
@@ -188,11 +190,13 @@ export default function ParameterOptimize({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-2">
+    <div className="space-y-5">
+      <div className="grid gap-5 md:grid-cols-2 items-start">
         {/* Configuration */}
-        <Card className="p-6 space-y-4">
-          <h3 className="font-semibold text-lg">Optimization Settings</h3>
+        <div className="card-elevated p-4 sm:p-5 space-y-4">
+          <h3 className="text-[15px] font-bold tracking-tight flex items-center gap-2">
+            <SlidersHorizontal className="h-3.5 w-3.5 text-primary" /> Optimization Settings
+          </h3>
 
           {/* Optimization Target */}
           <div className="space-y-2">
@@ -236,8 +240,8 @@ export default function ParameterOptimize({
           )}
 
           {/* Parameter Ranges */}
-          <div className="space-y-4 pt-4 border-t">
-            <h4 className="text-sm font-semibold">Parameter Ranges</h4>
+          <div className="space-y-4 pt-4 border-t border-border/50">
+            <h4 className="section-label">Parameter Ranges</h4>
             {Object.entries(paramRanges).map(([paramName, range]) => (
               <div key={paramName} className="space-y-2">
                 <Label className="text-sm font-medium">{paramName}</Label>
@@ -282,13 +286,15 @@ export default function ParameterOptimize({
               "Run Optimization"
             )}
           </Button>
-        </Card>
+        </div>
 
-        {/* Results Summary */}
-        {optimizeResult && (
-          <Card className="p-6 space-y-4">
+        {/* Results Summary — real once optimizeResult exists, honest ghost preview until then */}
+        {optimizeResult ? (
+          <div className="card-elevated p-4 sm:p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-lg">Best Parameters</h3>
+              <h3 className="text-[15px] font-bold tracking-tight flex items-center gap-2">
+                <Trophy className="h-3.5 w-3.5 text-warning" /> Best Parameters
+              </h3>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={handleApplyBestParams}>
                   <Check className="mr-2 h-4 w-4" />
@@ -304,17 +310,17 @@ export default function ParameterOptimize({
             {/* Best Params */}
             <div className="space-y-2">
               {Object.entries(optimizeResult.best_params).map(([key, value]) => (
-                <div key={key} className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">{key}</span>
-                  <span className="text-sm font-mono font-bold">{value}</span>
+                <div key={key} className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{key}</span>
+                  <span className="font-mono-numbers font-bold">{value}</span>
                 </div>
               ))}
             </div>
 
             {/* Score */}
-            <div className="pt-4 border-t">
-              <div className="text-sm text-muted-foreground">Best Score ({optimizeResult.optimization_target})</div>
-              <div className="text-2xl font-bold">
+            <div className="pt-4 border-t border-border/50">
+              <div className="label-caps">Best Score ({optimizeResult.optimization_target})</div>
+              <div className="text-2xl font-bold font-mono-numbers mt-1">
                 {optimizeResult.optimization_target.includes("pct")
                   ? formatPercent(optimizeResult.best_score / 100)
                   : formatNumber(optimizeResult.best_score)}
@@ -323,73 +329,99 @@ export default function ParameterOptimize({
 
             {/* Final Backtest (walk-forward only) */}
             {optimizeResult.walk_forward && optimizeResult.final_backtest && (
-              <div className="space-y-2 pt-4 border-t">
-                <h4 className="text-sm font-semibold">Full Data Performance</h4>
+              <div className="space-y-2 pt-4 border-t border-border/50">
+                <h4 className="section-label">Full Data Performance</h4>
                 <div className="grid grid-cols-3 gap-2 text-sm">
                   <div>
-                    <div className="text-muted-foreground text-xs">Return</div>
-                    <div className="font-bold text-green-600">
+                    <div className="label-caps">Return</div>
+                    <div className="font-bold font-mono-numbers text-gain mt-0.5">
                       {formatPercent(optimizeResult.final_backtest.total_return_pct / 100)}
                     </div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground text-xs">Sharpe</div>
-                    <div className="font-bold">{optimizeResult.final_backtest.sharpe_ratio.toFixed(2)}</div>
+                    <div className="label-caps">Sharpe</div>
+                    <div className="font-bold font-mono-numbers mt-0.5">{optimizeResult.final_backtest.sharpe_ratio.toFixed(2)}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground text-xs">Max DD</div>
-                    <div className="font-bold text-red-600">
+                    <div className="label-caps">Max DD</div>
+                    <div className="font-bold font-mono-numbers text-loss mt-0.5">
                       {formatPercent(optimizeResult.final_backtest.max_drawdown_pct / 100)}
                     </div>
                   </div>
                 </div>
               </div>
             )}
-          </Card>
+          </div>
+        ) : (
+          <div className="card-elevated p-4 sm:p-5 flex flex-col">
+            <h3 className="text-[15px] font-bold tracking-tight flex items-center gap-2 mb-1">
+              <Trophy className="h-3.5 w-3.5 text-muted-foreground" /> Best Parameters
+            </h3>
+            <EmptyState
+              icon={Trophy}
+              title="No optimization run yet"
+              description="Set your parameter ranges and run an optimization — the best combination and score will appear here."
+              size="sm"
+              preview={
+                <div className="rounded-lg border border-border/50 bg-secondary/20 p-4 opacity-70 space-y-2">
+                  {Object.keys(paramRanges).map((key) => (
+                    <div key={key} className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{key}</span>
+                      <Skeleton className="h-3 w-12 rounded" />
+                    </div>
+                  ))}
+                  <div className="pt-2 border-t border-border/40 flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Best Score ({optimizationTarget})</span>
+                    <Skeleton className="h-5 w-14 rounded" />
+                  </div>
+                </div>
+              }
+            />
+          </div>
         )}
       </div>
 
       {/* Top Results Table */}
       {optimizeResult && optimizeResult.all_results.length > 0 && (
-        <Card className="p-6">
-          <h3 className="font-semibold text-lg mb-4">
-            Top 10 Parameter Combinations
+        <div className="card-elevated p-4 sm:p-5">
+          <h3 className="text-[15px] font-bold tracking-tight flex items-center gap-2 mb-4">
+            <ListOrdered className="h-3.5 w-3.5 text-primary" /> Top 10 Parameter Combinations
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2">Rank</th>
+                <tr className="border-b border-border bg-secondary/20">
+                  <th className="text-left py-2.5 px-2 label-caps">Rank</th>
                   {Object.keys(optimizeResult.best_params).map(key => (
-                    <th key={key} className="text-left py-2">{key}</th>
+                    <th key={key} className="text-left py-2.5 px-2 label-caps">{key}</th>
                   ))}
-                  <th className="text-right py-2">Score</th>
+                  <th className="text-right py-2.5 px-2 label-caps">Score</th>
                   {!optimizeResult.walk_forward && (
                     <>
-                      <th className="text-right py-2">Return %</th>
-                      <th className="text-right py-2">Sharpe</th>
-                      <th className="text-right py-2">Trades</th>
+                      <th className="text-right py-2.5 px-2 label-caps">Return %</th>
+                      <th className="text-right py-2.5 px-2 label-caps">Sharpe</th>
+                      <th className="text-right py-2.5 px-2 label-caps">Trades</th>
                     </>
                   )}
                 </tr>
               </thead>
               <tbody>
                 {optimizeResult.all_results.slice(0, 10).map((result: any, idx) => (
-                  <tr key={idx} className="border-b hover:bg-muted/50">
-                    <td className="py-2">{idx + 1}</td>
+                  <tr key={idx} className="border-b border-border/50 hover:bg-secondary/40 transition-colors">
+                    <td className="py-2.5 px-2 font-mono-numbers text-muted-foreground">{idx + 1}</td>
                     {Object.keys(optimizeResult.best_params).map(key => (
-                      <td key={key} className="py-2 font-mono text-xs">{result.params[key]}</td>
+                      <td key={key} className="py-2.5 px-2 font-mono-numbers text-xs">{result.params[key]}</td>
                     ))}
-                    <td className="text-right py-2 font-bold">
+                    <td className="text-right py-2.5 px-2 font-bold font-mono-numbers">
                       {optimizeResult.walk_forward
                         ? formatNumber(result.avg_out_of_sample_score)
                         : formatNumber(result.score)}
                     </td>
                     {!optimizeResult.walk_forward && (
                       <>
-                        <td className="text-right py-2">{formatPercent(result.total_return_pct / 100)}</td>
-                        <td className="text-right py-2">{result.sharpe_ratio.toFixed(2)}</td>
-                        <td className="text-right py-2">{result.total_trades}</td>
+                        <td className="text-right py-2.5 px-2 font-mono-numbers">{formatPercent(result.total_return_pct / 100)}</td>
+                        <td className="text-right py-2.5 px-2 font-mono-numbers">{result.sharpe_ratio.toFixed(2)}</td>
+                        <td className="text-right py-2.5 px-2 font-mono-numbers">{result.total_trades}</td>
                       </>
                     )}
                   </tr>
@@ -397,13 +429,15 @@ export default function ParameterOptimize({
               </tbody>
             </table>
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Heatmap Section */}
       {Object.keys(paramRanges).length >= 2 && (
-        <Card className="p-6 space-y-4">
-          <h3 className="font-semibold text-lg">Parameter Heatmap</h3>
+        <div className="card-elevated p-4 sm:p-5 space-y-4">
+          <h3 className="text-[15px] font-bold tracking-tight flex items-center gap-2">
+            <LayoutGrid className="h-3.5 w-3.5 text-lab-secondary" /> Parameter Heatmap
+          </h3>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -446,26 +480,26 @@ export default function ParameterOptimize({
             )}
           </Button>
 
-          {/* Simple Heatmap Display */}
-          {heatmapResult && (
-            <div className="pt-4">
-              <div className="text-sm text-muted-foreground mb-2">
+          {/* Heatmap Display — real once generated, honest ghost grid until then */}
+          {heatmapResult ? (
+            <div className="pt-2">
+              <div className="text-xs text-muted-foreground mb-2">
                 Sharpe Ratio Heatmap ({heatmapResult.param2_name} vs {heatmapResult.param1_name})
               </div>
               <div className="overflow-x-auto">
                 <table className="border-collapse">
                   <thead>
                     <tr>
-                      <th className="border p-1 text-xs"></th>
+                      <th className="border border-border/50 p-1 text-xs"></th>
                       {heatmapResult.param1_values.map((val, i) => (
-                        <th key={i} className="border p-1 text-xs font-mono">{val}</th>
+                        <th key={i} className="border border-border/50 p-1 text-xs font-mono-numbers text-muted-foreground">{val}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {heatmapResult.heatmap_data.map((row, rowIdx) => (
                       <tr key={rowIdx}>
-                        <th className="border p-1 text-xs font-mono">
+                        <th className="border border-border/50 p-1 text-xs font-mono-numbers text-muted-foreground">
                           {heatmapResult.param2_values[rowIdx]}
                         </th>
                         {row.map((cell, cellIdx) => {
@@ -476,12 +510,12 @@ export default function ParameterOptimize({
                           return (
                             <td
                               key={cellIdx}
-                              className="border p-1 text-xs font-mono text-center"
+                              className="border border-border/50 p-1 text-xs font-mono-numbers text-center"
                               style={{
                                 backgroundColor: cell !== null
-                                  ? `rgba(34, 197, 94, ${colorIntensity / 100})`
-                                  : "#f1f5f9",
-                                color: colorIntensity > 50 ? "white" : "black",
+                                  ? `rgba(16, 185, 129, ${colorIntensity / 100})`
+                                  : "hsl(var(--secondary))",
+                                color: cell !== null ? (colorIntensity > 50 ? "#ffffff" : "#e2e8f0") : "hsl(var(--muted-foreground))",
                               }}
                             >
                               {cell !== null ? cell.toFixed(2) : "-"}
@@ -494,8 +528,26 @@ export default function ParameterOptimize({
                 </table>
               </div>
             </div>
+          ) : (
+            <div className="pt-2">
+              <EmptyState
+                icon={LayoutGrid}
+                title="No heatmap generated yet"
+                description={`Generate a heatmap to visualize the score across ${param1} × ${param2}.`}
+                size="sm"
+                preview={
+                  <div className="overflow-x-auto opacity-60">
+                    <div className="inline-grid grid-cols-6 gap-1">
+                      {Array.from({ length: 36 }).map((_, i) => (
+                        <Skeleton key={i} className="h-6 w-9 rounded-sm" />
+                      ))}
+                    </div>
+                  </div>
+                }
+              />
+            </div>
           )}
-        </Card>
+        </div>
       )}
     </div>
   );

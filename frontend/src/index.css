@@ -6,33 +6,37 @@
 
 @layer base {
   :root {
-    --background: 222 47% 11%;
+    /* Shared Alpha design system base tones (Alpha / AlphaLab / AlphaLive / AlphaSignal) */
+    --background: 224 52% 6%;
     --foreground: 210 40% 98%;
 
-    --card: 217 33% 17%;
+    --card: 221 39% 11%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 217 33% 17%;
+    --popover: 221 39% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
+    /* AlphaLab accent: electric blue (research / backtesting) */
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+    --lab-secondary: 198 93% 60%;
+    --lab-deep: 224 76% 48%;
 
-    --secondary: 217 33% 22%;
+    --secondary: 221 38% 15%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 55%;
+    --muted: 221 39% 11%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 217 33% 22%;
+    --accent: 221 38% 15%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217 33% 22%;
-    --input: 217 33% 22%;
-    --ring: 217 91% 60%;
+    --border: 220 26% 20%;
+    --input: 220 26% 20%;
+    --ring: 221 83% 53%;
 
     --radius: 0.5rem;
 
@@ -43,20 +47,20 @@
     --warning: 38 92% 50%;
     --warning-foreground: 38 92% 10%;
 
-    --chart-blue: 217 91% 60%;
+    --chart-blue: 221 83% 53%;
     --chart-green: 160 84% 39%;
     --chart-orange: 25 95% 53%;
     --chart-red: 0 84% 60%;
     --chart-purple: 262 83% 58%;
 
-    --sidebar-background: 222 47% 8%;
+    --sidebar-background: 224 55% 4%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 222 47% 11%;
-    --sidebar-accent: 217 33% 17%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 221 39% 11%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 22%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-border: 220 26% 20%;
+    --sidebar-ring: 221 83% 53%;
   }
 }
 
@@ -67,6 +71,15 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    background-image:
+      radial-gradient(ellipse 1400px 700px at 12% -10%, hsl(var(--primary) / 0.12), transparent 60%),
+      radial-gradient(ellipse 1100px 600px at 100% 0%, hsl(var(--lab-secondary) / 0.08), transparent 55%),
+      radial-gradient(ellipse 900px 500px at 50% 100%, hsl(160 84% 39% / 0.05), transparent 60%),
+      linear-gradient(hsl(var(--foreground) / 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.035) 1px, transparent 1px);
+    background-size: auto, auto, auto, 56px 56px, 56px 56px;
+    background-position: center, center, center, center, center;
+    background-attachment: fixed;
   }
 
   /* Custom scrollbar */
@@ -124,7 +137,97 @@
   }
 
   .card-elevated {
-    @apply bg-card border border-border rounded-lg;
-    box-shadow: 0 4px 24px hsl(var(--background) / 0.5);
+    @apply bg-card border border-border/60 rounded-xl;
+    background-image: linear-gradient(160deg, hsl(var(--foreground) / 0.025), transparent 40%);
+    box-shadow: 0 1px 0 hsl(var(--foreground) / 0.04) inset, 0 1px 2px hsl(var(--background) / 0.4), 0 8px 24px -8px hsl(var(--background) / 0.6);
   }
+
+  .card-interactive {
+    @apply card-elevated transition-all duration-200;
+  }
+  .card-interactive:hover {
+    @apply border-primary/30;
+    box-shadow: 0 1px 0 hsl(var(--foreground) / 0.04) inset, 0 1px 2px hsl(var(--background) / 0.4), 0 12px 32px -8px hsl(var(--primary) / 0.12);
+    transform: translateY(-1px);
+  }
+
+  .glow-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+
+  .hero-panel {
+    @apply relative overflow-hidden rounded-2xl border border-border/60;
+    background:
+      radial-gradient(ellipse 600px 300px at 0% 0%, hsl(var(--primary) / 0.16), transparent 60%),
+      radial-gradient(ellipse 500px 260px at 100% 100%, hsl(var(--lab-secondary) / 0.1), transparent 55%),
+      hsl(var(--card));
+    box-shadow: 0 1px 0 hsl(var(--foreground) / 0.05) inset, 0 20px 50px -20px hsl(var(--background) / 0.8);
+  }
+
+  .sparkline-bars {
+    @apply flex items-end gap-[3px] h-6;
+  }
+  .sparkline-bars > span {
+    @apply w-1 rounded-sm bg-current opacity-70;
+  }
+
+  .page-shell {
+    @apply w-full px-4 sm:px-6 lg:px-10 xl:px-14;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .btn-glow {
+    box-shadow: 0 1px 0 hsl(var(--foreground) / 0.06) inset, 0 8px 24px -8px hsl(var(--primary) / 0.45);
+  }
+
+  .section-label {
+    @apply text-[11px] font-semibold text-muted-foreground/90 uppercase tracking-widest;
+  }
+
+  .label-caps {
+    @apply text-[10.5px] font-bold uppercase tracking-wider text-foreground/55;
+  }
+
+  .chart-grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--foreground) / 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.05) 1px, transparent 1px);
+    background-size: 100% 25%, 12.5% 100%;
+  }
+
+  .surface-glow {
+    box-shadow: 0 0 0 1px hsl(var(--border) / 0.6), 0 24px 60px -24px hsl(var(--background) / 0.9);
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(var(--foreground)), hsl(var(--primary)) 100%, hsl(var(--lab-secondary)) 160%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .divider-fade {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--border)), transparent);
+  }
+
+  .animate-in-stagger > * {
+    animation: fade-in 0.3s ease-out backwards;
+  }
+  .animate-in-stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .animate-in-stagger > *:nth-child(2) { animation-delay: 40ms; }
+  .animate-in-stagger > *:nth-child(3) { animation-delay: 80ms; }
+  .animate-in-stagger > *:nth-child(4) { animation-delay: 120ms; }
+  .animate-in-stagger > *:nth-child(5) { animation-delay: 160ms; }
+  .animate-in-stagger > *:nth-child(6) { animation-delay: 200ms; }
 }

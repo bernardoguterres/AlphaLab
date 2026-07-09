@@ -35,19 +35,19 @@ export function TradeTable({ trades }: TradeTableProps) {
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border bg-secondary/50">
-              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground cursor-pointer" onClick={() => toggleSort("entry_date")}>
+            <tr className="border-b border-border bg-secondary/20">
+              <th className="px-3 py-2.5 text-left label-caps cursor-pointer" onClick={() => toggleSort("entry_date")}>
                 <span className="flex items-center gap-1">Entry <ArrowUpDown className="h-3 w-3" /></span>
               </th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Exit</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Type</th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Shares</th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Entry $</th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Exit $</th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground cursor-pointer" onClick={() => toggleSort("pnl")}>
+              <th className="px-3 py-2.5 text-left label-caps">Exit</th>
+              <th className="px-3 py-2.5 text-left label-caps">Type</th>
+              <th className="px-3 py-2.5 text-right label-caps">Shares</th>
+              <th className="px-3 py-2.5 text-right label-caps">Entry $</th>
+              <th className="px-3 py-2.5 text-right label-caps">Exit $</th>
+              <th className="px-3 py-2.5 text-right label-caps cursor-pointer" onClick={() => toggleSort("pnl")}>
                 <span className="flex items-center justify-end gap-1">P&L <ArrowUpDown className="h-3 w-3" /></span>
               </th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground cursor-pointer" onClick={() => toggleSort("pnl_pct")}>
+              <th className="px-3 py-2.5 text-right label-caps cursor-pointer" onClick={() => toggleSort("pnl_pct")}>
                 <span className="flex items-center justify-end gap-1">P&L % <ArrowUpDown className="h-3 w-3" /></span>
               </th>
             </tr>

@@ -1,10 +1,9 @@
-import { useState } from "react";
 import type { RiskSettings } from "@/types";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ShieldCheck } from "lucide-react";
 
 interface RiskSettingsPanelProps {
   settings: RiskSettings;
@@ -20,15 +19,16 @@ export function RiskSettingsPanel({ settings, onChange }: RiskSettingsPanelProps
 
   return (
     <Accordion type="single" collapsible className="w-full">
-      <AccordionItem value="risk-settings" className="border rounded-lg px-4">
-        <AccordionTrigger className="hover:no-underline">
+      <AccordionItem value="risk-settings" className="rounded-xl border border-border/70 bg-card/60 px-3.5">
+        <AccordionTrigger className="hover:no-underline py-3 [&>svg]:text-muted-foreground">
           <div className="flex items-center gap-2">
+            <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-sm font-semibold">Risk Settings</span>
-            <span className="text-xs text-muted-foreground">(Optional)</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Optional</span>
           </div>
         </AccordionTrigger>
-        <AccordionContent className="pt-4 pb-2">
-          <div className="grid grid-cols-2 gap-4">
+        <AccordionContent className="pt-1 pb-3.5">
+          <div className="grid grid-cols-2 gap-3.5">
             {/* Stop Loss */}
             <div className="space-y-1.5">
               <Label htmlFor="stop-loss" className="text-xs">
@@ -43,7 +43,7 @@ export function RiskSettingsPanel({ settings, onChange }: RiskSettingsPanelProps
                 max="50"
                 value={settings.stop_loss_pct}
                 onChange={(e) => updateSetting("stop_loss_pct", parseFloat(e.target.value) || 2.0)}
-                className="h-8 text-sm"
+                className="h-8 text-sm font-mono-numbers"
               />
             </div>
 
@@ -61,7 +61,7 @@ export function RiskSettingsPanel({ settings, onChange }: RiskSettingsPanelProps
                 max="100"
                 value={settings.take_profit_pct}
                 onChange={(e) => updateSetting("take_profit_pct", parseFloat(e.target.value) || 5.0)}
-                className="h-8 text-sm"
+                className="h-8 text-sm font-mono-numbers"
               />
             </div>
 
@@ -79,7 +79,7 @@ export function RiskSettingsPanel({ settings, onChange }: RiskSettingsPanelProps
                 max="100"
                 value={settings.max_position_size_pct}
                 onChange={(e) => updateSetting("max_position_size_pct", parseFloat(e.target.value) || 10.0)}
-                className="h-8 text-sm"
+                className="h-8 text-sm font-mono-numbers"
               />
             </div>
 
@@ -97,7 +97,7 @@ export function RiskSettingsPanel({ settings, onChange }: RiskSettingsPanelProps
                 max="20"
                 value={settings.max_daily_loss_pct}
                 onChange={(e) => updateSetting("max_daily_loss_pct", parseFloat(e.target.value) || 3.0)}
-                className="h-8 text-sm"
+                className="h-8 text-sm font-mono-numbers"
               />
             </div>
 
@@ -115,7 +115,7 @@ export function RiskSettingsPanel({ settings, onChange }: RiskSettingsPanelProps
                 max="50"
                 value={settings.max_open_positions}
                 onChange={(e) => updateSetting("max_open_positions", parseInt(e.target.value) || 5)}
-                className="h-8 text-sm"
+                className="h-8 text-sm font-mono-numbers"
               />
             </div>
 
@@ -133,7 +133,7 @@ export function RiskSettingsPanel({ settings, onChange }: RiskSettingsPanelProps
                 max="50"
                 value={settings.commission_per_trade}
                 onChange={(e) => updateSetting("commission_per_trade", parseFloat(e.target.value) || 0.0)}
-                className="h-8 text-sm"
+                className="h-8 text-sm font-mono-numbers"
               />
               <p className="text-[10px] text-muted-foreground">
                 Alpaca: $0 · Other brokers: $0.65-$5.00
@@ -141,7 +141,7 @@ export function RiskSettingsPanel({ settings, onChange }: RiskSettingsPanelProps
             </div>
 
             {/* Trailing Stop Toggle */}
-            <div className="col-span-2 space-y-2 pt-2 border-t">
+            <div className="col-span-2 space-y-2.5 pt-3 border-t border-border/50">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="trailing-stop"
@@ -167,7 +167,7 @@ export function RiskSettingsPanel({ settings, onChange }: RiskSettingsPanelProps
                     max="50"
                     value={settings.trailing_stop_pct}
                     onChange={(e) => updateSetting("trailing_stop_pct", parseFloat(e.target.value) || 3.0)}
-                    className="h-8 text-sm max-w-xs"
+                    className="h-8 text-sm font-mono-numbers max-w-xs"
                   />
                 </div>
               )}
@@ -176,10 +176,10 @@ export function RiskSettingsPanel({ settings, onChange }: RiskSettingsPanelProps
 
           {/* Warning if stop loss > take profit */}
           {showStopLossWarning && (
-            <div className="mt-4 flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-md">
-              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+            <div className="mt-3.5 flex items-start gap-2.5 p-3 bg-warning/[0.06] border border-warning/30 rounded-lg">
+              <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
               <div className="text-xs">
-                <p className="font-medium text-amber-500">Warning</p>
+                <p className="font-medium text-warning">Warning</p>
                 <p className="text-muted-foreground mt-0.5">
                   Stop loss ({settings.stop_loss_pct}%) is greater than take profit ({settings.take_profit_pct}%).
                   This is uncommon but valid for some strategies.
@@ -188,9 +188,9 @@ export function RiskSettingsPanel({ settings, onChange }: RiskSettingsPanelProps
             </div>
           )}
 
-          <div className="mt-4 p-3 bg-muted/50 rounded-md">
-            <p className="text-[10px] text-muted-foreground">
-              <strong>Note:</strong> Risk settings apply position limits and stop-loss/take-profit levels.
+          <div className="mt-3.5 p-3 bg-secondary/30 border border-border/40 rounded-lg">
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              <strong className="text-foreground/80">Note:</strong> Risk settings apply position limits and stop-loss/take-profit levels.
               Commission is applied on both entry and exit (2× per round trip).
               These settings will be included in the exported strategy config.
             </p>
