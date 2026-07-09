@@ -299,7 +299,7 @@ export function BatchBacktest() {
               </div>
               <div>
                 <div className="label-caps">Avg Sharpe</div>
-                <div className="text-2xl font-bold font-mono-numbers mt-0.5">{summary.avg_sharpe_ratio.toFixed(2)}</div>
+                <div className="text-2xl font-bold font-mono-numbers mt-0.5">{formatNumber(summary.avg_sharpe_ratio, 2)}</div>
               </div>
               <div>
                 <div className="label-caps">Runtime</div>
@@ -350,7 +350,7 @@ export function BatchBacktest() {
                       <td className={cn("py-2.5 px-2 text-right font-mono-numbers font-semibold", pnlColor(result.total_return_pct))}>
                         {formatPercent(result.total_return_pct / 100)}
                       </td>
-                      <td className="py-2.5 px-2 text-right font-mono-numbers">{result.sharpe_ratio.toFixed(2)}</td>
+                      <td className="py-2.5 px-2 text-right font-mono-numbers">{formatNumber(result.sharpe_ratio, 2)}</td>
                       <td className="py-2.5 px-2 text-right font-mono-numbers text-loss">{formatPercent(result.max_drawdown_pct / 100)}</td>
                       <td className="py-2.5 px-2 text-right font-mono-numbers">{formatPercent(result.win_rate)}</td>
                       <td className="py-2.5 px-2 text-right font-mono-numbers">{formatNumber(result.total_trades)}</td>

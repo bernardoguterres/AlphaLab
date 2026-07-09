@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { BacktestResult } from "@/types";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/utils/formatters";
 
 interface CorrelationMatrixProps {
   results: Record<string, BacktestResult>;
@@ -88,9 +89,9 @@ export function CorrelationMatrix({ results }: CorrelationMatrixProps) {
                       key={stratJ}
                       className="border border-border/50 px-2 py-1.5 text-center font-mono-numbers font-medium"
                       style={getColorStyle(value)}
-                      title={`Correlation: ${value.toFixed(3)}`}
+                      title={`Correlation: ${formatNumber(value, 3)}`}
                     >
-                      {value.toFixed(2)}
+                      {formatNumber(value, 2)}
                     </td>
                   );
                 })}
