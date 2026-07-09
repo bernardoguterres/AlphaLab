@@ -9,7 +9,7 @@ export const STRATEGY_META: Record<StrategyType, { category: string; icon: Lucid
   vwap_reversion: { category: "Mean Reversion", icon: Target, accent: "text-lab-secondary" },
 };
 
-// Icon-chip gradient per accent class — shared with StrategyCard so selector
+// Icon-chip gradient per accent class - shared with StrategyCard so selector
 // controls and data cards read as the same visual system.
 export const STRATEGY_ACCENT_GRADIENT: Record<string, string> = {
   "text-primary": "from-primary to-lab-deep",

@@ -217,7 +217,7 @@ export default function Dashboard() {
         />
         <MetricCard
           label="Best Strategy"
-          value={bestStrategy ? strategyDisplayName(bestStrategy.strategy) : "—"}
+          value={bestStrategy ? strategyDisplayName(bestStrategy.strategy) : "-"}
           subValue={bestStrategy ? formatPercent(bestStrategy.total_return_pct) : "Run a backtest to populate"}
           icon={<TrendingUp className="h-4 w-4" />}
           colorClass={bestStrategy && bestStrategy.total_return_pct > 0 ? "text-gain" : undefined}
@@ -226,7 +226,7 @@ export default function Dashboard() {
         />
         <MetricCard
           label="Last Backtest"
-          value={lastBacktest ? formatPercent(lastBacktest.total_return_pct) : "—"}
+          value={lastBacktest ? formatPercent(lastBacktest.total_return_pct) : "-"}
           subValue={lastBacktest ? `${lastBacktest.ticker} · ${strategyDisplayName(lastBacktest.strategy)}` : "No runs recorded yet"}
           icon={<Clock className="h-4 w-4" />}
           colorClass={lastBacktest ? pnlColor(lastBacktest.total_return_pct) : undefined}
@@ -325,7 +325,7 @@ export default function Dashboard() {
                               />
                             </div>
                           ) : (
-                            <span className="text-[10px] text-muted-foreground/40">—</span>
+                            <span className="text-[10px] text-muted-foreground/40">-</span>
                           )}
                         </td>
                         <td className={cn("px-4 py-3 text-right font-mono-numbers font-semibold", pnlColor(item.total_return_pct))}>

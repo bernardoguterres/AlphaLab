@@ -243,7 +243,7 @@ export function BatchBacktest() {
         </Button>
       </div>
 
-      {/* Progress — real state, restyled + a queue preview of the actual selected tickers */}
+      {/* Progress - real state, restyled + a queue preview of the actual selected tickers */}
       {progress && (
         <div className="card-elevated p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -257,7 +257,7 @@ export function BatchBacktest() {
               />
             </div>
           </div>
-          {/* Queue preview — the real selected tickers, generic in-flight indicator (no per-ticker status is tracked) */}
+          {/* Queue preview - the real selected tickers, generic in-flight indicator (no per-ticker status is tracked) */}
           <div className="flex flex-wrap gap-1.5 pt-1">
             {selectedTickers.map((t) => (
               <span
@@ -272,7 +272,7 @@ export function BatchBacktest() {
         </div>
       )}
 
-      {/* Results — real once available; honest empty-state canvas before that */}
+      {/* Results - real once available; honest empty-state canvas before that */}
       {summary && results ? (
         <div className="space-y-4">
           {/* Summary Card */}
@@ -390,7 +390,7 @@ export function BatchBacktest() {
             <EmptyState
               icon={Layers}
               title="No batch run yet"
-              description="Add tickers above and run a batch backtest — summary stats, a sortable results table, and per-ticker performance will appear here."
+              description="Add tickers above and run a batch backtest - summary stats, a sortable results table, and per-ticker performance will appear here."
               preview={
                 <div className="rounded-lg border border-border/50 bg-secondary/20 p-4 max-w-2xl mx-auto opacity-70 space-y-3">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -402,7 +402,7 @@ export function BatchBacktest() {
                     ))}
                   </div>
                   <div className="pt-2 border-t border-border/40 space-y-1.5">
-                    {(selectedTickers.length > 0 ? selectedTickers : ["—", "—", "—"]).slice(0, 5).map((t, i) => (
+                    {(selectedTickers.length > 0 ? selectedTickers : ["-", "-", "-"]).slice(0, 5).map((t, i) => (
                       <div key={i} className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground font-mono-numbers">{t}</span>
                         <Skeleton className="h-3 w-16 rounded" />

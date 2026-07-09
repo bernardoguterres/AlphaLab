@@ -19,9 +19,9 @@ export function formatNumber(value: number | undefined | null, decimals = 2): st
 }
 
 export function formatDate(dateStr: string | undefined | null): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return "-";
   const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "—";
+  if (isNaN(date.getTime())) return "-";
   return date.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",

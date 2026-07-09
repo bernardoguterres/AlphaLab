@@ -6,7 +6,7 @@ interface SparklinePlaceholderProps {
   height?: number;
 }
 
-// Lightweight inline SVG line chart — no charting library dependency.
+// Lightweight inline SVG line chart - no charting library dependency.
 // Renders whatever numeric series it's given (real equity curve values,
 // derived stats, etc). Callers are responsible for only passing real data.
 export function SparklinePlaceholder({
