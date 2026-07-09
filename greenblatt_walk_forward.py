@@ -21,19 +21,13 @@ Usage:
 from __future__ import annotations
 
 import math
-import os
-import sys
 import warnings
 
 warnings.filterwarnings("ignore")
 
-# ---------------------------------------------------------------------------
-# Path setup
-# ---------------------------------------------------------------------------
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-BACKEND = os.path.join(SCRIPT_DIR, "backend")
-if BACKEND not in sys.path:
-    sys.path.insert(0, BACKEND)
+from scripts.wf_common import setup_backend_path, fmt, print_table_header, print_table_row
+
+setup_backend_path()
 
 # ---------------------------------------------------------------------------
 # Imports
@@ -192,46 +186,21 @@ def _empty_row(reason: str) -> dict:
 # Formatting helpers
 # ---------------------------------------------------------------------------
 
-def _fmt(value, fmt_str, na="  N/A  "):
-    if value is None:
-        return na
-    try:
-        if math.isnan(float(value)):
-            return na
-        return format(value, fmt_str)
-    except (TypeError, ValueError):
-        return na
+COLUMNS = [
+    ("ticker", "Ticker", 6, "<"),
+    ("window", "Window", 10, "<"),
+    ("phase", "Ph", 4, "<"),
+    ("period", "Period", 24, "<"),
+    ("sharpe", "Sharpe", 8, ">"),
+    ("cagr", "CAGR%", 8, ">"),
+    ("win_rate", "WinRate", 9, ">"),
+    ("max_dd", "MaxDD%", 9, ">"),
+    ("trades", "Trades", 7, ">"),
+]
 
-
-COL_W = {
-    "ticker":    6,
-    "window":   10,
-    "phase":     4,
-    "period":   24,
-    "sharpe":    8,
-    "cagr":      8,
-    "win_rate":  9,
-    "max_dd":    9,
-    "trades":    7,
-}
 
 def _header() -> str:
-    h = (
-        f"{'Ticker':<{COL_W['ticker']}} "
-        f"{'Window':<{COL_W['window']}} "
-        f"{'Ph':<{COL_W['phase']}} "
-        f"{'Period':<{COL_W['period']}} "
-        f"{'Sharpe':>{COL_W['sharpe']}} "
-        f"{'CAGR%':>{COL_W['cagr']}} "
-        f"{'WinRate':>{COL_W['win_rate']}} "
-        f"{'MaxDD%':>{COL_W['max_dd']}} "
-        f"{'Trades':>{COL_W['trades']}}"
-    )
-    sep = "-" * len(h)
-    print(sep)
-    print(h)
-    print(sep)
-    return sep
+    return print_table_header(COLUMNS)
 
 
 def _row(ticker_lbl, window_lbl, phase, period, m):
@@ -241,20 +210,20 @@ def _row(ticker_lbl, window_lbl, phase, period, m):
     else:
         wr_str = f"{wr * 100:.1f}%"
 
-    trades_str = str(m["total_trades"]) if not m["error"] else "N/A"
-    note = f"  [{m['error']}]" if m["error"] else ""
-
-    print(
-        f"{ticker_lbl:<{COL_W['ticker']}} "
-        f"{window_lbl:<{COL_W['window']}} "
-        f"{phase:<{COL_W['phase']}} "
-        f"{period:<{COL_W['period']}} "
-        f"{_fmt(m['sharpe'], '.4f'):>{COL_W['sharpe']}} "
-        f"{_fmt(m['cagr'], '.1f'):>{COL_W['cagr']}} "
-        f"{wr_str:>{COL_W['win_rate']}} "
-        f"{_fmt(m['max_drawdown'], '.1f'):>{COL_W['max_dd']}} "
-        f"{trades_str:>{COL_W['trades']}}"
-        f"{note}"
+    print_table_row(
+        COLUMNS,
+        {
+            "ticker": ticker_lbl,
+            "window": window_lbl,
+            "phase": phase,
+            "period": period,
+            "sharpe": fmt(m["sharpe"], ".4f"),
+            "cagr": fmt(m["cagr"], ".1f"),
+            "win_rate": wr_str,
+            "max_dd": fmt(m["max_drawdown"], ".1f"),
+            "trades": str(m["total_trades"]) if not m["error"] else "N/A",
+        },
+        note=f"  [{m['error']}]" if m["error"] else "",
     )
 
 
@@ -356,11 +325,11 @@ def main():
 
             print(f"    In-sample  {window['train_start']} → {window['train_end']}", end=" … ")
             in_m = run_one_backtest(fd, window["train_start"], window["train_end"], ticker)
-            print(f"Sharpe={_fmt(in_m['sharpe'], '.3f')}  CAGR={_fmt(in_m['cagr'], '.1f')}%")
+            print(f"Sharpe={fmt(in_m['sharpe'], '.3f')}  CAGR={fmt(in_m['cagr'], '.1f')}%")
 
             print(f"    Out-sample {window['test_start']} → {window['test_end']}", end=" … ")
             out_m = run_one_backtest(fd, window["test_start"], window["test_end"], ticker)
-            print(f"Sharpe={_fmt(out_m['sharpe'], '.3f')}  CAGR={_fmt(out_m['cagr'], '.1f')}%")
+            print(f"Sharpe={fmt(out_m['sharpe'], '.3f')}  CAGR={fmt(out_m['cagr'], '.1f')}%")
 
             all_results[ticker][wlabel] = {
                 "in_sample": in_m,
@@ -432,11 +401,11 @@ def main():
         marker = ">>>" if passes else "   "
 
         sharpe_str = "  |  ".join(
-            f"{w['label']}: {_fmt(all_results[ticker][w['label']]['out_of_sample']['sharpe'], '.3f')}"
+            f"{w['label']}: {fmt(all_results[ticker][w['label']]['out_of_sample']['sharpe'], '.3f')}"
             for w in WINDOWS
         )
         cagr_str = "  |  ".join(
-            f"{w['label']}: {_fmt(all_results[ticker][w['label']]['out_of_sample']['cagr'], '.1f')}%"
+            f"{w['label']}: {fmt(all_results[ticker][w['label']]['out_of_sample']['cagr'], '.1f')}%"
             for w in WINDOWS
         )
 
