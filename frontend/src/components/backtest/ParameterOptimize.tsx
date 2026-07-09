@@ -340,7 +340,7 @@ export default function ParameterOptimize({
                   </div>
                   <div>
                     <div className="label-caps">Sharpe</div>
-                    <div className="font-bold font-mono-numbers mt-0.5">{optimizeResult.final_backtest.sharpe_ratio.toFixed(2)}</div>
+                    <div className="font-bold font-mono-numbers mt-0.5">{formatNumber(optimizeResult.final_backtest.sharpe_ratio, 2)}</div>
                   </div>
                   <div>
                     <div className="label-caps">Max DD</div>
@@ -420,7 +420,7 @@ export default function ParameterOptimize({
                     {!optimizeResult.walk_forward && (
                       <>
                         <td className="text-right py-2.5 px-2 font-mono-numbers">{formatPercent(result.total_return_pct / 100)}</td>
-                        <td className="text-right py-2.5 px-2 font-mono-numbers">{result.sharpe_ratio.toFixed(2)}</td>
+                        <td className="text-right py-2.5 px-2 font-mono-numbers">{formatNumber(result.sharpe_ratio, 2)}</td>
                         <td className="text-right py-2.5 px-2 font-mono-numbers">{result.total_trades}</td>
                       </>
                     )}
@@ -518,7 +518,7 @@ export default function ParameterOptimize({
                                 color: cell !== null ? (colorIntensity > 50 ? "#ffffff" : "#e2e8f0") : "hsl(var(--muted-foreground))",
                               }}
                             >
-                              {cell !== null ? cell.toFixed(2) : "-"}
+                              {formatNumber(cell, 2)}
                             </td>
                           );
                         })}

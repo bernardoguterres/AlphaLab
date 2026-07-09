@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Trade } from "@/types";
-import { formatCurrency, formatDate, pnlColor } from "@/utils/formatters";
+import { formatCurrency, formatDate, formatPercent, pnlColor } from "@/utils/formatters";
 import { cn } from "@/lib/utils";
 import { ArrowUpDown } from "lucide-react";
 
@@ -66,7 +66,7 @@ export function TradeTable({ trades }: TradeTableProps) {
                 <td className="px-3 py-2 text-right font-mono-numbers text-xs">{formatCurrency(trade.entry_price)}</td>
                 <td className="px-3 py-2 text-right font-mono-numbers text-xs">{formatCurrency(trade.exit_price)}</td>
                 <td className={cn("px-3 py-2 text-right font-mono-numbers text-xs font-semibold", pnlColor(trade.pnl))}>{formatCurrency(trade.pnl)}</td>
-                <td className={cn("px-3 py-2 text-right font-mono-numbers text-xs font-semibold", pnlColor(trade.pnl_pct))}>{trade.pnl_pct >= 0 ? "+" : ""}{trade.pnl_pct.toFixed(2)}%</td>
+                <td className={cn("px-3 py-2 text-right font-mono-numbers text-xs font-semibold", pnlColor(trade.pnl_pct))}>{formatPercent(trade.pnl_pct)}</td>
               </tr>
             ))}
           </tbody>

@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { SparklinePlaceholder } from "@/components/ui/sparkline-placeholder";
 import { STRATEGY_ACCENT_GRADIENT } from "@/utils/strategyMeta";
+import { formatPercent, formatNumber } from "@/utils/formatters";
 
 interface StrategyCardProps {
   name: string;
@@ -100,13 +101,13 @@ export function StrategyCard({
         <div>
           <p className="label-caps">Best Return</p>
           <p className={cn("font-mono-numbers font-bold mt-0.5", featured ? "text-base" : "text-xs", bestReturn != null ? (bestReturn >= 0 ? "text-gain" : "text-loss") : "text-muted-foreground/50")}>
-            {bestReturn != null ? `${bestReturn >= 0 ? "+" : ""}${bestReturn.toFixed(1)}%` : "—"}
+            {formatPercent(bestReturn, 1)}
           </p>
         </div>
         <div className="border-x border-border/40 px-2">
           <p className="label-caps">Avg Sharpe</p>
           <p className={cn("font-mono-numbers font-bold mt-0.5", featured ? "text-base" : "text-xs", avgSharpe == null && "text-muted-foreground/50")}>
-            {avgSharpe != null ? avgSharpe.toFixed(2) : "—"}
+            {formatNumber(avgSharpe, 2)}
           </p>
         </div>
         <div className="pl-2">
