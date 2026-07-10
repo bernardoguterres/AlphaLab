@@ -34,6 +34,11 @@ export function strategyDisplayName(strategy: string): string {
     ma_crossover: "MA Crossover",
     rsi_mean_reversion: "RSI Mean Reversion",
     momentum_breakout: "Momentum Breakout",
+    bollinger_breakout: "Bollinger Breakout",
+    vwap_reversion: "VWAP Reversion",
+    bollinger_rsi_combo: "Bollinger RSI Combo",
+    trend_adaptive_rsi: "Trend Adaptive RSI",
+    greenblatt_weekly: "Greenblatt Weekly",
   };
   return map[strategy] || strategy;
 }

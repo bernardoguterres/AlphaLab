@@ -353,7 +353,6 @@ AlphaLab/
 │   ├── backtest_runner.py     # Batch backtest tool (tests all strategies)
 │   ├── walk_forward_validation.py  # Walk-forward validation for daily strategies
 │   ├── greenblatt_walk_forward.py  # Walk-forward validation for GreenblattWeekly
-│   ├── test_new_strategies.py # Ad-hoc SPY backtest for RSI/BB/trend-adaptive strategies
 │   └── wf_common.py           # Shared helpers for the walk-forward scripts
 ├── frontend/                   # React UI (TypeScript + Vite + Tauri)
 │   ├── src/
