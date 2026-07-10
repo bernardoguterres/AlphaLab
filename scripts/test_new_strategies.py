@@ -18,8 +18,8 @@ import os
 from datetime import datetime, timedelta
 import pandas as pd
 
-# Add backend to path
-backend_path = os.path.join(os.path.dirname(__file__), 'backend')
+# Add backend to path (repo root is one level up from scripts/)
+backend_path = os.path.join(os.path.dirname(__file__), '..', 'backend')
 sys.path.insert(0, backend_path)
 
 from src.data.processor import FeatureEngineer

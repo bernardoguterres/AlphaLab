@@ -13,8 +13,8 @@ import yfinance as yf
 from datetime import datetime, timedelta
 import json
 
-# Add backend to path
-backend_path = Path(__file__).parent / 'backend'
+# Add backend to path (repo root is one level up from scripts/)
+backend_path = Path(__file__).parent.parent / 'backend'
 sys.path.insert(0, str(backend_path))
 
 from src.strategies.implementations.rsi_simple import RSISimple
