@@ -41,7 +41,6 @@ AlphaLab is your **strategy development platform**. It works together with **Alp
 | **[AlphaLab](https://github.com/bernardoguterres/AlphaLab)** (this repo) | Strategy development & backtesting | As needed (not 24/7) |
 | **[AlphaLive](https://github.com/bernardoguterres/AlphaLive)** | Live trading execution | 24/7 during trading hours |
 | **[AlphaSignal](https://github.com/bernardoguterres/AlphaSignal)** | Financial RAG - sentiment signals from SEC filings | Optional enrichment layer |
-| **[DeepLOB](https://github.com/bernardoguterres/DeepLOB)** | CNN+LSTM LOB prediction - execution timing filter | Optional enrichment layer |
 
 ### How They Work Together
 
@@ -117,11 +116,8 @@ AlphaLab is the development platform in a three-repo algorithmic trading system:
 | **[AlphaLab](https://github.com/bernardoguterres/AlphaLab)** (this repo) | Backtest strategies, optimise parameters, export to AlphaLive |
 | **[AlphaLive](https://github.com/bernardoguterres/AlphaLive)** | 24/7 execution engine - loads strategy JSON and trades automatically via Alpaca |
 | **[AlphaSignal](https://github.com/bernardoguterres/AlphaSignal)** | Financial RAG layer - ingests SEC EDGAR filings and news, exposes sentiment signals via REST API |
-| **[DeepLOB](https://github.com/bernardoguterres/DeepLOB)** | CNN+Inception+LSTM mid-price predictor - served as a REST endpoint, queried by AlphaLive as an execution timing filter |
 
 **AlphaSignal as a signal source:** AlphaSignal's `/sentiment/{ticker}` endpoint returns sentiment scores derived from SEC 10-K/10-Q filings and financial news. These can be consumed as strategy features during backtesting in AlphaLab - for example, suppressing a buy signal when sentiment is strongly negative, or weighting position size by sentiment confidence. AlphaSignal runs as a separate service; AlphaLab queries it over HTTP and degrades gracefully if it's unavailable.
-
-**DeepLOB as an execution timing filter:** DeepLOB predicts mid-price direction from limit order book snapshots using a CNN+Inception+LSTM architecture trained on the FI-2010 benchmark. AlphaLive queries it (alongside AlphaSignal) via a concurrent pre-execution gate before placing each order.
 
 ## Features
 
