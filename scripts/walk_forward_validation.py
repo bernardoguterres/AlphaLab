@@ -13,14 +13,14 @@ Usage:
     cd /Users/bernardoguterrres/Desktop/Alpha/AlphaLab/backend
     source venv/bin/activate
     cd ..
-    python walk_forward_validation.py
+    python scripts/walk_forward_validation.py
 """
 
 import math
 import warnings
 warnings.filterwarnings("ignore")          # suppress pandas / scipy noise
 
-from scripts.wf_common import setup_backend_path, fmt, print_table_header, print_table_row
+from wf_common import setup_backend_path, fmt, print_table_header, print_table_row
 
 setup_backend_path()
 

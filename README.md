@@ -352,9 +352,13 @@ AlphaLab/
 │   ├── requirements.txt
 │   ├── run.py                 # Local dev entry point (Flask dev server)
 │   ├── wsgi.py                 # Production entry point (gunicorn)
-│   ├── Dockerfile              # Railway deploy (gunicorn)
+│   └── Dockerfile              # Railway deploy (gunicorn)
+├── scripts/                     # Standalone research tools (run outside the API)
 │   ├── backtest_runner.py     # Batch backtest tool (tests all strategies)
-│   └── backtest_results.json  # 5-year backtest results (12 strategy-ticker combos)
+│   ├── walk_forward_validation.py  # Walk-forward validation for daily strategies
+│   ├── greenblatt_walk_forward.py  # Walk-forward validation for GreenblattWeekly
+│   ├── test_new_strategies.py # Ad-hoc SPY backtest for RSI/BB/trend-adaptive strategies
+│   └── wf_common.py           # Shared helpers for the walk-forward scripts
 ├── frontend/                   # React UI (TypeScript + Vite + Tauri)
 │   ├── src/
 │   │   ├── pages/             # Dashboard, Backtest, Compare, DataManager
@@ -370,8 +374,7 @@ AlphaLab/
 │   ├── Dockerfile              # Railway deploy (Node build → nginx static serve)
 │   └── nginx.conf.template     # SPA fallback + Railway's dynamic $PORT
 ├── docs/                       # Technical documentation
-│   ├── STRATEGY_SCHEMA.md
-│   └── archive/                # Retired docs (kept for reference, not actively maintained)
+│   └── STRATEGY_SCHEMA.md
 ├── README.md                   # This file
 ├── CLAUDE.md                   # Development guide
 └── .gitignore

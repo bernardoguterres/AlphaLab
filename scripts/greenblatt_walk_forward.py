@@ -15,7 +15,7 @@ Usage:
     cd /Users/bernardoguterrres/Desktop/Alpha/AlphaLab/backend
     source venv/bin/activate
     cd ..
-    python greenblatt_walk_forward.py
+    python scripts/greenblatt_walk_forward.py
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-from scripts.wf_common import setup_backend_path, fmt, print_table_header, print_table_row
+from wf_common import setup_backend_path, fmt, print_table_header, print_table_row
 
 setup_backend_path()
 
