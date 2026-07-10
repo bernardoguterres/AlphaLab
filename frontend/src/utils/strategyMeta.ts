@@ -1,4 +1,4 @@
-import { TrendingUp, RefreshCcw, Zap, Waves, Target, type LucideIcon } from "lucide-react";
+import { TrendingUp, RefreshCcw, Zap, Waves, Target, Layers, Compass, Gem, type LucideIcon } from "lucide-react";
 import type { StrategyType } from "@/types";
 
 export const STRATEGY_META: Record<StrategyType, { category: string; icon: LucideIcon; accent: string }> = {
@@ -7,6 +7,9 @@ export const STRATEGY_META: Record<StrategyType, { category: string; icon: Lucid
   momentum_breakout: { category: "Momentum", icon: Zap, accent: "text-warning" },
   bollinger_breakout: { category: "Volatility Breakout", icon: Waves, accent: "text-gain" },
   vwap_reversion: { category: "Mean Reversion", icon: Target, accent: "text-lab-secondary" },
+  bollinger_rsi_combo: { category: "Mean Reversion", icon: Layers, accent: "text-lab-secondary" },
+  trend_adaptive_rsi: { category: "Adaptive Trend", icon: Compass, accent: "text-warning" },
+  greenblatt_weekly: { category: "Value Factor", icon: Gem, accent: "text-gain" },
 };
 
 // Icon-chip gradient per accent class - shared with StrategyCard so selector

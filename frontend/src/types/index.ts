@@ -100,7 +100,7 @@ export interface BacktestHistoryItem {
   result: BacktestResult;
 }
 
-export type StrategyType = "ma_crossover" | "rsi_mean_reversion" | "momentum_breakout" | "bollinger_breakout" | "vwap_reversion";
+export type StrategyType = "ma_crossover" | "rsi_mean_reversion" | "momentum_breakout" | "bollinger_breakout" | "vwap_reversion" | "bollinger_rsi_combo" | "trend_adaptive_rsi" | "greenblatt_weekly";
 
 export interface MACrossoverParams {
   short_window: number;
@@ -142,7 +142,40 @@ export interface VWAPReversionParams {
   cooldown_days: number;
 }
 
-export type StrategyParams = MACrossoverParams | RSIMeanReversionParams | MomentumBreakoutParams | BollingerBreakoutParams | VWAPReversionParams;
+export interface BollingerRSIComboParams {
+  bb_period: number;
+  bb_std: number;
+  rsi_period: number;
+  rsi_oversold: number;
+  rsi_overbought: number;
+  exit_at_middle: boolean;
+}
+
+export interface TrendAdaptiveRSIParams {
+  rsi_period: number;
+  trend_sma: number;
+  trend_lookback: number;
+  uptrend_buy: number;
+  uptrend_sell: number;
+  downtrend_buy: number;
+  downtrend_sell: number;
+  range_buy: number;
+  range_sell: number;
+}
+
+export interface GreenblattWeeklyParams {
+  fast_sma: number;
+  slow_sma: number;
+  rsi_period: number;
+  rsi_oversold: number;
+  rsi_overbought: number;
+  min_hold_bars: number;
+  trailing_stop_pct: number;
+  exit_rsi_overbought: boolean;
+  exit_sma_cross: boolean;
+}
+
+export type StrategyParams = MACrossoverParams | RSIMeanReversionParams | MomentumBreakoutParams | BollingerBreakoutParams | VWAPReversionParams | BollingerRSIComboParams | TrendAdaptiveRSIParams | GreenblattWeeklyParams;
 
 export interface CachedTicker {
   ticker: string;
@@ -394,6 +427,18 @@ export const STRATEGY_INFO: Record<StrategyType, { name: string; description: st
     name: "VWAP Reversion",
     description: "Mean reversion strategy trading deviations from Volume-Weighted Average Price",
   },
+  bollinger_rsi_combo: {
+    name: "Bollinger RSI Combo",
+    description: "Entry on Bollinger lower-band touch and RSI oversold together; exits at BB middle or RSI overbought",
+  },
+  trend_adaptive_rsi: {
+    name: "Trend Adaptive RSI",
+    description: "RSI buy/sell thresholds that adapt to the prevailing trend regime (uptrend, downtrend, or range)",
+  },
+  greenblatt_weekly: {
+    name: "Greenblatt Weekly",
+    description: "Value-factor strategy on weekly bars: Magic Formula screening, weekly golden-cross/RSI entry, 52-week min hold with a trailing-stop exit",
+  },
 };
 
 export const DEFAULT_PARAMS: Record<StrategyType, StrategyParams> = {
@@ -431,5 +476,35 @@ export const DEFAULT_PARAMS: Record<StrategyType, StrategyParams> = {
     oversold: 30,
     overbought: 70,
     cooldown_days: 3,
+  },
+  bollinger_rsi_combo: {
+    bb_period: 20,
+    bb_std: 2.0,
+    rsi_period: 14,
+    rsi_oversold: 45,
+    rsi_overbought: 55,
+    exit_at_middle: true,
+  },
+  trend_adaptive_rsi: {
+    rsi_period: 14,
+    trend_sma: 50,
+    trend_lookback: 5,
+    uptrend_buy: 45,
+    uptrend_sell: 65,
+    downtrend_buy: 35,
+    downtrend_sell: 55,
+    range_buy: 35,
+    range_sell: 65,
+  },
+  greenblatt_weekly: {
+    fast_sma: 10,
+    slow_sma: 50,
+    rsi_period: 14,
+    rsi_oversold: 35,
+    rsi_overbought: 65,
+    min_hold_bars: 52,
+    trailing_stop_pct: 0.20,
+    exit_rsi_overbought: false,
+    exit_sma_cross: false,
   },
 };
