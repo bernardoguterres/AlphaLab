@@ -370,8 +370,8 @@ AlphaLab/
 │   ├── Dockerfile              # Railway deploy (Node build → nginx static serve)
 │   └── nginx.conf.template     # SPA fallback + Railway's dynamic $PORT
 ├── docs/                       # Technical documentation
-│   ├── METRICS_GUIDE.md
-│   └── STRATEGY_SCHEMA.md
+│   ├── STRATEGY_SCHEMA.md
+│   └── archive/                # Retired docs (kept for reference, not actively maintained)
 ├── README.md                   # This file
 ├── CLAUDE.md                   # Development guide
 └── .gitignore
@@ -380,7 +380,6 @@ AlphaLab/
 ## Documentation
 
 **Getting Started:** see the [Quick Start](#quick-start) section above for install/run instructions.
-- [Metrics Guide](docs/METRICS_GUIDE.md) - What each metric means (Sharpe, Sortino, drawdown, etc.)
 - [Strategy Export Schema](docs/STRATEGY_SCHEMA.md) - JSON schema for AlphaLive integration
 
 **For Contributors:**

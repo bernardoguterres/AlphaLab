@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useBacktestStore } from "@/stores/backtestStore";
 import { runBacktest, fetchData } from "@/services/api";
-import type { StrategyType, StrategyParams, BacktestResult, MACrossoverParams, RSIMeanReversionParams, MomentumBreakoutParams, BollingerBreakoutParams, VWAPReversionParams, RiskSettings } from "@/types";
+import type { StrategyType, StrategyParams, BacktestResult, MACrossoverParams, RSIMeanReversionParams, MomentumBreakoutParams, BollingerBreakoutParams, VWAPReversionParams, BollingerRSIComboParams, TrendAdaptiveRSIParams, GreenblattWeeklyParams, RiskSettings } from "@/types";
 import { STRATEGY_INFO, DEFAULT_PARAMS, DEFAULT_RISK_SETTINGS } from "@/types";
 import { MetricCard } from "@/components/metrics/MetricCard";
 import { MetricsTabs } from "@/components/metrics/MetricsTabs";
@@ -278,6 +278,15 @@ export default function Backtest() {
           )}
           {strategy === "vwap_reversion" && (
             <VWAPReversionForm params={currentParams as VWAPReversionParams} onChange={updateParam} />
+          )}
+          {strategy === "bollinger_rsi_combo" && (
+            <BollingerRSIComboForm params={currentParams as BollingerRSIComboParams} onChange={updateParam} />
+          )}
+          {strategy === "trend_adaptive_rsi" && (
+            <TrendAdaptiveRSIForm params={currentParams as TrendAdaptiveRSIParams} onChange={updateParam} />
+          )}
+          {strategy === "greenblatt_weekly" && (
+            <GreenblattWeeklyForm params={currentParams as GreenblattWeeklyParams} onChange={updateParam} />
           )}
         </section>
 
@@ -640,6 +649,54 @@ function VWAPReversionForm({ params, onChange }: { params: VWAPReversionParams; 
       <ParamSlider label="Oversold" value={params.oversold} onChange={(v) => onChange("oversold", v)} min={10} max={40} />
       <ParamSlider label="Overbought" value={params.overbought} onChange={(v) => onChange("overbought", v)} min={60} max={90} />
       <ParamSlider label="Cooldown Days" value={params.cooldown_days} onChange={(v) => onChange("cooldown_days", v)} min={0} max={10} />
+    </div>
+  );
+}
+
+function BollingerRSIComboForm({ params, onChange }: { params: BollingerRSIComboParams; onChange: (k: string, v: number | boolean) => void }) {
+  return (
+    <div className="space-y-3">
+      <ParamSlider label="BB Period" value={params.bb_period} onChange={(v) => onChange("bb_period", v)} min={5} max={50} />
+      <ParamSlider label="BB Std Dev" value={params.bb_std} onChange={(v) => onChange("bb_std", v)} min={1} max={4} step={0.1} />
+      <ParamSlider label="RSI Period" value={params.rsi_period} onChange={(v) => onChange("rsi_period", v)} min={5} max={30} />
+      <ParamSlider label="RSI Oversold" value={params.rsi_oversold} onChange={(v) => onChange("rsi_oversold", v)} min={20} max={49} />
+      <ParamSlider label="RSI Overbought" value={params.rsi_overbought} onChange={(v) => onChange("rsi_overbought", v)} min={51} max={80} />
+      <ParamCheckbox label="Exit at BB Middle" checked={params.exit_at_middle} onChange={(v) => onChange("exit_at_middle", v)} />
+    </div>
+  );
+}
+
+function TrendAdaptiveRSIForm({ params, onChange }: { params: TrendAdaptiveRSIParams; onChange: (k: string, v: number) => void }) {
+  return (
+    <div className="space-y-3">
+      <ParamSlider label="RSI Period" value={params.rsi_period} onChange={(v) => onChange("rsi_period", v)} min={5} max={30} />
+      <ParamSlider label="Trend SMA" value={params.trend_sma} onChange={(v) => onChange("trend_sma", v)} min={20} max={200} />
+      <ParamSlider label="Trend Lookback" value={params.trend_lookback} onChange={(v) => onChange("trend_lookback", v)} min={1} max={20} />
+      <ParamSlider label="Uptrend Buy" value={params.uptrend_buy} onChange={(v) => onChange("uptrend_buy", v)} min={20} max={49} />
+      <ParamSlider label="Uptrend Sell" value={params.uptrend_sell} onChange={(v) => onChange("uptrend_sell", v)} min={51} max={80} />
+      <ParamSlider label="Downtrend Buy" value={params.downtrend_buy} onChange={(v) => onChange("downtrend_buy", v)} min={10} max={49} />
+      <ParamSlider label="Downtrend Sell" value={params.downtrend_sell} onChange={(v) => onChange("downtrend_sell", v)} min={51} max={70} />
+      <ParamSlider label="Range Buy" value={params.range_buy} onChange={(v) => onChange("range_buy", v)} min={20} max={49} />
+      <ParamSlider label="Range Sell" value={params.range_sell} onChange={(v) => onChange("range_sell", v)} min={51} max={80} />
+    </div>
+  );
+}
+
+function GreenblattWeeklyForm({ params, onChange }: { params: GreenblattWeeklyParams; onChange: (k: string, v: number | boolean) => void }) {
+  return (
+    <div className="space-y-3">
+      {/* fast_sma/slow_sma should only be 10/20/50/100/200 - FeatureEngineer's precomputed
+          SMA windows (see AlphaLab/docs/STRATEGY_SCHEMA.md). Slider doesn't enforce the
+          discrete set, same as other params here that rely on backend validation. */}
+      <ParamSlider label="Fast SMA (weeks)" value={params.fast_sma} onChange={(v) => onChange("fast_sma", v)} min={10} max={100} step={10} />
+      <ParamSlider label="Slow SMA (weeks)" value={params.slow_sma} onChange={(v) => onChange("slow_sma", v)} min={20} max={200} step={10} />
+      <ParamSlider label="RSI Period" value={params.rsi_period} onChange={(v) => onChange("rsi_period", v)} min={5} max={30} />
+      <ParamSlider label="RSI Oversold" value={params.rsi_oversold} onChange={(v) => onChange("rsi_oversold", v)} min={20} max={49} />
+      <ParamSlider label="RSI Overbought" value={params.rsi_overbought} onChange={(v) => onChange("rsi_overbought", v)} min={51} max={80} />
+      <ParamSlider label="Min Hold (weeks)" value={params.min_hold_bars} onChange={(v) => onChange("min_hold_bars", v)} min={4} max={104} />
+      <ParamSlider label="Trailing Stop %" value={params.trailing_stop_pct} onChange={(v) => onChange("trailing_stop_pct", v)} min={0.05} max={0.5} step={0.05} />
+      <ParamCheckbox label="Exit on RSI Overbought" checked={params.exit_rsi_overbought} onChange={(v) => onChange("exit_rsi_overbought", v)} />
+      <ParamCheckbox label="Exit on SMA Death-Cross" checked={params.exit_sma_cross} onChange={(v) => onChange("exit_sma_cross", v)} />
     </div>
   );
 }
