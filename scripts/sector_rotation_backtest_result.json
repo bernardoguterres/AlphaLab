@@ -1,0 +1,60 @@
+{
+  "run_date": "2026-07-12",
+  "n_trials": 6,
+  "windows": {
+    "Window 1": {
+      "cagr_pct": 8.01,
+      "sharpe": 0.3108,
+      "skewness": -0.646,
+      "kurtosis_pearson": 10.972100000000001,
+      "n_obs": 131,
+      "sectors_held": [
+        "XLB",
+        "XLC",
+        "XLE",
+        "XLF",
+        "XLI",
+        "XLK",
+        "XLP",
+        "XLRE",
+        "XLU",
+        "XLV",
+        "XLY"
+      ],
+      "deflated_sharpe_ratio": 0.2071,
+      "significant_at_95pct": false,
+      "faber_overlay_spy": {
+        "cagr_pct": 5.81,
+        "sharpe": 0.184
+      },
+      "beats_faber_overlay": "True"
+    },
+    "Window 2": {
+      "cagr_pct": 6.26,
+      "sharpe": 0.226,
+      "skewness": -0.5947,
+      "kurtosis_pearson": 5.3573,
+      "n_obs": 209,
+      "sectors_held": [
+        "XLB",
+        "XLC",
+        "XLE",
+        "XLF",
+        "XLI",
+        "XLK",
+        "XLP",
+        "XLRE",
+        "XLU",
+        "XLV",
+        "XLY"
+      ],
+      "deflated_sharpe_ratio": 0.197,
+      "significant_at_95pct": false,
+      "faber_overlay_spy": {
+        "cagr_pct": 8.42,
+        "sharpe": 0.401
+      },
+      "beats_faber_overlay": "False"
+    }
+  }
+}
