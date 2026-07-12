@@ -1,0 +1,45 @@
+{
+  "run_date": "2026-07-12",
+  "candidates": [
+    "JNJ",
+    "KO",
+    "AAPL",
+    "MSFT",
+    "META",
+    "XOM"
+  ],
+  "windows": {
+    "Window 1": {
+      "tickers_used": [
+        "JNJ",
+        "KO",
+        "AAPL",
+        "MSFT",
+        "META",
+        "XOM"
+      ],
+      "cagr_pct": 20.07,
+      "sharpe": 0.8937,
+      "max_drawdown_pct": -23.67,
+      "n_fills": 20,
+      "n_rebalance_events": 4,
+      "n_equity_obs": 157
+    },
+    "Window 2": {
+      "tickers_used": [
+        "JNJ",
+        "KO",
+        "AAPL",
+        "MSFT",
+        "META",
+        "XOM"
+      ],
+      "cagr_pct": 15.51,
+      "sharpe": 0.829,
+      "max_drawdown_pct": -22.11,
+      "n_fills": 24,
+      "n_rebalance_events": 5,
+      "n_equity_obs": 209
+    }
+  }
+}

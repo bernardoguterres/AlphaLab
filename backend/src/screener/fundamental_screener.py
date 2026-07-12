@@ -62,7 +62,9 @@ class ScreenerResult:
     company_name: str
     sector: str
     earnings_yield: float  # EBIT / EV  (higher = cheaper)
-    return_on_capital: float  # EBIT / (NWC + Net Fixed Assets)  (higher = more efficient)
+    return_on_capital: (
+        float  # EBIT / (NWC + Net Fixed Assets)  (higher = more efficient)
+    )
     ebit: float
     enterprise_value: float
     invested_capital: float  # NWC + Net Fixed Assets
@@ -192,7 +194,9 @@ class FundamentalScreener:
                     continue
         return None
 
-    def _parse(self, ticker: str, info: dict, income_stmt, balance_sheet) -> ScreenerResult | None:
+    def _parse(
+        self, ticker: str, info: dict, income_stmt, balance_sheet
+    ) -> ScreenerResult | None:
         sector = info.get("sector", "Unknown")
         if self.exclude_financials_utilities and sector in EXCLUDED_SECTORS:
             logger.debug(f"{ticker}: sector {sector} excluded (Greenblatt convention)")
