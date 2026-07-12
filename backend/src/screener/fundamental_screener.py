@@ -36,6 +36,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 
+import pandas as pd
 import yfinance as yf
 
 from ..utils.logger import setup_logger
@@ -269,18 +270,21 @@ class FundamentalScreener:
         return out
 
     def _rank(self, results: list[ScreenerResult]) -> list[ScreenerResult]:
-        # Assign per-factor ranks in-place (one pass each), then sort once for final output
-        for i, r in enumerate(
-            sorted(results, key=lambda r: r.earnings_yield, reverse=True)
-        ):
-            r.earnings_yield_rank = i + 1
+        if not results:
+            return results
 
-        for i, r in enumerate(
-            sorted(results, key=lambda r: r.return_on_capital, reverse=True)
-        ):
-            r.roc_rank = i + 1
+        # method="first" breaks ties by original list order, matching the
+        # tie-breaking a stable sorted()+enumerate() would have produced.
+        ey_ranks = pd.Series(
+            [r.earnings_yield for r in results]
+        ).rank(method="first", ascending=False)
+        roc_ranks = pd.Series(
+            [r.return_on_capital for r in results]
+        ).rank(method="first", ascending=False)
 
-        for r in results:
+        for r, ey_rank, roc_rank in zip(results, ey_ranks, roc_ranks):
+            r.earnings_yield_rank = int(ey_rank)
+            r.roc_rank = int(roc_rank)
             r.combined_rank = r.earnings_yield_rank + r.roc_rank
 
         return sorted(results, key=lambda r: r.combined_rank)
