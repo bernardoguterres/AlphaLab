@@ -27,12 +27,14 @@ def _fake_result(ticker="AAPL", rank=1):
         company_name=f"{ticker} Inc.",
         sector="Technology",
         earnings_yield=0.05,
-        return_on_equity=0.25,
-        pe_ratio=20.0,
+        return_on_capital=0.25,
+        ebit=50e9,
+        enterprise_value=1000e9,
+        invested_capital=200e9,
         market_cap_b=500.0,
         debt_to_equity=0.5,
         earnings_yield_rank=rank,
-        roe_rank=rank,
+        roc_rank=rank,
         combined_rank=rank * 2,
     )
 
@@ -76,7 +78,7 @@ class TestGreenblattScreenEndpoint:
         candidates = body["data"]["candidates"]
         assert candidates[0]["ticker"] == "AAPL"
         assert candidates[0]["earnings_yield_pct"] == 5.0
-        assert candidates[0]["roe_pct"] == 25.0
+        assert candidates[0]["roc_pct"] == 25.0
 
         # Screener constructed with the request's filters.
         _, kwargs = mock_cls.call_args

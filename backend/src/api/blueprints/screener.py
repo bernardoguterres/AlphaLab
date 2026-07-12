@@ -45,12 +45,14 @@ def run_greenblatt_screen():
                             "company": r.company_name,
                             "sector": r.sector,
                             "earnings_yield_pct": round(r.earnings_yield * 100, 2),
-                            "roe_pct": round(r.return_on_equity * 100, 2),
-                            "pe_ratio": round(r.pe_ratio, 2),
+                            "roc_pct": round(r.return_on_capital * 100, 2),
+                            "ebit": round(r.ebit, 2),
+                            "enterprise_value": round(r.enterprise_value, 2),
+                            "invested_capital": round(r.invested_capital, 2),
                             "market_cap_b": round(r.market_cap_b, 2),
                             "debt_to_equity": round(r.debt_to_equity, 2),
                             "ey_rank": r.earnings_yield_rank,
-                            "roe_rank": r.roe_rank,
+                            "roc_rank": r.roc_rank,
                         }
                         for r in results
                     ],

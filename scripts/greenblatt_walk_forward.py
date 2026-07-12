@@ -262,7 +262,7 @@ def main():
         print(f"  Screener error: {exc}")
         print("  Using fallback candidate list from CLAUDE.md verified results.")
         class _FakeSR:
-            def __init__(self, t): self.ticker = t; self.combined_rank = None; self.earnings_yield = None; self.return_on_equity = None
+            def __init__(self, t): self.ticker = t; self.combined_rank = None; self.earnings_yield = None; self.return_on_capital = None
         top_candidates = [_FakeSR(t) for t in ["META", "LLY", "NVDA", "JPM", "AAPL", "V"]]
 
     if not top_candidates:
@@ -270,13 +270,13 @@ def main():
         return
 
     print(f"\n  Screener results (top {len(top_candidates)}):")
-    print(f"  {'#':<3} {'Ticker':<7} {'Combined Rank':<14} {'Earnings Yield':>14} {'ROE':>8}")
+    print(f"  {'#':<3} {'Ticker':<7} {'Combined Rank':<14} {'Earnings Yield':>14} {'ROC':>8}")
     print("  " + "-" * 50)
     for i, c in enumerate(top_candidates, 1):
         ey = f"{c.earnings_yield:.4f}" if c.earnings_yield is not None else "  N/A"
-        roe = f"{c.return_on_equity:.3f}" if c.return_on_equity is not None else " N/A"
+        roc = f"{c.return_on_capital:.3f}" if c.return_on_capital is not None else " N/A"
         rank = str(c.combined_rank) if c.combined_rank is not None else " N/A"
-        print(f"  {i:<3} {c.ticker:<7} {rank:<14} {ey:>14} {roe:>8}")
+        print(f"  {i:<3} {c.ticker:<7} {rank:<14} {ey:>14} {roc:>8}")
 
     candidate_tickers = [c.ticker for c in top_candidates]
 
