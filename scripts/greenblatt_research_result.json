@@ -1,0 +1,44 @@
+{
+  "run_date": "2026-07-12",
+  "n_trials": 6,
+  "params": {
+    "top_n": 6,
+    "screen_top_n": 25,
+    "rebalance_weeks": 52,
+    "windows": [
+      "2022"
+    ]
+  },
+  "windows": {
+    "2022 Bear": {
+      "strategy": {
+        "cagr_pct": -16.19,
+        "sharpe": -1.1581,
+        "n_obs": 52,
+        "deflated_sharpe_ratio": 0.0083,
+        "significant_at_95pct": false,
+        "selected": [
+          "AAPL",
+          "JNJ",
+          "KO",
+          "META",
+          "MSFT",
+          "XOM"
+        ]
+      },
+      "equal_weight_all_qualified": {
+        "cagr_pct": -5.32,
+        "sharpe": -0.3927
+      },
+      "spy_buyhold": {
+        "cagr_pct": -16.91,
+        "sharpe": -0.843
+      },
+      "faber_overlay": {
+        "cagr_pct": -20.97,
+        "sharpe": -2.518
+      },
+      "beats_diversification_sharpe": "False"
+    }
+  }
+}
