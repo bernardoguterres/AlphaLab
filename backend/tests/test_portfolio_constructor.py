@@ -162,6 +162,11 @@ class TestPortfolioConstructor:
         assert all(r.rank == 7 for r in a_rows)
         assert all(r.price > 0 for r in a_rows)
 
+    def test_missing_both_candidates_and_rank_fn_raises(self):
+        pc = PortfolioConstructor(top_n=2, rebalance_period_bars=52)
+        with pytest.raises(ValueError, match="Must provide either"):
+            pc.run(price_data=_make_price_data(["A", "B"]))
+
     def test_target_shares_scale_with_portfolio_value(self):
         candidates = [
             _FakeCandidate(t, combined_rank=i) for i, t in enumerate(["A", "B"])
@@ -180,3 +185,99 @@ class TestPortfolioConstructor:
         small_shares = sum(r.target_shares for r in result_small.rebalance_history[:2])
         large_shares = sum(r.target_shares for r in result_large.rebalance_history[:2])
         assert large_shares > small_shares
+
+
+class TestPortfolioConstructorDynamicRanking:
+    """rank_fn mode (added 2026-07-12) - re-ranks the FULL universe at every
+    rebalance using only trailing data, for genuinely time-varying signals
+    like relative-strength rotation (unlike Greenblatt's static candidates,
+    which are correct only because the fundamentals data has no
+    point-in-time source to re-rank against)."""
+
+    def test_calls_rank_fn_with_trailing_data_only_no_lookahead(self):
+        price_data = _make_price_data(["A", "B", "C", "D"], n=104)
+        seen_max_dates = []
+
+        def rank_fn(trailing):
+            seen_max_dates.append(max(df.index.max() for df in trailing.values()))
+            return [
+                _FakeCandidate(t, i + 1) for i, t in enumerate(["A", "B", "C", "D"])
+            ]
+
+        pc = PortfolioConstructor(top_n=2, rebalance_period_bars=52)
+        result = pc.run(price_data=price_data, rank_fn=rank_fn)
+
+        rebalance_dates = sorted(set(r.date for r in result.rebalance_history))
+        assert len(rebalance_dates) == 2
+        assert seen_max_dates[0] == rebalance_dates[0]
+        assert seen_max_dates[1] == rebalance_dates[1]
+
+    def test_reranking_changes_selection_across_rebalances(self):
+        price_data = _make_price_data(["A", "B", "C", "D"], n=104)
+        call_count = {"n": 0}
+
+        def rank_fn(trailing):
+            call_count["n"] += 1
+            order = (
+                ["A", "B", "C", "D"] if call_count["n"] == 1 else ["C", "D", "A", "B"]
+            )
+            return [_FakeCandidate(t, i + 1) for i, t in enumerate(order)]
+
+        pc = PortfolioConstructor(top_n=2, rebalance_period_bars=52)
+        result = pc.run(price_data=price_data, rank_fn=rank_fn)
+
+        rebalance_dates = sorted(set(r.date for r in result.rebalance_history))
+        first_selection = {
+            r.ticker
+            for r in result.rebalance_history
+            if r.date == rebalance_dates[0] and r.target_shares > 0
+        }
+        second_selection = {
+            r.ticker
+            for r in result.rebalance_history
+            if r.date == rebalance_dates[1] and r.target_shares > 0
+        }
+
+        assert first_selection == {"A", "B"}
+        assert second_selection == {"C", "D"}
+
+    def test_dropped_ticker_is_force_sold_to_zero(self):
+        price_data = _make_price_data(["A", "B", "C", "D"], n=104)
+        call_count = {"n": 0}
+
+        def rank_fn(trailing):
+            call_count["n"] += 1
+            order = (
+                ["A", "B", "C", "D"] if call_count["n"] == 1 else ["C", "D", "A", "B"]
+            )
+            return [_FakeCandidate(t, i + 1) for i, t in enumerate(order)]
+
+        pc = PortfolioConstructor(top_n=2, rebalance_period_bars=52)
+        result = pc.run(price_data=price_data, rank_fn=rank_fn)
+
+        assert result.final_portfolio.get_position("A") == 0
+        assert result.final_portfolio.get_position("C") > 0
+
+    def test_tickers_used_reflects_union_across_rebalances(self):
+        price_data = _make_price_data(["A", "B", "C", "D"], n=104)
+        call_count = {"n": 0}
+
+        def rank_fn(trailing):
+            call_count["n"] += 1
+            order = (
+                ["A", "B", "C", "D"] if call_count["n"] == 1 else ["C", "D", "A", "B"]
+            )
+            return [_FakeCandidate(t, i + 1) for i, t in enumerate(order)]
+
+        pc = PortfolioConstructor(top_n=2, rebalance_period_bars=52)
+        result = pc.run(price_data=price_data, rank_fn=rank_fn)
+
+        assert set(result.tickers_used) == {"A", "B", "C", "D"}
+
+    def test_universe_smaller_than_two_raises(self):
+        pc = PortfolioConstructor(top_n=2, rebalance_period_bars=52)
+        with pytest.raises(ValueError):
+            pc.run(
+                price_data=_make_price_data(["A"]),
+                rank_fn=lambda td: [_FakeCandidate("A", 1)],
+            )
