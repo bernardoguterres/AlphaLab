@@ -211,7 +211,7 @@ cd frontend && npm run tauri:dev     # Desktop → native app window
 ### Run Tests
 
 ```bash
-# Backend tests (292 tests: 289 passing, 3 skipped), 91% coverage
+# Backend tests (350 tests: 347 passing, 3 skipped), 91% coverage
 cd backend
 source venv/bin/activate
 pytest tests/ -v
@@ -343,7 +343,7 @@ AlphaLab/
 │   │   ├── backtest/          # Engine, portfolio, metrics, orders
 │   │   ├── api/               # Flask routes + Pydantic validators
 │   │   └── utils/             # Logger, config, exceptions
-│   ├── tests/                 # 292 tests (289 passing, 3 skipped), 91% coverage
+│   ├── tests/                 # 350 tests (347 passing, 3 skipped), 91% coverage
 │   ├── config.yaml
 │   ├── requirements.txt
 │   ├── run.py                 # Local dev entry point (Flask dev server)
@@ -435,7 +435,7 @@ python run.py
 1. Create a new branch: `git checkout -b feature/your-feature-name`
 2. Make your changes
 3. Run tests: `pytest tests/ -v`
-4. Ensure all 290 tests pass
+4. Ensure all 347 tests pass
 
 **Code style:**
 - Follow PEP 8
@@ -570,7 +570,7 @@ Before submitting, ensure:
 
 #### Backend
 - Flask REST API (127.0.0.1:5050)
-- 292 tests (289 passing, 3 skipped), 91% coverage
+- 350 tests (347 passing, 3 skipped), 91% coverage
 - 14 API endpoints with Pydantic validation
 - 8 trading strategies (MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, Bollinger RSI Combo, Trend Adaptive RSI, GreenblattWeekly)
 - Technical indicators: SMA, RSI, ADX, Bollinger Bands, ATR
@@ -599,7 +599,7 @@ Before submitting, ensure:
 
 - **Backend Code:** Python, Flask
 - **Frontend Code:** TypeScript, React
-- **Total Tests:** 292 (289 passing, 3 skipped), 91% coverage
+- **Total Tests:** 350 (347 passing, 3 skipped), 91% coverage
 - **API Endpoints:** 14
 - **Strategies:** 8
 - **Indicators:** SMA, RSI, ADX, Bollinger Bands, ATR
