@@ -1,0 +1,250 @@
+{
+  "run_date": "2026-07-12",
+  "n_trials": 6,
+  "results": {
+    "greenblatt": {
+      "2008 Crisis": {
+        "strategy": {
+          "cagr_pct": 8.55,
+          "sharpe": 0.3275,
+          "n_obs": 135,
+          "deflated_sharpe_ratio": 0.2163,
+          "significant_at_95pct": false
+        },
+        "equal_weight": {
+          "cagr_pct": 8.55,
+          "sharpe": 0.3275,
+          "n_obs": 135,
+          "deflated_sharpe_ratio": 0.2163,
+          "significant_at_95pct": false
+        },
+        "spy_buyhold": {
+          "cagr_pct": -9.63,
+          "sharpe": -0.36
+        },
+        "faber_overlay": {
+          "cagr_pct": 6.77,
+          "sharpe": 0.356
+        }
+      },
+      "2015-2019 Grind": {
+        "strategy": {
+          "cagr_pct": 16.58,
+          "sharpe": 1.061,
+          "n_obs": 261,
+          "deflated_sharpe_ratio": 0.8282,
+          "significant_at_95pct": false
+        },
+        "equal_weight": {
+          "cagr_pct": 16.58,
+          "sharpe": 1.061,
+          "n_obs": 261,
+          "deflated_sharpe_ratio": 0.8282,
+          "significant_at_95pct": false
+        },
+        "spy_buyhold": {
+          "cagr_pct": 11.91,
+          "sharpe": 0.673
+        },
+        "faber_overlay": {
+          "cagr_pct": 4.76,
+          "sharpe": 0.116
+        }
+      },
+      "2020 COVID": {
+        "strategy": {
+          "cagr_pct": 26.96,
+          "sharpe": 1.0514,
+          "n_obs": 53,
+          "deflated_sharpe_ratio": 0.3757,
+          "significant_at_95pct": false
+        },
+        "equal_weight": {
+          "cagr_pct": 26.96,
+          "sharpe": 1.0514,
+          "n_obs": 53,
+          "deflated_sharpe_ratio": 0.3757,
+          "significant_at_95pct": false
+        },
+        "spy_buyhold": {
+          "cagr_pct": 18.01,
+          "sharpe": 0.648
+        },
+        "faber_overlay": {
+          "cagr_pct": 14.52,
+          "sharpe": 0.628
+        }
+      },
+      "2022 Bear": {
+        "strategy": {
+          "cagr_pct": -16.19,
+          "sharpe": -1.1581,
+          "n_obs": 52,
+          "deflated_sharpe_ratio": 0.0083,
+          "significant_at_95pct": false
+        },
+        "equal_weight": {
+          "cagr_pct": -16.19,
+          "sharpe": -1.1581,
+          "n_obs": 52,
+          "deflated_sharpe_ratio": 0.0083,
+          "significant_at_95pct": false
+        },
+        "spy_buyhold": {
+          "cagr_pct": -16.91,
+          "sharpe": -0.843
+        },
+        "faber_overlay": {
+          "cagr_pct": -20.97,
+          "sharpe": -2.518
+        }
+      }
+    },
+    "sector_rotation": {
+      "2008 Crisis": {
+        "strategy": {
+          "cagr_pct": -3.78,
+          "sharpe": -0.3483,
+          "n_obs": 135,
+          "deflated_sharpe_ratio": 0.0309,
+          "significant_at_95pct": false
+        },
+        "equal_weight": {
+          "cagr_pct": -6.1,
+          "sharpe": -0.2892,
+          "n_obs": 135,
+          "deflated_sharpe_ratio": 0.0387,
+          "significant_at_95pct": false
+        },
+        "spy_buyhold": {
+          "cagr_pct": -9.63,
+          "sharpe": -0.36
+        },
+        "faber_overlay": {
+          "cagr_pct": 6.77,
+          "sharpe": 0.356
+        },
+        "universe": [
+          "XLY",
+          "XLP",
+          "XLE",
+          "XLF",
+          "XLV",
+          "XLI",
+          "XLB",
+          "XLK",
+          "XLU"
+        ]
+      },
+      "2015-2019 Grind": {
+        "strategy": {
+          "cagr_pct": 4.51,
+          "sharpe": 0.0929,
+          "n_obs": 261,
+          "deflated_sharpe_ratio": 0.1371,
+          "significant_at_95pct": false
+        },
+        "equal_weight": {
+          "cagr_pct": 8.85,
+          "sharpe": 0.4474,
+          "n_obs": 261,
+          "deflated_sharpe_ratio": 0.3729,
+          "significant_at_95pct": false
+        },
+        "spy_buyhold": {
+          "cagr_pct": 11.91,
+          "sharpe": 0.673
+        },
+        "faber_overlay": {
+          "cagr_pct": 4.76,
+          "sharpe": 0.116
+        },
+        "universe": [
+          "XLY",
+          "XLP",
+          "XLE",
+          "XLF",
+          "XLV",
+          "XLI",
+          "XLB",
+          "XLK",
+          "XLU"
+        ]
+      },
+      "2020 COVID": {
+        "strategy": {
+          "cagr_pct": 16.06,
+          "sharpe": 0.5834,
+          "n_obs": 52,
+          "deflated_sharpe_ratio": 0.2307,
+          "significant_at_95pct": false
+        },
+        "equal_weight": {
+          "cagr_pct": 10.01,
+          "sharpe": 0.3401,
+          "n_obs": 52,
+          "deflated_sharpe_ratio": 0.1663,
+          "significant_at_95pct": false
+        },
+        "spy_buyhold": {
+          "cagr_pct": 18.01,
+          "sharpe": 0.648
+        },
+        "faber_overlay": {
+          "cagr_pct": 14.52,
+          "sharpe": 0.628
+        },
+        "universe": [
+          "XLC",
+          "XLY",
+          "XLP",
+          "XLE",
+          "XLF",
+          "XLV",
+          "XLI",
+          "XLB",
+          "XLRE",
+          "XLK",
+          "XLU"
+        ]
+      },
+      "2022 Bear": {
+        "strategy": {
+          "cagr_pct": -2.58,
+          "sharpe": -0.3151,
+          "n_obs": 52,
+          "deflated_sharpe_ratio": 0.0531,
+          "significant_at_95pct": false
+        },
+        "equal_weight": {
+          "cagr_pct": -10.31,
+          "sharpe": -0.6579,
+          "n_obs": 52,
+          "deflated_sharpe_ratio": 0.0261,
+          "significant_at_95pct": false
+        },
+        "spy_buyhold": {
+          "cagr_pct": -16.91,
+          "sharpe": -0.843
+        },
+        "faber_overlay": {
+          "cagr_pct": -20.97,
+          "sharpe": -2.518
+        },
+        "universe": [
+          "XLC",
+          "XLY",
+          "XLP",
+          "XLE",
+          "XLF",
+          "XLV",
+          "XLI",
+          "XLB",
+          "XLRE",
+          "XLK",
+          "XLU"
+        ]
+      }
+    }
+  }
+}
