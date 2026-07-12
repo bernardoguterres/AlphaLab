@@ -56,6 +56,21 @@ class MomentumBreakout(BaseStrategy):
         low_n = low.rolling(lookback, min_periods=lookback).min()
         vol_avg = volume.rolling(p["volume_avg_period"]).mean()
 
+        # Extract to numpy arrays once, up front - avoids repeated .iloc[i]/pd.isna
+        # Series overhead inside the per-bar loop below.
+        close_arr = close.to_numpy()
+        volume_arr = volume.to_numpy()
+        atr_arr = atr.to_numpy()
+        rsi_arr = rsi.to_numpy()
+        high_n_arr = high_n.to_numpy()
+        low_n_arr = low_n.to_numpy()
+        vol_avg_arr = vol_avg.to_numpy()
+        atr_valid = ~np.isnan(atr_arr)
+        rsi_valid = ~np.isnan(rsi_arr)
+        high_n_valid = ~np.isnan(high_n_arr)
+        low_n_valid = ~np.isnan(low_n_arr)
+        vol_avg_valid = ~np.isnan(vol_avg_arr)
+
         # State machine
         in_position = False
         entry_price = 0.0
@@ -65,14 +80,13 @@ class MomentumBreakout(BaseStrategy):
         last_signal_bar = -p["cooldown_days"] - 1
 
         for i in range(lookback, len(data)):
-            current_close = close.iloc[i]
+            current_close = close_arr[i]
 
             if in_position:
                 # Update trailing stop
                 if current_close > peak_price:
                     peak_price = current_close
-                    atr_i = atr.iloc[i]
-                    atr_val = atr_i if pd.notna(atr_i) else peak_price * 0.02
+                    atr_val = atr_arr[i] if atr_valid[i] else peak_price * 0.02
                     trailing_stop = peak_price - p["trailing_stop_atr_mult"] * atr_val
 
                 exit_reason = None
@@ -88,7 +102,7 @@ class MomentumBreakout(BaseStrategy):
                     exit_reason = f"Trailing stop ({pnl:+.1f}%)"
 
                 # 3. Breakdown below N-day low
-                elif pd.notna(low_n.iloc[i - 1]) and current_close < low_n.iloc[i - 1]:
+                elif low_n_valid[i - 1] and current_close < low_n_arr[i - 1]:
                     pnl = (current_close / entry_price - 1) * 100
                     exit_reason = f"Breakdown below {lookback}-day low ({pnl:+.1f}%)"
 
@@ -105,26 +119,24 @@ class MomentumBreakout(BaseStrategy):
                     continue
 
                 # Breakout above N-day high
-                prev_high = high_n.iloc[i - 1]
-                if pd.isna(prev_high) or current_close <= prev_high:
+                if not high_n_valid[i - 1] or current_close <= high_n_arr[i - 1]:
                     continue
 
                 # Volume surge confirmation
-                avg_vol = vol_avg.iloc[i]
-                if pd.isna(avg_vol) or avg_vol <= 0:
+                avg_vol = vol_avg_arr[i]
+                if not vol_avg_valid[i] or avg_vol <= 0:
                     continue
-                volume_i = volume.iloc[i]
+                volume_i = volume_arr[i]
                 if volume_i <= (avg_vol * p["volume_surge_pct"] / 100):
                     continue
 
                 # RSI momentum confirmation
-                rsi_val = rsi.iloc[i]
-                if pd.isna(rsi_val) or rsi_val <= p["rsi_min"]:
+                rsi_val = rsi_arr[i]
+                if not rsi_valid[i] or rsi_val <= p["rsi_min"]:
                     continue
 
                 # Entry signal
-                atr_i = atr.iloc[i]
-                atr_val = atr_i if pd.notna(atr_i) else current_close * 0.02
+                atr_val = atr_arr[i] if atr_valid[i] else current_close * 0.02
                 entry_price = current_close
                 stop_price = entry_price - p["stop_loss_atr_mult"] * atr_val
                 peak_price = entry_price
