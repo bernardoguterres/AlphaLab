@@ -58,11 +58,23 @@ class TestFundamentalScreener(unittest.TestCase):
     def test_basic_screen_returns_ranked_results(self, mock_ticker_cls):
         specs = {
             # A: EY=50/500=0.10 (best), ROC=50/20=2.5 (best) -> should rank first
-            "A": (_make_info(enterprise_value=500e9), _make_income_stmt(50e9), _make_balance_sheet(10e9, 10e9)),
+            "A": (
+                _make_info(enterprise_value=500e9),
+                _make_income_stmt(50e9),
+                _make_balance_sheet(10e9, 10e9),
+            ),
             # B: EY=20/800=0.025 (worst), ROC=20/40=0.5 (worst)
-            "B": (_make_info(enterprise_value=800e9), _make_income_stmt(20e9), _make_balance_sheet(20e9, 20e9)),
+            "B": (
+                _make_info(enterprise_value=800e9),
+                _make_income_stmt(20e9),
+                _make_balance_sheet(20e9, 20e9),
+            ),
             # C: mid on both
-            "C": (_make_info(enterprise_value=600e9), _make_income_stmt(30e9), _make_balance_sheet(15e9, 15e9)),
+            "C": (
+                _make_info(enterprise_value=600e9),
+                _make_income_stmt(30e9),
+                _make_balance_sheet(15e9, 15e9),
+            ),
         }
         mock_ticker_cls.side_effect = lambda t: _mock_ticker(*specs[t])
 
@@ -100,7 +112,9 @@ class TestFundamentalScreener(unittest.TestCase):
         self.assertAlmostEqual(result.return_on_capital, 50e9 / 30e9, places=6)
 
     @patch("src.screener.fundamental_screener.yf.Ticker")
-    def test_negative_working_capital_still_ranked_if_invested_capital_positive(self, mock_ticker_cls):
+    def test_negative_working_capital_still_ranked_if_invested_capital_positive(
+        self, mock_ticker_cls
+    ):
         # Real-world case (e.g. Apple): negative working capital, large net PPE,
         # net invested capital still positive - must not be excluded.
         mock_ticker_cls.return_value = _mock_ticker(
@@ -115,7 +129,9 @@ class TestFundamentalScreener(unittest.TestCase):
         self.assertAlmostEqual(result.invested_capital, 28e9, places=2)
 
     @patch("src.screener.fundamental_screener.yf.Ticker")
-    def test_falls_back_to_current_assets_minus_liabilities_when_no_working_capital_row(self, mock_ticker_cls):
+    def test_falls_back_to_current_assets_minus_liabilities_when_no_working_capital_row(
+        self, mock_ticker_cls
+    ):
         bs = pd.DataFrame(
             {"2025-09-30": [40e9, 25e9, 20e9]},
             index=["Current Assets", "Current Liabilities", "Net PPE"],
@@ -149,7 +165,11 @@ class TestFundamentalScreener(unittest.TestCase):
     def test_negative_invested_capital_excluded(self, mock_ticker_cls):
         specs = {
             # NWC + NetPPE = -50 + 10 = -40 <= 0 -> excluded, ratio not meaningful
-            "A": (_make_info(), _make_income_stmt(20e9), _make_balance_sheet(working_capital=-50e9, net_ppe=10e9)),
+            "A": (
+                _make_info(),
+                _make_income_stmt(20e9),
+                _make_balance_sheet(working_capital=-50e9, net_ppe=10e9),
+            ),
             "B": (_make_info(), _make_income_stmt(20e9), _make_balance_sheet()),
         }
         mock_ticker_cls.side_effect = lambda t: _mock_ticker(*specs[t])
@@ -191,7 +211,11 @@ class TestFundamentalScreener(unittest.TestCase):
                 _make_income_stmt(),
                 _make_balance_sheet(),
             ),
-            "B": (_make_info(sector="Technology"), _make_income_stmt(), _make_balance_sheet()),
+            "B": (
+                _make_info(sector="Technology"),
+                _make_income_stmt(),
+                _make_balance_sheet(),
+            ),
         }
         mock_ticker_cls.side_effect = lambda t: _mock_ticker(*specs[t])
 
@@ -227,8 +251,16 @@ class TestFundamentalScreener(unittest.TestCase):
     @patch("src.screener.fundamental_screener.yf.Ticker")
     def test_filters_out_small_cap(self, mock_ticker_cls):
         specs = {
-            "A": (_make_info(market_cap=500_000_000), _make_income_stmt(), _make_balance_sheet()),
-            "B": (_make_info(market_cap=5_000_000_000), _make_income_stmt(), _make_balance_sheet()),
+            "A": (
+                _make_info(market_cap=500_000_000),
+                _make_income_stmt(),
+                _make_balance_sheet(),
+            ),
+            "B": (
+                _make_info(market_cap=5_000_000_000),
+                _make_income_stmt(),
+                _make_balance_sheet(),
+            ),
         }
         mock_ticker_cls.side_effect = lambda t: _mock_ticker(*specs[t])
 
@@ -258,7 +290,9 @@ class TestFundamentalScreener(unittest.TestCase):
         def side_effect(ticker):
             if ticker == "BAD":
                 raise Exception("Network error")
-            return _mock_ticker(_make_info(), _make_income_stmt(), _make_balance_sheet())
+            return _mock_ticker(
+                _make_info(), _make_income_stmt(), _make_balance_sheet()
+            )
 
         mock_ticker_cls.side_effect = side_effect
 
@@ -285,8 +319,16 @@ class TestFundamentalScreener(unittest.TestCase):
     @patch("src.screener.fundamental_screener.yf.Ticker")
     def test_combined_rank_is_sum_of_individual_ranks(self, mock_ticker_cls):
         specs = {
-            "A": (_make_info(enterprise_value=500e9), _make_income_stmt(50e9), _make_balance_sheet()),
-            "B": (_make_info(enterprise_value=900e9), _make_income_stmt(10e9), _make_balance_sheet()),
+            "A": (
+                _make_info(enterprise_value=500e9),
+                _make_income_stmt(50e9),
+                _make_balance_sheet(),
+            ),
+            "B": (
+                _make_info(enterprise_value=900e9),
+                _make_income_stmt(10e9),
+                _make_balance_sheet(),
+            ),
         }
         mock_ticker_cls.side_effect = lambda t: _mock_ticker(*specs[t])
 

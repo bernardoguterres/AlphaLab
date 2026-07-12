@@ -60,7 +60,47 @@ def _make_trades():
     ]
 
 
+def _make_weekly_equity_curve(
+    n_weeks=157, start_val=100_000, annual_return=0.10, seed=42
+):
+    """Synthetic WEEKLY-bar equity curve - regression fixture for the
+    2026-07-12 TRADING_DAYS=252-hardcoded annualization bug (CAGR/Sharpe
+    were silently computed as if weekly bars were daily bars)."""
+    rng = np.random.RandomState(seed)
+    weekly_ret = annual_return / 52
+    weekly_vol = 0.02
+    returns = rng.normal(weekly_ret, weekly_vol, n_weeks)
+    values = [start_val]
+    for r in returns:
+        values.append(values[-1] * (1 + r))
+    dates = pd.bdate_range("2018-01-01", periods=n_weeks + 1, freq="W-FRI")
+    return [
+        {"date": str(d.date()), "value": round(v, 2)} for d, v in zip(dates, values)
+    ]
+
+
 class TestPerformanceMetrics:
+    def test_weekly_bar_cagr_is_not_inflated_by_daily_bar_assumption(self):
+        # Regression test: a ~10%/year weekly-bar equity curve must report
+        # CAGR in a sane range (roughly 0-30%, allowing for the specific
+        # random draw), NOT the >100% figure that TRADING_DAYS=252 hardcoded
+        # for annualization produced when applied to weekly (52/year) data.
+        curve = _make_weekly_equity_curve(annual_return=0.10)
+        m = PerformanceMetrics()
+        result = m.calculate_all(curve, [])
+        assert 0 < result["returns"]["cagr_pct"] < 30
+
+    def test_infer_periods_per_year_weekly_vs_daily(self):
+        daily_curve = _make_equity_curve(n=252)
+        weekly_curve = _make_weekly_equity_curve(n_weeks=104)
+        m = PerformanceMetrics()
+
+        daily_idx = pd.to_datetime([c["date"] for c in daily_curve])
+        weekly_idx = pd.to_datetime([c["date"] for c in weekly_curve])
+
+        assert m._infer_periods_per_year(daily_idx) == pytest.approx(252, abs=1)
+        assert m._infer_periods_per_year(weekly_idx) == pytest.approx(52, abs=1)
+
     def test_positive_returns(self):
         curve = _make_equity_curve(annual_return=0.15)
         m = PerformanceMetrics()

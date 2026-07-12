@@ -46,9 +46,29 @@ from src.strategies.implementations.greenblatt_weekly import GreenblattWeekly
 # ---------------------------------------------------------------------------
 
 UNIVERSE = [
-    "MSFT", "AAPL", "GOOGL", "AMZN", "META", "NVDA", "JPM", "JNJ",
-    "V", "MA", "UNH", "HD", "MCD", "KO", "PEP", "WMT", "BAC",
-    "XOM", "CVX", "LLY", "ABBV", "TMO", "BRK-B",
+    "MSFT",
+    "AAPL",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "NVDA",
+    "JPM",
+    "JNJ",
+    "V",
+    "MA",
+    "UNH",
+    "HD",
+    "MCD",
+    "KO",
+    "PEP",
+    "WMT",
+    "BAC",
+    "XOM",
+    "CVX",
+    "LLY",
+    "ABBV",
+    "TMO",
+    "BRK-B",
 ]
 
 TOP_N_CANDIDATES = 6
@@ -69,22 +89,22 @@ WINDOWS = [
     {
         "label": "Window 1",
         "train_start": "2010-01-01",
-        "train_end":   "2017-12-31",
-        "test_start":  "2018-01-01",
-        "test_end":    "2020-12-31",
+        "train_end": "2017-12-31",
+        "test_start": "2018-01-01",
+        "test_end": "2020-12-31",
     },
     {
         "label": "Window 2",
         "train_start": "2013-01-01",
-        "train_end":   "2020-12-31",
-        "test_start":  "2021-01-01",
-        "test_end":    "2024-12-31",
+        "train_end": "2020-12-31",
+        "test_start": "2021-01-01",
+        "test_end": "2024-12-31",
     },
 ]
 
 # Thresholds for CONSISTENT verdict
 SHARPE_THRESHOLD = 0.8
-CAGR_THRESHOLD   = 13.0   # % - must beat buy-and-hold SPY
+CAGR_THRESHOLD = 13.0  # % - must beat buy-and-hold SPY
 
 # BacktestEngine drawdown halt at 40% - correct for weekly value strategies
 MAX_DRAWDOWN_PCT = 40
@@ -93,10 +113,12 @@ MAX_DRAWDOWN_PCT = 40
 # Data helpers
 # ---------------------------------------------------------------------------
 
+
 def fetch_weekly(ticker: str, start: str, end: str) -> pd.DataFrame:
     print(f"    Fetching {ticker} weekly {start} → {end} …", end=" ", flush=True)
-    raw = yf.download(ticker, start=start, end=end, interval="1wk",
-                      auto_adjust=True, progress=False)
+    raw = yf.download(
+        ticker, start=start, end=end, interval="1wk", auto_adjust=True, progress=False
+    )
     if raw.empty:
         raise RuntimeError(f"No weekly data for {ticker}")
 
@@ -127,6 +149,7 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
 # Backtest helper
 # ---------------------------------------------------------------------------
 
+
 def run_one_backtest(
     featured_data: pd.DataFrame,
     start_date: str,
@@ -142,22 +165,27 @@ def run_one_backtest(
     strategy = GreenblattWeekly(STRATEGY_PARAMS.copy())
     engine = BacktestEngine()
     results = engine.run_backtest(
-        strategy, df_slice,
+        strategy,
+        df_slice,
         initial_capital=100_000,
         max_drawdown_pct=MAX_DRAWDOWN_PCT,
     )
 
     calculator = PerformanceMetrics(risk_free_rate=0.04)
-    bm_curve = results.benchmark.get("buy_and_hold_equity_curve") if results.benchmark else None
+    bm_curve = (
+        results.benchmark.get("buy_and_hold_equity_curve")
+        if results.benchmark
+        else None
+    )
     metrics = calculator.calculate_all(
         equity_curve=results.equity_curve,
         trades=results.trades,
         benchmark_curve=bm_curve,
     )
 
-    sharpe  = metrics.get("risk", {}).get("sharpe_ratio", 0.0) or 0.0
-    cagr    = metrics.get("returns", {}).get("cagr_pct", 0.0) or 0.0
-    max_dd  = metrics.get("drawdown", {}).get("max_drawdown_pct", 0.0) or 0.0
+    sharpe = metrics.get("risk", {}).get("sharpe_ratio", 0.0) or 0.0
+    cagr = metrics.get("returns", {}).get("cagr_pct", 0.0) or 0.0
+    max_dd = metrics.get("drawdown", {}).get("max_drawdown_pct", 0.0) or 0.0
     win_rate = metrics.get("trades", {}).get("win_rate", 0.0) or 0.0
     n_trades = metrics.get("trades", {}).get("total_trades", 0) or 0
 
@@ -231,18 +259,25 @@ def _row(ticker_lbl, window_lbl, phase, period, m):
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
     print()
     print("=" * 80)
     print("  AlphaLab - GreenblattWeekly Walk-Forward Validation")
     print(f"  Universe   : {len(UNIVERSE)} tickers")
     print(f"  Candidates : top {TOP_N_CANDIDATES} by Greenblatt rank")
-    print(f"  Strategy   : GreenblattWeekly (weekly bars, 52w min hold, 20% trailing stop)")
+    print(
+        f"  Strategy   : GreenblattWeekly (weekly bars, 52w min hold, 20% trailing stop)"
+    )
     print(f"  Windows    : {len(WINDOWS)}")
     for w in WINDOWS:
-        print(f"    {w['label']}: Train {w['train_start'][:4]}–{w['train_end'][:4]}  |  "
-              f"Test {w['test_start'][:4]}–{w['test_end'][:4]}")
-    print(f"  Verdict threshold: OOS Sharpe ≥ {SHARPE_THRESHOLD} AND CAGR ≥ {CAGR_THRESHOLD}% in BOTH windows")
+        print(
+            f"    {w['label']}: Train {w['train_start'][:4]}–{w['train_end'][:4]}  |  "
+            f"Test {w['test_start'][:4]}–{w['test_end'][:4]}"
+        )
+    print(
+        f"  Verdict threshold: OOS Sharpe ≥ {SHARPE_THRESHOLD} AND CAGR ≥ {CAGR_THRESHOLD}% in BOTH windows"
+    )
     print("=" * 80)
 
     # ------------------------------------------------------------------
@@ -261,20 +296,32 @@ def main():
     except Exception as exc:
         print(f"  Screener error: {exc}")
         print("  Using fallback candidate list from CLAUDE.md verified results.")
+
         class _FakeSR:
-            def __init__(self, t): self.ticker = t; self.combined_rank = None; self.earnings_yield = None; self.return_on_capital = None
-        top_candidates = [_FakeSR(t) for t in ["META", "LLY", "NVDA", "JPM", "AAPL", "V"]]
+            def __init__(self, t):
+                self.ticker = t
+                self.combined_rank = None
+                self.earnings_yield = None
+                self.return_on_capital = None
+
+        top_candidates = [
+            _FakeSR(t) for t in ["META", "LLY", "NVDA", "JPM", "AAPL", "V"]
+        ]
 
     if not top_candidates:
         print("  No candidates returned - aborting.")
         return
 
     print(f"\n  Screener results (top {len(top_candidates)}):")
-    print(f"  {'#':<3} {'Ticker':<7} {'Combined Rank':<14} {'Earnings Yield':>14} {'ROC':>8}")
+    print(
+        f"  {'#':<3} {'Ticker':<7} {'Combined Rank':<14} {'Earnings Yield':>14} {'ROC':>8}"
+    )
     print("  " + "-" * 50)
     for i, c in enumerate(top_candidates, 1):
         ey = f"{c.earnings_yield:.4f}" if c.earnings_yield is not None else "  N/A"
-        roc = f"{c.return_on_capital:.3f}" if c.return_on_capital is not None else " N/A"
+        roc = (
+            f"{c.return_on_capital:.3f}" if c.return_on_capital is not None else " N/A"
+        )
         rank = str(c.combined_rank) if c.combined_rank is not None else " N/A"
         print(f"  {i:<3} {c.ticker:<7} {rank:<14} {ey:>14} {roc:>8}")
 
@@ -286,9 +333,9 @@ def main():
     print(f"\n[2/3] Fetching weekly market data …\n")
 
     all_starts = [w["train_start"] for w in WINDOWS]
-    all_ends   = [w["test_end"]    for w in WINDOWS]
+    all_ends = [w["test_end"] for w in WINDOWS]
     fetch_start = min(all_starts)
-    fetch_end   = max(all_ends)
+    fetch_end = max(all_ends)
 
     featured: dict[str, pd.DataFrame] = {}
     failed_tickers = []
@@ -323,13 +370,27 @@ def main():
             wlabel = window["label"]
             print(f"  {ticker} / {wlabel}")
 
-            print(f"    In-sample  {window['train_start']} → {window['train_end']}", end=" … ")
-            in_m = run_one_backtest(fd, window["train_start"], window["train_end"], ticker)
-            print(f"Sharpe={fmt(in_m['sharpe'], '.3f')}  CAGR={fmt(in_m['cagr'], '.1f')}%")
+            print(
+                f"    In-sample  {window['train_start']} → {window['train_end']}",
+                end=" … ",
+            )
+            in_m = run_one_backtest(
+                fd, window["train_start"], window["train_end"], ticker
+            )
+            print(
+                f"Sharpe={fmt(in_m['sharpe'], '.3f')}  CAGR={fmt(in_m['cagr'], '.1f')}%"
+            )
 
-            print(f"    Out-sample {window['test_start']} → {window['test_end']}", end=" … ")
-            out_m = run_one_backtest(fd, window["test_start"], window["test_end"], ticker)
-            print(f"Sharpe={fmt(out_m['sharpe'], '.3f')}  CAGR={fmt(out_m['cagr'], '.1f')}%")
+            print(
+                f"    Out-sample {window['test_start']} → {window['test_end']}",
+                end=" … ",
+            )
+            out_m = run_one_backtest(
+                fd, window["test_start"], window["test_end"], ticker
+            )
+            print(
+                f"Sharpe={fmt(out_m['sharpe'], '.3f')}  CAGR={fmt(out_m['cagr'], '.1f')}%"
+            )
 
             all_results[ticker][wlabel] = {
                 "in_sample": in_m,
@@ -356,12 +417,16 @@ def main():
             first_row = False
 
             _row(
-                ticker_lbl, wlabel, "IN",
+                ticker_lbl,
+                wlabel,
+                "IN",
                 f"{window['train_start'][:4]}–{window['train_end'][:4]}",
                 res["in_sample"],
             )
             _row(
-                "", "", "OUT",
+                "",
+                "",
+                "OUT",
                 f"{window['test_start'][:4]}–{window['test_end'][:4]}",
                 res["out_of_sample"],
             )
@@ -373,7 +438,9 @@ def main():
     # ------------------------------------------------------------------
     print()
     print("=" * 80)
-    print(f"  VERDICTS  (OOS Sharpe ≥ {SHARPE_THRESHOLD} AND CAGR ≥ {CAGR_THRESHOLD}% in BOTH windows)")
+    print(
+        f"  VERDICTS  (OOS Sharpe ≥ {SHARPE_THRESHOLD} AND CAGR ≥ {CAGR_THRESHOLD}% in BOTH windows)"
+    )
     print("=" * 80)
 
     consistent_tickers = []
@@ -389,8 +456,7 @@ def main():
             for r in oos_rows
         )
         all_cagr_pass = valid and all(
-            not math.isnan(r["cagr"]) and r["cagr"] >= CAGR_THRESHOLD
-            for r in oos_rows
+            not math.isnan(r["cagr"]) and r["cagr"] >= CAGR_THRESHOLD for r in oos_rows
         )
         passes = all_sharpe_pass and all_cagr_pass
 
@@ -413,14 +479,19 @@ def main():
         print(f"              {'':22}  CAGR:   {cagr_str}")
 
     print()
-    print("  CONSISTENT = OOS Sharpe ≥ {:.1f} AND CAGR ≥ {:.0f}% in BOTH windows - safe to export to AlphaLive.".format(
-        SHARPE_THRESHOLD, CAGR_THRESHOLD))
+    print(
+        "  CONSISTENT = OOS Sharpe ≥ {:.1f} AND CAGR ≥ {:.0f}% in BOTH windows - safe to export to AlphaLive.".format(
+            SHARPE_THRESHOLD, CAGR_THRESHOLD
+        )
+    )
     print("  UNSTABLE   = Fails one or more thresholds - do NOT deploy.")
     print()
 
     if consistent_tickers:
         print("Export candidates (all passed):", ", ".join(consistent_tickers))
-        print("  Next step: AlphaLab → batch backtest → export JSON → place in AlphaLive/configs/production/")
+        print(
+            "  Next step: AlphaLab → batch backtest → export JSON → place in AlphaLive/configs/production/"
+        )
     else:
         print("No candidates passed both thresholds.")
         print("  Review parameters or expand the screener universe.")

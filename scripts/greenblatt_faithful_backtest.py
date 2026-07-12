@@ -62,9 +62,29 @@ from src.screener.fundamental_screener import FundamentalScreener
 # ---------------------------------------------------------------------------
 
 UNIVERSE = [
-    "MSFT", "AAPL", "GOOGL", "AMZN", "META", "NVDA", "JPM", "JNJ",
-    "V", "MA", "UNH", "HD", "MCD", "KO", "PEP", "WMT", "BAC",
-    "XOM", "CVX", "LLY", "ABBV", "TMO", "BRK-B",
+    "MSFT",
+    "AAPL",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "NVDA",
+    "JPM",
+    "JNJ",
+    "V",
+    "MA",
+    "UNH",
+    "HD",
+    "MCD",
+    "KO",
+    "PEP",
+    "WMT",
+    "BAC",
+    "XOM",
+    "CVX",
+    "LLY",
+    "ABBV",
+    "TMO",
+    "BRK-B",
 ]
 
 TOP_N = 6
@@ -82,9 +102,11 @@ RISK_FREE_RATE = 0.04
 # conservatively assuming SR=0 for the planning estimate (see
 # STRATEGY_RESEARCH_PLAN.md section D).
 Z_ALPHA = 1.96  # two-sided, alpha=0.05
-Z_BETA = 0.84   # power=0.80
+Z_BETA = 0.84  # power=0.80
 MIN_DETECTABLE_SHARPE_DELTA = 0.3
-REQUIRED_N_RETURN_OBS = math.ceil(((Z_ALPHA + Z_BETA) ** 2) / (MIN_DETECTABLE_SHARPE_DELTA ** 2))
+REQUIRED_N_RETURN_OBS = math.ceil(
+    ((Z_ALPHA + Z_BETA) ** 2) / (MIN_DETECTABLE_SHARPE_DELTA**2)
+)
 
 DEFLATED_SHARPE_TRIALS = 6  # locked roster, EXPERIMENT_REGISTRY_SCHEMA.md
 
@@ -93,9 +115,11 @@ DEFLATED_SHARPE_TRIALS = 6  # locked roster, EXPERIMENT_REGISTRY_SCHEMA.md
 # Data helpers
 # ---------------------------------------------------------------------------
 
+
 def fetch_weekly_returns(ticker: str, start: str, end: str) -> pd.Series | None:
-    raw = yf.download(ticker, start=start, end=end, interval="1wk",
-                       auto_adjust=True, progress=False)
+    raw = yf.download(
+        ticker, start=start, end=end, interval="1wk", auto_adjust=True, progress=False
+    )
     if raw.empty:
         return None
     if isinstance(raw.columns, pd.MultiIndex):
@@ -135,7 +159,11 @@ def compute_metrics(weekly_returns: pd.Series) -> dict:
     std_w = weekly_returns.std()
     equity = (1 + weekly_returns).cumprod()
     years = n / 52.0
-    cagr = (equity.iloc[-1] ** (1 / years) - 1) * 100 if years > 0 and equity.iloc[-1] > 0 else None
+    cagr = (
+        (equity.iloc[-1] ** (1 / years) - 1) * 100
+        if years > 0 and equity.iloc[-1] > 0
+        else None
+    )
 
     ann_return = mean_w * 52
     ann_vol = std_w * math.sqrt(52) if std_w and std_w > 0 else None
@@ -157,18 +185,27 @@ def compute_metrics(weekly_returns: pd.Series) -> dict:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
     print("=" * 80)
     print("  AlphaLab - M1: Faithful Greenblatt Backtest (EBIT/EV + EBIT/(NWC+NetPPE))")
-    print(f"  Universe        : {len(UNIVERSE)} tickers (financials/utilities excluded per Greenblatt convention)")
+    print(
+        f"  Universe        : {len(UNIVERSE)} tickers (financials/utilities excluded per Greenblatt convention)"
+    )
     print(f"  Top N           : {TOP_N}")
-    print(f"  Required N (weekly return obs, Lo 2002, power=0.8, alpha=0.05, delta-SR=0.3): {REQUIRED_N_RETURN_OBS}")
+    print(
+        f"  Required N (weekly return obs, Lo 2002, power=0.8, alpha=0.05, delta-SR=0.3): {REQUIRED_N_RETURN_OBS}"
+    )
     print("=" * 80)
 
-    print("\n[1/3] Running faithful Greenblatt screener (today's fundamentals - "
-          "look-ahead-biased when applied to historical windows, disclosed) ...\n")
+    print(
+        "\n[1/3] Running faithful Greenblatt screener (today's fundamentals - "
+        "look-ahead-biased when applied to historical windows, disclosed) ...\n"
+    )
     screener = FundamentalScreener(
-        universe=UNIVERSE, min_market_cap_b=10.0, max_debt_to_equity=2.0,
+        universe=UNIVERSE,
+        min_market_cap_b=10.0,
+        max_debt_to_equity=2.0,
         request_delay=0.4,
     )
     candidates = screener.screen(top_n=TOP_N)
@@ -176,16 +213,22 @@ def main():
         print("  No candidates passed the screen - aborting.")
         return
 
-    print(f"  {'#':<3} {'Ticker':<7} {'Rank':<6} {'EY (EBIT/EV)':>14} {'ROC':>10} {'EBIT ($B)':>12}")
+    print(
+        f"  {'#':<3} {'Ticker':<7} {'Rank':<6} {'EY (EBIT/EV)':>14} {'ROC':>10} {'EBIT ($B)':>12}"
+    )
     print("  " + "-" * 60)
     for i, c in enumerate(candidates, 1):
-        print(f"  {i:<3} {c.ticker:<7} {c.combined_rank:<6} {c.earnings_yield:>14.4f} "
-              f"{c.return_on_capital:>10.3f} {c.ebit/1e9:>12.2f}")
+        print(
+            f"  {i:<3} {c.ticker:<7} {c.combined_rank:<6} {c.earnings_yield:>14.4f} "
+            f"{c.return_on_capital:>10.3f} {c.ebit/1e9:>12.2f}"
+        )
 
     excluded = set(UNIVERSE) - {c.ticker for c in candidates}
-    print(f"\n  (Note: screen ran across all {len(UNIVERSE)}, top {TOP_N} shown above. "
-          f"Universe members not appearing as candidates were either excluded by "
-          f"sector/filters or ranked outside the top {TOP_N}.)")
+    print(
+        f"\n  (Note: screen ran across all {len(UNIVERSE)}, top {TOP_N} shown above. "
+        f"Universe members not appearing as candidates were either excluded by "
+        f"sector/filters or ranked outside the top {TOP_N}.)"
+    )
 
     tickers = [c.ticker for c in candidates]
 
@@ -211,20 +254,33 @@ def main():
         port_metrics = compute_metrics(port_returns)
 
         bh = fetch_weekly_returns("SPY", window["start"], window["end"])
-        bh_metrics = compute_metrics(bh) if bh is not None else {"cagr_pct": None, "sharpe": None, "max_drawdown_pct": None, "n_obs": 0}
+        bh_metrics = (
+            compute_metrics(bh)
+            if bh is not None
+            else {
+                "cagr_pct": None,
+                "sharpe": None,
+                "max_drawdown_pct": None,
+                "n_obs": 0,
+            }
+        )
 
         n_sufficient = port_metrics["n_obs"] >= REQUIRED_N_RETURN_OBS
 
-        print(f"    Portfolio ({len(per_ticker_returns)} names, equal-weight): "
-              f"CAGR={fmt(port_metrics['cagr_pct'], '.1f')}%  "
-              f"Sharpe={fmt(port_metrics['sharpe'], '.3f')}  "
-              f"MaxDD={fmt(port_metrics['max_drawdown_pct'], '.1f')}%  "
-              f"N={port_metrics['n_obs']} weekly obs "
-              f"({'SUFFICIENT' if n_sufficient else 'INSUFFICIENT'} for power=0.8/alpha=0.05/delta=0.3)")
-        print(f"    SPY buy-and-hold:                      "
-              f"CAGR={fmt(bh_metrics['cagr_pct'], '.1f')}%  "
-              f"Sharpe={fmt(bh_metrics['sharpe'], '.3f')}  "
-              f"MaxDD={fmt(bh_metrics['max_drawdown_pct'], '.1f')}%")
+        print(
+            f"    Portfolio ({len(per_ticker_returns)} names, equal-weight): "
+            f"CAGR={fmt(port_metrics['cagr_pct'], '.1f')}%  "
+            f"Sharpe={fmt(port_metrics['sharpe'], '.3f')}  "
+            f"MaxDD={fmt(port_metrics['max_drawdown_pct'], '.1f')}%  "
+            f"N={port_metrics['n_obs']} weekly obs "
+            f"({'SUFFICIENT' if n_sufficient else 'INSUFFICIENT'} for power=0.8/alpha=0.05/delta=0.3)"
+        )
+        print(
+            f"    SPY buy-and-hold:                      "
+            f"CAGR={fmt(bh_metrics['cagr_pct'], '.1f')}%  "
+            f"Sharpe={fmt(bh_metrics['sharpe'], '.3f')}  "
+            f"MaxDD={fmt(bh_metrics['max_drawdown_pct'], '.1f')}%"
+        )
 
         results_by_window[label] = {
             "window": window,
@@ -235,18 +291,25 @@ def main():
         }
 
     print("\n[3/3] Verdict\n")
-    print("  This run does NOT compute the deflated Sharpe ratio (see script docstring) "
-          "and is therefore PRELIMINARY, not a final PASS/FAIL. Beating buy-and-hold on a "
-          "raw Sharpe basis with sufficient return-observation count is necessary but not "
-          "sufficient for the 'validated' label per STRATEGY_RESEARCH_PLAN.md §I.")
+    print(
+        "  This run does NOT compute the deflated Sharpe ratio (see script docstring) "
+        "and is therefore PRELIMINARY, not a final PASS/FAIL. Beating buy-and-hold on a "
+        "raw Sharpe basis with sufficient return-observation count is necessary but not "
+        "sufficient for the 'validated' label per STRATEGY_RESEARCH_PLAN.md §I."
+    )
 
     for label, res in results_by_window.items():
         p, b = res["portfolio"], res["benchmark_spy"]
-        beats_bh_sharpe = (p["sharpe"] is not None and b["sharpe"] is not None
-                            and p["sharpe"] > b["sharpe"])
-        print(f"  {label}: portfolio Sharpe {fmt(p['sharpe'], '.3f')} vs SPY {fmt(b['sharpe'], '.3f')} "
-              f"-> {'beats SPY (risk-adjusted)' if beats_bh_sharpe else 'does NOT beat SPY (risk-adjusted)'}, "
-              f"N={p['n_obs']} ({'sufficient' if res['n_sufficient_for_derived_threshold'] else 'INSUFFICIENT'})")
+        beats_bh_sharpe = (
+            p["sharpe"] is not None
+            and b["sharpe"] is not None
+            and p["sharpe"] > b["sharpe"]
+        )
+        print(
+            f"  {label}: portfolio Sharpe {fmt(p['sharpe'], '.3f')} vs SPY {fmt(b['sharpe'], '.3f')} "
+            f"-> {'beats SPY (risk-adjusted)' if beats_bh_sharpe else 'does NOT beat SPY (risk-adjusted)'}, "
+            f"N={p['n_obs']} ({'sufficient' if res['n_sufficient_for_derived_threshold'] else 'INSUFFICIENT'})"
+        )
 
     output = {
         "run_date": datetime.now().strftime("%Y-%m-%d"),
@@ -256,9 +319,12 @@ def main():
         "candidates": [c.ticker for c in candidates],
         "candidates_detail": [
             {
-                "ticker": c.ticker, "combined_rank": c.combined_rank,
-                "earnings_yield": c.earnings_yield, "return_on_capital": c.return_on_capital,
-                "ebit": c.ebit, "enterprise_value": c.enterprise_value,
+                "ticker": c.ticker,
+                "combined_rank": c.combined_rank,
+                "earnings_yield": c.earnings_yield,
+                "return_on_capital": c.return_on_capital,
+                "ebit": c.ebit,
+                "enterprise_value": c.enterprise_value,
             }
             for c in candidates
         ],

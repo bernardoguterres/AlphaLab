@@ -10,6 +10,16 @@ from ..utils.logger import setup_logger
 
 logger = setup_logger("alphalab.metrics")
 
+# Historical default / fallback only - do NOT use this directly for
+# annualization. Every annualized metric below infers the actual number of
+# return observations per year from the equity curve's own date spacing
+# (see _infer_periods_per_year), because this class is used for daily AND
+# weekly bar strategies (e.g. GreenblattWeekly) alike. Hardcoding 252 here
+# previously caused weekly-bar CAGR/Sharpe to be wildly overstated - a
+# 3-year weekly backtest (~157 bars) was annualized as if it spanned
+# 157/252 = 0.62 years instead of ~3.02 years. Fixed 2026-07-12; see
+# docs/STRATEGY_RESEARCH_PLAN.md and the AlphaLab CLAUDE.md changelog for
+# the discovery and its implications for previously-reported weekly results.
 TRADING_DAYS = 252
 
 
@@ -48,12 +58,14 @@ class PerformanceMetrics:
         eq = eq.set_index("date").sort_index()
         eq["return"] = eq["value"].pct_change()
 
+        periods_per_year = self._infer_periods_per_year(eq.index)
+
         result = {
-            "returns": self._return_metrics(eq),
-            "risk": self._risk_metrics(eq),
+            "returns": self._return_metrics(eq, periods_per_year),
+            "risk": self._risk_metrics(eq, periods_per_year),
             "drawdown": self._drawdown_metrics(eq),
             "trades": self._trade_metrics(trades),
-            "consistency": self._consistency_metrics(eq),
+            "consistency": self._consistency_metrics(eq, periods_per_year),
         }
 
         if benchmark_curve:
@@ -61,22 +73,44 @@ class PerformanceMetrics:
             bm["date"] = pd.to_datetime(bm["date"])
             bm = bm.set_index("date").sort_index()
             bm["return"] = bm["value"].pct_change()
-            result["vs_benchmark"] = self._benchmark_metrics(eq, bm)
+            result["vs_benchmark"] = self._benchmark_metrics(eq, bm, periods_per_year)
         else:
             result["vs_benchmark"] = {}
 
         return result
 
+    @staticmethod
+    def _infer_periods_per_year(index: pd.DatetimeIndex) -> float:
+        """Infer return observations per year from the equity curve's own
+        date spacing, instead of assuming daily bars.
+
+        Uses the median gap between consecutive timestamps (robust to a few
+        irregular gaps, e.g. holidays) and snaps to the nearest common
+        trading calendar (daily=252, weekly=52, monthly=12, quarterly=4,
+        annual=1) within 20% tolerance; falls back to a raw 365.25/gap
+        estimate for anything else.
+        """
+        if len(index) < 2:
+            return TRADING_DAYS
+        median_days = index.to_series().diff().dropna().dt.days.median()
+        if not median_days or median_days <= 0:
+            return TRADING_DAYS
+        calendars = {1: TRADING_DAYS, 7: 52, 30: 12, 91: 4, 365: 1}
+        for cal_days, periods in calendars.items():
+            if abs(median_days - cal_days) / cal_days < 0.2:
+                return periods
+        return 365.25 / median_days
+
     # ------------------------------------------------------------------
     # Return metrics
     # ------------------------------------------------------------------
 
-    def _return_metrics(self, eq: pd.DataFrame) -> dict:
+    def _return_metrics(self, eq: pd.DataFrame, periods_per_year: float) -> dict:
         total = (
             eq["value"].iloc[-1] / eq["value"].iloc[0] - 1 if eq["value"].iloc[0] else 0
         )
-        n_days = len(eq)
-        years = max(n_days / TRADING_DAYS, 1 / TRADING_DAYS)
+        n_periods = len(eq)
+        years = max(n_periods / periods_per_year, 1 / periods_per_year)
         cagr = (1 + total) ** (1 / years) - 1 if total > -1 else -1
 
         rets = eq["return"].dropna()
@@ -100,13 +134,13 @@ class PerformanceMetrics:
     # Risk metrics
     # ------------------------------------------------------------------
 
-    def _risk_metrics(self, eq: pd.DataFrame) -> dict:
+    def _risk_metrics(self, eq: pd.DataFrame, periods_per_year: float) -> dict:
         rets = eq["return"].dropna()
         if len(rets) < 2:
             return {"sharpe": 0, "sortino": 0, "calmar": 0}
 
-        vol = float(rets.std()) * np.sqrt(TRADING_DAYS)
-        annual_ret = float(rets.mean()) * TRADING_DAYS
+        vol = float(rets.std()) * np.sqrt(periods_per_year)
+        annual_ret = float(rets.mean()) * periods_per_year
         excess = annual_ret - self.rf
 
         sharpe = excess / vol if vol > 0 else 0.0
@@ -114,7 +148,9 @@ class PerformanceMetrics:
         # Sortino: downside deviation only
         downside = rets[rets < 0]
         down_std = (
-            float(downside.std()) * np.sqrt(TRADING_DAYS) if len(downside) > 1 else 0
+            float(downside.std()) * np.sqrt(periods_per_year)
+            if len(downside) > 1
+            else 0
         )
         sortino = excess / down_std if down_std > 0 else 0.0
 
@@ -250,7 +286,7 @@ class PerformanceMetrics:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _consistency_metrics(eq: pd.DataFrame) -> dict:
+    def _consistency_metrics(eq: pd.DataFrame, periods_per_year: float) -> dict:
         monthly = eq["value"].resample("ME").last().pct_change().dropna()
         yearly = eq["value"].resample("YE").last().pct_change().dropna()
 
@@ -265,9 +301,12 @@ class PerformanceMetrics:
         win_streaks = [len(g) for _, g in streaks if g.iloc[0] == 1]
         loss_streaks = [len(g) for _, g in streaks if g.iloc[0] == 0]
 
-        # Rolling Sharpe (252-day)
-        rolling_ret = eq["return"].rolling(TRADING_DAYS).mean() * TRADING_DAYS
-        rolling_vol = eq["return"].rolling(TRADING_DAYS).std() * np.sqrt(TRADING_DAYS)
+        # Rolling Sharpe (trailing 1 year, in bar-count terms for this
+        # equity curve's own frequency - e.g. a 52-bar window on weekly
+        # data, a 252-bar window on daily data).
+        window = max(int(round(periods_per_year)), 2)
+        rolling_ret = eq["return"].rolling(window).mean() * periods_per_year
+        rolling_vol = eq["return"].rolling(window).std() * np.sqrt(periods_per_year)
         rolling_sharpe = (rolling_ret / rolling_vol.replace(0, np.nan)).dropna()
 
         # Ulcer Index
@@ -300,7 +339,9 @@ class PerformanceMetrics:
     # Benchmark comparison
     # ------------------------------------------------------------------
 
-    def _benchmark_metrics(self, eq: pd.DataFrame, bm: pd.DataFrame) -> dict:
+    def _benchmark_metrics(
+        self, eq: pd.DataFrame, bm: pd.DataFrame, periods_per_year: float
+    ) -> dict:
         # Align dates
         common = eq.index.intersection(bm.index)
         if len(common) < 20:
@@ -320,15 +361,15 @@ class PerformanceMetrics:
         beta = cov[0, 1] / cov[1, 1] if cov[1, 1] != 0 else 0
         alpha_annual = (
             float(strat_ret.mean()) - beta * float(bench_ret.mean())
-        ) * TRADING_DAYS
+        ) * periods_per_year
 
         # Tracking error
         active_ret = strat_ret - bench_ret
-        tracking_error = float(active_ret.std()) * np.sqrt(TRADING_DAYS)
+        tracking_error = float(active_ret.std()) * np.sqrt(periods_per_year)
 
         # Information ratio
         ir = (
-            float(active_ret.mean()) * TRADING_DAYS / tracking_error
+            float(active_ret.mean()) * periods_per_year / tracking_error
             if tracking_error > 0
             else 0
         )
