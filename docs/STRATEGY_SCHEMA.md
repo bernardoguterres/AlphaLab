@@ -185,7 +185,9 @@ All required fields in `metadata.performance`:
 
 ## Per-Strategy Parameters
 
-All 8 strategies below are implemented and tested in both AlphaLab (backtesting) and AlphaLive (live signal generation, verified for parity). Parameters are passed through as an untyped dict (see note in [Adding New Strategies](#adding-new-strategies)) - each strategy's own `validate_params()` applies its own defaults via `setdefault()`, which is what's listed below (pulled directly from the implementation, not aspirational ranges).
+All 8 strategies below are implemented and tested in both AlphaLab (backtesting) and AlphaLive (live signal generation, verified for parity). AlphaLab's internal strategy classes take their own untyped params dict (see note in [Adding New Strategies](#adding-new-strategies)), with defaults applied via `setdefault()` in each strategy's `validate_params()`. **The JSON shown in this section is the exported/wire format** - what actually appears in `strategy.parameters` after `POST /api/strategies/export`, which is not always identical to AlphaLab's internal field names. Every `parameters` block also carries a `strategy_type` field matching `strategy.name` (a discriminator added 2026-07-14 - see [Versioning Policy](#versioning-policy)); omitted from the examples below for brevity but present in every real export.
+
+**Export field-name translation (2026-07-14):** four strategies have internal AlphaLab field names that differ from what AlphaLive actually reads; `_build_export_json`'s export-mapping layer (`backend/src/api/helpers.py`) renames them automatically - you never need to do this by hand when exporting through the API, but if you hand-craft a config JSON for AlphaLive, use the exported names below, not AlphaLab's internal ones (`short_window`/`long_window`, `volume_surge_pct`/`volume_avg_period`, `bb_period`/`bb_std_dev`, greenblatt's own `trailing_stop_pct`).
 
 ### 1. MA Crossover (`ma_crossover`)
 
@@ -193,8 +195,8 @@ Classic moving average crossover with volume confirmation.
 
 ```json
 {
-  "short_window": 50,
-  "long_window": 200,
+  "fast_period": 50,
+  "slow_period": 200,
   "volume_confirmation": true,
   "volume_avg_period": 20,
   "min_separation_pct": 0.0,
@@ -204,8 +206,8 @@ Classic moving average crossover with volume confirmation.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `short_window` | 50 | Short MA period (bars); must be < `long_window` |
-| `long_window` | 200 | Long MA period (bars) |
+| `fast_period` | 50 | Short MA period (bars); must be < `slow_period`. AlphaLab's internal class calls this `short_window` - renamed at export to match AlphaLive's `signal_engine.py`. |
+| `slow_period` | 200 | Long MA period (bars). Internal name: `long_window`. |
 | `volume_confirmation` | true | Require volume > avg for signal |
 | `volume_avg_period` | 20 | Volume moving average period |
 | `min_separation_pct` | 0.0 | Min % separation before cross (anti-whipsaw) |
@@ -252,8 +254,8 @@ Breakout strategy with trailing stop and volume surge confirmation.
 ```json
 {
   "lookback": 20,
-  "volume_surge_pct": 150,
-  "volume_avg_period": 20,
+  "surge_pct": 1.5,
+  "volume_ma_period": 20,
   "rsi_min": 50,
   "stop_loss_atr_mult": 2.0,
   "trailing_stop_atr_mult": 3.0,
@@ -264,8 +266,8 @@ Breakout strategy with trailing stop and volume surge confirmation.
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `lookback` | 20 | Breakout lookback period (bars) |
-| `volume_surge_pct` | 150 | Required volume surge (% of avg) |
-| `volume_avg_period` | 20 | Volume moving average period |
+| `surge_pct` | 1.5 | Required volume surge, as a ratio of avg volume (e.g. 1.5 = 1.5x). AlphaLab's internal class calls this `volume_surge_pct` and expresses it as a percentage (150 = 150%) - the export-mapping layer divides by 100 and renames it. |
+| `volume_ma_period` | 20 | Volume moving average period. Internal name: `volume_avg_period`. |
 | `rsi_min` | 50 | Min RSI for breakout confirmation |
 | `stop_loss_atr_mult` | 2.0 | Initial stop-loss (x ATR) |
 | `trailing_stop_atr_mult` | 3.0 | Trailing stop distance (x ATR) |
@@ -279,8 +281,8 @@ Trades N-consecutive-close breakouts above/below Bollinger Bands with optional v
 
 ```json
 {
-  "bb_period": 20,
-  "bb_std_dev": 2.0,
+  "period": 20,
+  "std_dev": 2.0,
   "confirmation_bars": 2,
   "volume_filter": true,
   "volume_threshold": 1.5,
@@ -290,8 +292,8 @@ Trades N-consecutive-close breakouts above/below Bollinger Bands with optional v
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `bb_period` | 20 | Bollinger Band period |
-| `bb_std_dev` | 2.0 | Standard deviations for bands |
+| `period` | 20 | Bollinger Band period. AlphaLab's internal class calls this `bb_period` - renamed at export to match AlphaLive's `signal_engine.py`/`indicators.py`. |
+| `std_dev` | 2.0 | Standard deviations for bands. Internal name: `bb_std_dev`. |
 | `confirmation_bars` | 2 | Consecutive closes above/below band required to confirm breakout |
 | `volume_filter` | true | Require volume confirmation |
 | `volume_threshold` | 1.5 | Volume must exceed this multiple of its rolling average |
@@ -392,7 +394,7 @@ Value-factor strategy on weekly bars: Greenblatt Magic Formula screening for can
   "rsi_oversold": 35,
   "rsi_overbought": 65,
   "min_hold_bars": 52,
-  "trailing_stop_pct": 0.20,
+  "trailing_stop_fraction": 0.20,
   "exit_rsi_overbought": false,
   "exit_sma_cross": false
 }
@@ -406,7 +408,7 @@ Value-factor strategy on weekly bars: Greenblatt Magic Formula screening for can
 | `rsi_oversold` | 35 | Weekly RSI entry threshold |
 | `rsi_overbought` | 65 | Weekly RSI exit threshold (only used if `exit_rsi_overbought=true`) |
 | `min_hold_bars` | 52 | Minimum hold in weeks (approx. 1 year) - bypassed only by the trailing stop |
-| `trailing_stop_pct` | 0.20 | Trailing stop distance from peak price (20%) - the default, always-active exit |
+| `trailing_stop_fraction` | 0.20 | Trailing stop distance from peak price, as a 0-1 fraction (0.20 = 20%) - the default, always-active exit. Deliberately not named `trailing_stop_pct` (2026-07-14 rename) - that name is `risk.trailing_stop_pct` below, an absolute percentage (e.g. 3.0 = 3%). Same name with incompatible units in the same document was a real ambiguity bug. |
 | `exit_rsi_overbought` | false | Opt-in early exit on RSI overbought - disabled by default |
 | `exit_sma_cross` | false | Opt-in early exit on SMA death-cross - disabled by default |
 
@@ -495,8 +497,9 @@ The `safety_limits` block provides **per-strategy customization** of stopping co
   "strategy": {
     "name": "ma_crossover",
     "parameters": {
-      "short_window": 50,
-      "long_window": 200,
+      "strategy_type": "ma_crossover",
+      "fast_period": 50,
+      "slow_period": 200,
       "volume_confirmation": true,
       "cooldown_days": 5
     },
