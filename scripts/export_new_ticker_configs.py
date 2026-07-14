@@ -35,6 +35,35 @@ from src.strategies.implementations.rsi_mean_reversion import RSIMeanReversion
 
 ALPHALIVE_CONFIGS = SCRIPT_DIR.parent / "AlphaLive" / "configs" / "production"
 
+
+def _internal_params(strategy_name: str, params: dict) -> dict:
+    """Translate export-canonical parameter names (what ends up in the
+    exported JSON's strategy.parameters, and what AlphaLive reads) to the
+    names the AlphaLab strategy CLASS itself expects internally, for use
+    only when actually running the backtest below.
+
+    Audit bug 3.7: this script previously instantiated
+    MovingAverageCrossover(job["params"]) directly with job["params"] =
+    {"fast_period": 20, "slow_period": 50} - but MovingAverageCrossover's
+    own validate_params() only recognizes short_window/long_window
+    (setdefault() silently ignored the unrecognized keys and fell back to
+    its own 50/200 defaults). The backtest that produced the shipped
+    GLD/IWM/XLK performance numbers therefore ran a 50/200 crossover, not
+    the intended 20/50 one the exported JSON's parameters claim. job["params"]
+    itself is left untouched by this function - it's already the correct
+    AlphaLive-facing name set (see backend/strategy_schema.py's
+    MACrossoverParams, which documents the same translation done in the
+    other direction by the Flask API's export endpoint).
+    """
+    if strategy_name == "ma_crossover":
+        p = dict(params)
+        if "fast_period" in p:
+            p["short_window"] = p.pop("fast_period")
+        if "slow_period" in p:
+            p["long_window"] = p.pop("slow_period")
+        return p
+    return dict(params)
+
 BACKTEST_START = "2015-01-01"
 BACKTEST_END   = "2024-12-31"
 INITIAL_CAPITAL = 100_000.0
@@ -150,7 +179,9 @@ def main():
         name   = job["strategy_name"]
         print(f"\n  {name} / {ticker}")
 
-        strategy = job["strategy_class"](job["params"].copy())
+        strategy = job["strategy_class"](
+            _internal_params(job["strategy_name"], job["params"])
+        )
         bt = engine.run_backtest(strategy, ticker_data[ticker], initial_capital=INITIAL_CAPITAL)
 
         bm_curve = bt.benchmark.get("buy_and_hold_equity_curve") if bt.benchmark else None
@@ -183,7 +214,7 @@ def main():
         print(f"{filename} (Sharpe={perf['sharpe_ratio']}, "
               f"Return={perf['total_return_pct']}%, Trades={perf['total_trades']})")
 
-print(f"\n {len(exports)} configs exported to {ALPHALIVE_CONFIGS}")
+    print(f"\n {len(exports)} configs exported to {ALPHALIVE_CONFIGS}")
 
 
 if __name__ == "__main__":

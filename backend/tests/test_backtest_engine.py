@@ -93,8 +93,88 @@ class TestPortfolio:
         p._check_drawdown_halt(val)
         assert p.halted
 
+    def test_drawdown_halt_still_allows_closing_position(self):
+        """Regression test for audit bug 3.2: a drawdown halt used to
+        reject ALL orders, including SELLs - once triggered, an open
+        position was frozen for the rest of the backtest with no way to
+        ever close it. A halt now only blocks new entries (BUY); a SELL
+        must still go through to close/reduce an existing position."""
+        p = Portfolio(
+            initial_capital=10_000,
+            max_drawdown_pct=5,
+            slippage_pct=0,
+            commission_rate=0,
+            cash_reserve_pct=0,
+            max_position_pct=100,
+        )
+        buy = Order(ticker="AAPL", side=OrderSide.BUY, shares=95)
+        p.execute_order(buy, {"AAPL": 100.0})
+        p.record_value(None, {"AAPL": 100.0})
+        p.record_value(None, {"AAPL": 90.0})
+        p._check_drawdown_halt(p.get_portfolio_value({"AAPL": 90.0}))
+        assert p.halted
+
+        # A new BUY must still be rejected while halted.
+        another_buy = Order(ticker="AAPL", side=OrderSide.BUY, shares=1)
+        rejected = p.execute_order(another_buy, {"AAPL": 90.0})
+        assert rejected.status == OrderStatus.REJECTED
+
+        # But closing the existing position via SELL must succeed.
+        sell = Order(ticker="AAPL", side=OrderSide.SELL, shares=95)
+        result = p.execute_order(sell, {"AAPL": 90.0})
+        assert result.status == OrderStatus.FILLED
+        assert p.get_position("AAPL") == 0
+
 
 class TestBacktestEngine:
+    def test_drawdown_halt_does_not_block_exit_signal_in_simulation_loop(self):
+        """Engine-level regression test for audit bug 3.2: `_simulate`'s
+        pending-signal execution used to be gated behind
+        `not portfolio.halted`, so once a drawdown halt tripped, a
+        strategy's own SELL signal was silently dropped before it ever
+        reached execute_order - the position sat frozen at mark-to-market
+        for the rest of the backtest. Reproduces the audit's own scenario:
+        a crash trips the drawdown halt, then a subsequent SELL signal
+        must still close the position.
+        """
+        n = 20
+        dates = pd.bdate_range("2021-01-01", periods=n)
+        # Flat, then a crash big enough to trip the default 10% drawdown
+        # halt, then flat again.
+        close = np.concatenate(
+            [np.full(5, 100.0), np.linspace(100, 10, 5), np.full(n - 10, 10.0)]
+        )
+        data = pd.DataFrame(
+            {
+                "Open": close,
+                "High": close * 1.001,
+                "Low": close * 0.999,
+                "Close": close,
+                "Volume": np.full(n, 1_000_000),
+            },
+            index=dates,
+        )
+        data.attrs["ticker"] = "TEST"
+
+        signals = pd.DataFrame(index=data.index)
+        signals["signal"] = 0
+        signals["reason"] = ""
+        signals.loc[dates[1], "signal"] = 1  # BUY, executes at dates[2]'s open
+        signals.loc[dates[1], "reason"] = "test buy"
+        signals.loc[dates[12], "signal"] = -1  # SELL, well after the crash/halt
+        signals.loc[dates[12], "reason"] = "test sell"
+
+        engine = BacktestEngine()
+        portfolio, trades = engine._simulate(
+            data, signals, capital=10_000, sizing="equal_weight"
+        )
+
+        assert portfolio.halted, "test setup should have tripped the drawdown halt"
+        sell_trades = [t for t in trades if t["side"] == "sell"]
+        assert len(sell_trades) == 1
+        assert sell_trades[0]["status"] == "filled"
+        assert portfolio.get_position("TEST") == 0
+
     def test_basic_backtest_runs(self):
         data = _make_featured_data()
         strategy = MovingAverageCrossover({"short_window": 20, "long_window": 50})

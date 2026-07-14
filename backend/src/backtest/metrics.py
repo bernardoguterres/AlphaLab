@@ -1,5 +1,6 @@
 """Performance metrics calculator - industry-standard backtesting analytics."""
 
+import math
 from typing import Optional
 
 import numpy as np
@@ -9,6 +10,41 @@ from scipy import stats as scipy_stats
 from ..utils.logger import setup_logger
 
 logger = setup_logger("alphalab.metrics")
+
+# Finite ceiling substituted for +/-Infinity (audit bug 3.5). Matches the
+# cap scripts/export_greenblatt_configs.py already applied to profit_factor
+# alone, inconsistently - now applied uniformly to every metric, everywhere
+# they're computed (this module is the single source both Flask endpoints
+# and both standalone export scripts read metrics from).
+_INF_CAP = 999.0
+
+
+def _sanitize_for_json(obj):
+    """Recursively replace NaN with None and +/-Infinity with a large
+    finite sentinel.
+
+    NaN and Infinity are not valid JSON per RFC 8259, even though Python's
+    json module emits the literal tokens NaN/Infinity/-Infinity by default
+    and neither Flask's jsonify nor json.dumps reject them - they throw on
+    strict client-side JSON.parse instead. Thin/early equity curves produce
+    NaN for mean_daily_return/skewness/etc. (too few return observations);
+    an all-winning-trade backtest produces profit_factor=Infinity (zero
+    gross loss). Applied once here, at calculate_all()'s return boundary,
+    so every metric group is covered uniformly rather than patching each
+    NaN-prone field individually.
+    """
+    if isinstance(obj, float):
+        if math.isnan(obj):
+            return None
+        if math.isinf(obj):
+            return _INF_CAP if obj > 0 else -_INF_CAP
+        return obj
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_for_json(v) for v in obj]
+    return obj
+
 
 # Historical default / fallback only - do NOT use this directly for
 # annualization. Every annualized metric below infers the actual number of
@@ -21,6 +57,17 @@ logger = setup_logger("alphalab.metrics")
 # docs/STRATEGY_RESEARCH_PLAN.md and the AlphaLab CLAUDE.md changelog for
 # the discovery and its implications for previously-reported weekly results.
 TRADING_DAYS = 252
+
+# Minimum denominator (as a fraction, e.g. 0.0001 = 0.01%) below which
+# volatility/drawdown is treated as "no meaningful signal to divide by"
+# rather than computing a ratio (audit bug 3.6). A near-zero-but-nonzero
+# volatility (e.g. a backtest that's flat cash for all but a couple of
+# bars) previously passed the old `vol > 0` guard and produced a Sharpe
+# ratio of ~1.2e14 on a real reproduction - meaningless at any magnitude,
+# not just "large". Below this floor there genuinely isn't enough signal
+# to compute a ratio; 0.0 (the same fallback already used for the exact-
+# zero case) is the honest answer, not an astronomically large number.
+_MIN_RATIO_DENOMINATOR = 1e-4
 
 
 class PerformanceMetrics:
@@ -77,7 +124,7 @@ class PerformanceMetrics:
         else:
             result["vs_benchmark"] = {}
 
-        return result
+        return _sanitize_for_json(result)
 
     @staticmethod
     def _infer_periods_per_year(index: pd.DatetimeIndex) -> float:
@@ -143,7 +190,11 @@ class PerformanceMetrics:
         annual_ret = float(rets.mean()) * periods_per_year
         excess = annual_ret - self.rf
 
-        sharpe = excess / vol if vol > 0 else 0.0
+        # audit bug 3.6: `vol > 0` alone let a near-zero-but-nonzero
+        # volatility through, blowing Sharpe up to a meaningless magnitude
+        # (reproduced: ~1.2e14 on a synthetic near-constant-return series)
+        # instead of failing safely. See _MIN_RATIO_DENOMINATOR above.
+        sharpe = excess / vol if vol > _MIN_RATIO_DENOMINATOR else 0.0
 
         # Sortino: downside deviation only
         downside = rets[rets < 0]
@@ -152,12 +203,14 @@ class PerformanceMetrics:
             if len(downside) > 1
             else 0
         )
-        sortino = excess / down_std if down_std > 0 else 0.0
+        sortino = excess / down_std if down_std > _MIN_RATIO_DENOMINATOR else 0.0
 
         # Calmar
         dd_info = self._compute_drawdown(eq)
         max_dd = dd_info["max_drawdown_pct"] / 100
-        calmar = annual_ret / abs(max_dd) if max_dd != 0 else 0.0
+        calmar = (
+            annual_ret / abs(max_dd) if abs(max_dd) > _MIN_RATIO_DENOMINATOR else 0.0
+        )
 
         # VaR and CVaR
         var_95 = float(rets.quantile(0.05)) * 100

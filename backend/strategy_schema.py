@@ -74,6 +74,40 @@ class RSIMeanReversionParams(BaseModel):
         return self
 
 
+class RSISimpleParams(BaseModel):
+    """RSI Simple strategy parameters.
+
+    Ultra-simple RSI mean reversion (no BB/ADX confirmation, no state
+    machine) - field names match the internal RSISimple class exactly
+    (no export-mapping translation needed, unlike ma_crossover/
+    momentum_breakout/bollinger_breakout).
+
+    Audit bug 3.8: this strategy was fully implemented and tested but not
+    registered here, in STRATEGY_MAP, or in docs/STRATEGY_SCHEMA.md -
+    unreachable through the real export pipeline despite its own docstring
+    claiming "EXACT PARITY with AlphaLive". Registered 2026-07-14 as its
+    own distinct, reachable strategy (not a replacement for
+    rsi_mean_reversion). Note: AlphaLive does not currently have a
+    registered "rsi_simple" strategy name of its own - exporting this to
+    AlphaLive today would be rejected as an unknown strategy. Whether
+    AlphaLive's own rsi_mean_reversion implementation should instead be
+    backed by this class (its params already match what AlphaLive's
+    signal_engine.py actually reads) is a separate, cross-repo parity
+    decision, out of scope for this AlphaLab-only fix.
+    """
+
+    strategy_type: Literal["rsi_simple"] = "rsi_simple"
+    period: int = Field(default=14, ge=2, le=100, description="RSI calculation period")
+    oversold: int = Field(default=40, ge=1, le=49, description="RSI buy threshold")
+    overbought: int = Field(default=60, ge=51, le=99, description="RSI sell threshold")
+
+    @model_validator(mode="after")
+    def validate_rsi_thresholds(self):
+        if self.oversold >= self.overbought:
+            raise ValueError("oversold must be < overbought")
+        return self
+
+
 class MomentumBreakoutParams(BaseModel):
     """Momentum Breakout strategy parameters.
 
@@ -250,6 +284,7 @@ class TrendAdaptiveRSIParams(BaseModel):
 StrategyName = Literal[
     "ma_crossover",
     "rsi_mean_reversion",
+    "rsi_simple",
     "momentum_breakout",
     "bollinger_breakout",
     "vwap_reversion",
@@ -262,6 +297,7 @@ StrategyParamsUnion = Annotated[
     Union[
         MACrossoverParams,
         RSIMeanReversionParams,
+        RSISimpleParams,
         MomentumBreakoutParams,
         BollingerBreakoutParams,
         VWAPReversionParams,

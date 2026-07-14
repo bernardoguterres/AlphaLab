@@ -478,7 +478,7 @@ export default function Backtest() {
               <MetricCard label="CAGR" value={formatPercent(currentResult.metrics.returns.cagr)} colorClass={pnlColor(currentResult.metrics.returns.cagr)} />
               <MetricCard label="Sharpe Ratio" value={formatNumber(currentResult.metrics.risk.sharpe_ratio)} icon={<Target className="h-4 w-4" />} />
               <MetricCard label="Max Drawdown" value={formatPercent(currentResult.metrics.drawdown.max_drawdown)} colorClass="text-loss" />
-              <MetricCard label="Win Rate" value={formatPercent(currentResult.metrics.trades.win_rate)} icon={<Percent className="h-4 w-4" />} />
+              <MetricCard label="Win Rate" value={formatPercent(currentResult.metrics.trades.win_rate * 100)} icon={<Percent className="h-4 w-4" />} />
               <MetricCard label="Total Trades" value={currentResult.total_trades.toString()} />
             </div>
 
@@ -523,12 +523,20 @@ export default function Backtest() {
             {currentResult.monte_carlo && (
               <div className="card-elevated p-4">
                 <h3 className="text-sm font-semibold mb-3">Monte Carlo Simulation</h3>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Distribution of final portfolio value across {currentResult.monte_carlo.runs} randomized runs.
+                </p>
                 <div className="grid grid-cols-5 gap-3">
-                  <MetricCard label="5th Percentile" value={formatPercent(currentResult.monte_carlo.percentile_5)} colorClass="text-loss" className="!p-3" />
-                  <MetricCard label="25th Percentile" value={formatPercent(currentResult.monte_carlo.percentile_25)} className="!p-3" />
-                  <MetricCard label="Median" value={formatPercent(currentResult.monte_carlo.median)} className="!p-3" />
-                  <MetricCard label="75th Percentile" value={formatPercent(currentResult.monte_carlo.percentile_75)} className="!p-3" />
-                  <MetricCard label="95th Percentile" value={formatPercent(currentResult.monte_carlo.percentile_95)} colorClass="text-gain" className="!p-3" />
+                  <MetricCard label="5th Percentile" value={formatCurrency(currentResult.monte_carlo.percentile_5)} colorClass="text-loss" className="!p-3" />
+                  <MetricCard label="Min" value={formatCurrency(currentResult.monte_carlo.min_final_value)} colorClass="text-loss" className="!p-3" />
+                  <MetricCard label="Median" value={formatCurrency(currentResult.monte_carlo.median_final_value)} className="!p-3" />
+                  <MetricCard label="Max" value={formatCurrency(currentResult.monte_carlo.max_final_value)} colorClass="text-gain" className="!p-3" />
+                  <MetricCard label="95th Percentile" value={formatCurrency(currentResult.monte_carlo.percentile_95)} colorClass="text-gain" className="!p-3" />
+                </div>
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  <MetricCard label="Mean Final Value" value={formatCurrency(currentResult.monte_carlo.mean_final_value)} className="!p-3" />
+                  <MetricCard label="Std Dev" value={formatCurrency(currentResult.monte_carlo.std_final_value)} className="!p-3" />
+                  <MetricCard label="Probability of Profit" value={formatPercent(currentResult.monte_carlo.prob_profit * 100)} className="!p-3" />
                 </div>
               </div>
             )}

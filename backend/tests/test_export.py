@@ -142,7 +142,11 @@ class TestStrategyExport:
             (
                 "ma_crossover",
                 {"short_window": 50, "long_window": 200},
-                {"fast_period": 50, "slow_period": 200, "strategy_type": "ma_crossover"},
+                {
+                    "fast_period": 50,
+                    "slow_period": 200,
+                    "strategy_type": "ma_crossover",
+                },
             ),
             (
                 "rsi_mean_reversion",
@@ -157,7 +161,11 @@ class TestStrategyExport:
             (
                 "momentum_breakout",
                 {"lookback": 20, "volume_surge_pct": 150},
-                {"lookback": 20, "surge_pct": 1.5, "strategy_type": "momentum_breakout"},
+                {
+                    "lookback": 20,
+                    "surge_pct": 1.5,
+                    "strategy_type": "momentum_breakout",
+                },
             ),
         ]
 
@@ -326,7 +334,11 @@ class TestExportRegressionGroup1:
             "total_return_pct": 20.0,
             "total_trades": 15,
             "metrics": {
-                "risk": {"sharpe_ratio": 1.3, "sortino_ratio": 1.6, "calmar_ratio": 1.9},
+                "risk": {
+                    "sharpe_ratio": 1.3,
+                    "sortino_ratio": 1.6,
+                    "calmar_ratio": 1.9,
+                },
                 "drawdown": {"max_drawdown_pct": max_drawdown_pct},
                 "trades": {"win_rate": 0.58, "profit_factor": 1.6},
             },
@@ -357,7 +369,9 @@ class TestExportRegressionGroup1:
             config=config,
         )
 
-        assert export["metadata"]["performance"]["max_drawdown_pct"] == expected_drawdown
+        assert (
+            export["metadata"]["performance"]["max_drawdown_pct"] == expected_drawdown
+        )
         assert export["metadata"]["performance"]["max_drawdown_pct"] != 0.0
 
     def test_ma_crossover_params_translated_and_validate(self):
@@ -520,7 +534,11 @@ class TestExportRegressionGroup1:
             backtest_id="test_mismatch",
             ticker="AAPL",
             strategy_name="ma_crossover",
-            params={"short_window": 50, "long_window": 200, "volume_confirmation": True},
+            params={
+                "short_window": 50,
+                "long_window": 200,
+                "volume_confirmation": True,
+            },
             start_date="2020-01-01",
             end_date="2024-12-31",
             initial_capital=100000,
@@ -547,7 +565,11 @@ class TestExportRegressionGroup1:
             backtest_id="test_missing_tag",
             ticker="AAPL",
             strategy_name="ma_crossover",
-            params={"short_window": 50, "long_window": 200, "volume_confirmation": True},
+            params={
+                "short_window": 50,
+                "long_window": 200,
+                "volume_confirmation": True,
+            },
             start_date="2020-01-01",
             end_date="2024-12-31",
             initial_capital=100000,

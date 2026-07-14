@@ -139,6 +139,63 @@ class ParameterOptimizer:
             "walk_forward": False,
         }
 
+    def _is_better(self, score: float, best_score: float, target: str) -> bool:
+        """Comparator matching _extract_metric's convention: lower is
+        better for max_drawdown_pct (already returned as abs()), higher is
+        better for everything else."""
+        if target == "max_drawdown_pct":
+            return score < best_score
+        return score > best_score
+
+    def _grid_search_best(
+        self,
+        strategy_class,
+        data: pd.DataFrame,
+        param_names: list[str],
+        combinations: list[tuple],
+        initial_capital: float,
+        engine,
+        metrics_calc,
+        optimization_target: str,
+    ) -> dict | None:
+        """Run every combination against `data` and return the single
+        best-scoring one, or None if every combination failed.
+
+        This is the one place "which parameter combination wins on a given
+        dataset" is decided - used both for each walk-forward fold's
+        train-only selection and for the final full-data parameter choice
+        (see _walk_forward_optimize). It never touches held-out test data
+        itself; the caller controls what `data` is, which is what keeps
+        fold-level selection leakage-free.
+        """
+        best = None
+        for combo in combinations:
+            params = dict(zip(param_names, combo))
+            try:
+                strategy = strategy_class(params)
+                result = engine.run_backtest(
+                    strategy=strategy,
+                    data=data,
+                    initial_capital=initial_capital,
+                    start_date=None,
+                    end_date=None,
+                    position_sizing="equal_weight",
+                    monte_carlo_runs=0,
+                )
+                score = self._score_fold_result(
+                    result, metrics_calc, optimization_target
+                )
+            except Exception as e:
+                logger.debug("Grid search failed for %s: %s", params, e)
+                continue
+
+            if best is None or self._is_better(
+                score, best["score"], optimization_target
+            ):
+                best = {"params": params, "score": score}
+
+        return best
+
     def _walk_forward_optimize(
         self,
         strategy_class,
@@ -151,65 +208,129 @@ class ParameterOptimizer:
         optimization_target: str,
         n_folds: int,
     ) -> dict:
-        """Walk-forward optimization to prevent overfitting."""
-        # Create time-based folds
+        """True walk-forward optimization (audit bug 3.3 fix, 2026-07-14).
+
+        The previous implementation computed train_data per fold and never
+        used it - every parameter combination was scored directly against
+        every TEST fold, and best_params was whichever combo scored best on
+        test data. That is grid search on the test set wearing a
+        walk-forward label, and it overstates confidence in whatever
+        parameters happen to fit the test windows well.
+
+        Fixed methodology: for each fold, select the best-scoring
+        combination using ONLY that fold's train_data
+        (_grid_search_best), then evaluate ONLY that selected combination
+        on the fold's held-out test_data to get the fold's honest
+        out-of-sample score. Test-fold performance never influences which
+        combination is chosen for that fold.
+
+        Response shape change: `all_results` is now one entry PER FOLD, not
+        per parameter combination. Each fold can legitimately select a
+        different "best" combination (each fold trains on a different,
+        progressively larger window), so there is no longer a single
+        meaningful "this combo's average OOS score" table across folds -
+        only each fold's own winner ever touches that fold's test data.
+        `best_score` is the average of the folds' honest OOS scores (this
+        number will typically look worse than the old leaky version - that
+        is the fix working, not a regression).
+
+        `best_params` (the one parameter set actually returned for the
+        caller to apply) comes from a separate train-only selection over
+        the ENTIRE dataset - this never touches any held-out test split, so
+        it is not leakage, it's simply "what a train-only search recommends
+        given everything available." `final_backtest` reports that choice's
+        performance on the full dataset for reference only; it is an
+        in-sample figure, not additional out-of-sample validation evidence.
+        """
         folds = self._create_folds(data, n_folds)
+        if not folds:
+            raise ValueError("Not enough data to create walk-forward folds")
 
-        # For each parameter combination, test on all folds
-        combination_scores = []
+        fold_results = []
+        for fold_idx, (train_data, test_data) in enumerate(folds):
+            train_winner = self._grid_search_best(
+                strategy_class,
+                train_data,
+                param_names,
+                combinations,
+                initial_capital,
+                engine,
+                metrics_calc,
+                optimization_target,
+            )
+            if train_winner is None:
+                logger.warning(
+                    "Fold %d: no parameter combination succeeded on train_data",
+                    fold_idx,
+                )
+                continue
 
-        for combo in combinations:
-            params = dict(zip(param_names, combo))
-            fold_scores = []
+            oos_score = None
+            try:
+                strategy = strategy_class(train_winner["params"])
+                test_result = engine.run_backtest(
+                    strategy=strategy,
+                    data=test_data,
+                    initial_capital=initial_capital,
+                    start_date=None,
+                    end_date=None,
+                    position_sizing="equal_weight",
+                    monte_carlo_runs=0,
+                )
+                oos_score = self._score_fold_result(
+                    test_result, metrics_calc, optimization_target
+                )
+            except Exception as e:
+                logger.debug(
+                    "Fold %d: test evaluation failed for %s: %s",
+                    fold_idx,
+                    train_winner["params"],
+                    e,
+                )
 
-            for fold_idx, (train_data, test_data) in enumerate(folds):
-                try:
-                    # Optimize on training data
-                    strategy = strategy_class(params)
-
-                    # Test on out-of-sample data
-                    test_result = engine.run_backtest(
-                        strategy=strategy,
-                        data=test_data,
-                        initial_capital=initial_capital,
-                        start_date=None,
-                        end_date=None,
-                        position_sizing="equal_weight",
-                        monte_carlo_runs=0,
-                    )
-
-                    score = self._score_fold_result(
-                        test_result, metrics_calc, optimization_target
-                    )
-                    fold_scores.append(score)
-
-                except Exception as e:
-                    logger.debug("Fold %d failed for %s: %s", fold_idx, params, e)
-                    fold_scores.append(float("-inf"))
-
-            # Average out-of-sample score
-            avg_score = np.mean([s for s in fold_scores if s != float("-inf")])
-
-            combination_scores.append(
+            fold_results.append(
                 {
-                    "params": params,
-                    "avg_out_of_sample_score": avg_score,
-                    "fold_scores": fold_scores,
+                    "fold": fold_idx,
+                    "train_start": (
+                        str(train_data.index[0]) if len(train_data) else None
+                    ),
+                    "train_end": str(train_data.index[-1]) if len(train_data) else None,
+                    "test_start": str(test_data.index[0]) if len(test_data) else None,
+                    "test_end": str(test_data.index[-1]) if len(test_data) else None,
+                    "selected_params": train_winner["params"],
+                    "train_score": train_winner["score"],
+                    "avg_out_of_sample_score": oos_score,
                 }
             )
 
-        if not combination_scores:
-            raise ValueError("Walk-forward optimization failed for all parameters")
+        valid_oos_scores = [
+            f["avg_out_of_sample_score"]
+            for f in fold_results
+            if f["avg_out_of_sample_score"] is not None
+        ]
+        if not valid_oos_scores:
+            raise ValueError("Walk-forward optimization failed for all folds")
 
-        # Sort by average out-of-sample score
-        reverse = optimization_target != "max_drawdown_pct"
-        combination_scores.sort(
-            key=lambda x: x["avg_out_of_sample_score"], reverse=reverse
+        avg_oos_score = float(np.mean(valid_oos_scores))
+
+        # Final params: train-only selection over the ENTIRE dataset - see
+        # docstring above for why this is not leakage.
+        full_data_winner = self._grid_search_best(
+            strategy_class,
+            data,
+            param_names,
+            combinations,
+            initial_capital,
+            engine,
+            metrics_calc,
+            optimization_target,
         )
+        if full_data_winner is None:
+            raise ValueError(
+                "Walk-forward optimization failed to select final parameters"
+            )
+        best_params = full_data_winner["params"]
 
-        best_params = combination_scores[0]["params"]
-
-        # Run final backtest on full data with best params
         strategy = strategy_class(best_params)
         final_result = engine.run_backtest(
             strategy=strategy,
@@ -220,18 +341,17 @@ class ParameterOptimizer:
             position_sizing="equal_weight",
             monte_carlo_runs=0,
         )
-
         final_metrics = metrics_calc.calculate_all(
             final_result.equity_curve, final_result.trades
         )
 
         return {
             "best_params": best_params,
-            "best_score": combination_scores[0]["avg_out_of_sample_score"],
-            "all_results": combination_scores,
+            "best_score": avg_oos_score,
+            "all_results": fold_results,
             "optimization_target": optimization_target,
             "walk_forward": True,
-            "n_folds": n_folds,
+            "n_folds": len(fold_results),
             "final_backtest": {
                 "total_return_pct": final_result.total_return_pct,
                 "sharpe_ratio": final_metrics["risk"]["sharpe_ratio"],
