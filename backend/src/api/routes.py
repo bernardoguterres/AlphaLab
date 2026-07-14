@@ -14,7 +14,11 @@ from .blueprints.screener import screener_bp
 from .blueprints.settings_bp import settings_bp
 
 # Re-exported for backward compatibility (tests import these from routes)
-from .helpers import _build_export_json, _fetch_and_prepare  # noqa: F401
+from .helpers import (  # noqa: F401
+    _build_export_json,
+    _fetch_and_prepare,
+    _translate_params_for_export,
+)
 from ..data.fetcher import DataFetcher
 from ..utils.config import load_config
 from ..utils.logger import setup_logger

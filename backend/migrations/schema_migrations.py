@@ -220,8 +220,9 @@ def create_minimal_v1_0_config() -> Dict[str, Any]:
         "strategy": {
             "name": "ma_crossover",
             "parameters": {
-                "short_window": 50,
-                "long_window": 200,
+                "strategy_type": "ma_crossover",
+                "fast_period": 50,
+                "slow_period": 200,
                 "volume_confirmation": True,
                 "cooldown_days": 5,
             },

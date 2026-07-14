@@ -26,10 +26,18 @@ except ImportError:
 
 
 class MACrossoverParams(BaseModel):
-    """Moving Average Crossover strategy parameters."""
+    """Moving Average Crossover strategy parameters.
 
-    short_window: int = Field(ge=2, le=500, description="Short MA period")
-    long_window: int = Field(ge=3, le=500, description="Long MA period")
+    Field names here are the export contract with AlphaLive, which reads
+    fast_period/slow_period (alphalive/strategy/signal_engine.py). AlphaLab's
+    own internal MovingAverageCrossover class still uses short_window/
+    long_window (backend/src/strategies/implementations/moving_average_crossover.py)
+    - the rename happens only at the export-mapping layer (helpers.py).
+    """
+
+    strategy_type: Literal["ma_crossover"] = "ma_crossover"
+    fast_period: int = Field(ge=2, le=500, description="Short MA period")
+    slow_period: int = Field(ge=3, le=500, description="Long MA period")
     volume_confirmation: bool = Field(description="Require volume > avg")
     volume_avg_period: int = Field(default=20, ge=5, le=100, description="Volume MA period")
     min_separation_pct: float = Field(
@@ -39,14 +47,15 @@ class MACrossoverParams(BaseModel):
 
     @model_validator(mode="after")
     def validate_windows(self):
-        if self.short_window >= self.long_window:
-            raise ValueError("short_window must be < long_window")
+        if self.fast_period >= self.slow_period:
+            raise ValueError("fast_period must be < slow_period")
         return self
 
 
 class RSIMeanReversionParams(BaseModel):
     """RSI Mean Reversion strategy parameters."""
 
+    strategy_type: Literal["rsi_mean_reversion"] = "rsi_mean_reversion"
     rsi_period: int = Field(ge=2, le=100, description="RSI calculation period")
     oversold: int = Field(ge=1, le=49, description="RSI buy threshold")
     overbought: int = Field(ge=51, le=99, description="RSI sell threshold")
@@ -66,10 +75,20 @@ class RSIMeanReversionParams(BaseModel):
 
 
 class MomentumBreakoutParams(BaseModel):
-    """Momentum Breakout strategy parameters."""
+    """Momentum Breakout strategy parameters.
 
+    surge_pct/volume_ma_period are the AlphaLive export-contract names
+    (alphalive/strategy/signal_engine.py, indicators.py); AlphaLab's own
+    internal MomentumBreakout class uses volume_surge_pct (a percentage,
+    e.g. 150 = 150% of avg volume) and volume_avg_period - the export-mapping
+    layer (helpers.py) converts volume_surge_pct/100 -> surge_pct (a ratio,
+    e.g. 1.5x) and renames volume_avg_period -> volume_ma_period.
+    """
+
+    strategy_type: Literal["momentum_breakout"] = "momentum_breakout"
     lookback: int = Field(ge=5, le=200, description="Breakout lookback period")
-    volume_surge_pct: int = Field(ge=100, le=1000, description="Required volume surge (% of avg)")
+    surge_pct: float = Field(ge=1.0, le=10.0, description="Required volume surge (× avg)")
+    volume_ma_period: int = Field(default=20, ge=5, le=100, description="Volume MA period")
     rsi_min: int = Field(ge=30, le=80, description="Min RSI for confirmation")
     stop_loss_atr_mult: float = Field(ge=0.5, le=10.0, description="Initial stop-loss (× ATR)")
     trailing_stop_atr_mult: float = Field(
@@ -79,10 +98,17 @@ class MomentumBreakoutParams(BaseModel):
 
 
 class BollingerBreakoutParams(BaseModel):
-    """Bollinger Breakout strategy parameters."""
+    """Bollinger Breakout strategy parameters.
 
-    bb_period: int = Field(ge=5, le=100, description="Bollinger Band period")
-    bb_std_dev: float = Field(ge=0.5, le=4.0, description="BB standard deviations")
+    period/std_dev are the AlphaLive export-contract names
+    (alphalive/strategy/signal_engine.py, indicators.py); AlphaLab's own
+    internal BollingerBreakout class uses bb_period/bb_std_dev - the
+    export-mapping layer (helpers.py) renames them.
+    """
+
+    strategy_type: Literal["bollinger_breakout"] = "bollinger_breakout"
+    period: int = Field(ge=5, le=100, description="Bollinger Band period")
+    std_dev: float = Field(ge=0.5, le=4.0, description="BB standard deviations")
     confirmation_bars: int = Field(ge=1, le=5, description="Consecutive closes required")
     volume_filter: bool = Field(description="Enable volume confirmation")
     volume_threshold: float = Field(
@@ -94,6 +120,7 @@ class BollingerBreakoutParams(BaseModel):
 class VWAPReversionParams(BaseModel):
     """VWAP Reversion strategy parameters."""
 
+    strategy_type: Literal["vwap_reversion"] = "vwap_reversion"
     vwap_period: int = Field(ge=5, le=50, description="Rolling VWAP period")
     deviation_threshold: float = Field(ge=0.5, le=5.0, description="Deviation from VWAP (std dev)")
     rsi_period: int = Field(ge=5, le=30, description="RSI calculation period")
@@ -118,8 +145,17 @@ class GreenblattWeeklyParams(BaseModel):
 
     Default behaviour: hold for at least 52 weeks, exit only on a 20% trailing
     drawdown from peak. RSI/SMA exits are opt-in via the exit_* flags.
+
+    trailing_stop_fraction (a 0-1 fraction, e.g. 0.20 = 20% below peak) is
+    deliberately NOT named trailing_stop_pct - that name is reserved for
+    RiskConfig.trailing_stop_pct below, which is an absolute percentage
+    (e.g. 3.0 = 3%). Same field name, two different unit conventions in the
+    same document, was a real ambiguity bug - see AlphaLive's
+    execution/risk_manager.py (percentage, /100) vs strategy/signal_engine.py
+    (fraction, used raw) for the two consumers this was disambiguating.
     """
 
+    strategy_type: Literal["greenblatt_weekly"] = "greenblatt_weekly"
     fast_sma: int = Field(default=10, ge=2, le=50, description="Fast SMA period (weeks)")
     slow_sma: int = Field(default=50, ge=5, le=200, description="Slow SMA period (weeks)")
     rsi_period: int = Field(default=14, ge=2, le=50, description="RSI period (weeks)")
@@ -133,11 +169,11 @@ class GreenblattWeeklyParams(BaseModel):
     min_hold_bars: int = Field(
         default=52, ge=1, le=260, description="Minimum hold in bars (weeks). Default 52 ≈ 1 year."
     )
-    trailing_stop_pct: float = Field(
+    trailing_stop_fraction: float = Field(
         default=0.20,
         ge=0.05,
         le=0.50,
-        description="Exit when price drops this % below position peak (default 20%)",
+        description="Exit when price drops this fraction below position peak (default 0.20 = 20%)",
     )
     exit_rsi_overbought: bool = Field(
         default=False,
@@ -159,6 +195,7 @@ class GreenblattWeeklyParams(BaseModel):
 class BollingerRSIComboParams(BaseModel):
     """Bollinger Bands + RSI combination strategy parameters."""
 
+    strategy_type: Literal["bollinger_rsi_combo"] = "bollinger_rsi_combo"
     bb_period: int = Field(default=20, ge=5, le=100, description="Bollinger Bands period")
     bb_std: float = Field(
         default=2.0, ge=0.5, le=5.0, description="Bollinger Bands standard deviation multiplier"
@@ -182,6 +219,7 @@ class BollingerRSIComboParams(BaseModel):
 class TrendAdaptiveRSIParams(BaseModel):
     """Trend-adaptive RSI strategy parameters. Adjusts thresholds by market regime."""
 
+    strategy_type: Literal["trend_adaptive_rsi"] = "trend_adaptive_rsi"
     rsi_period: int = Field(default=14, ge=2, le=50, description="RSI period")
     trend_sma: int = Field(default=50, ge=10, le=200, description="SMA period for trend detection")
     trend_lookback: int = Field(
@@ -220,26 +258,48 @@ StrategyName = Literal[
     "trend_adaptive_rsi",
 ]
 
-StrategyParamsUnion = Union[
-    MACrossoverParams,
-    RSIMeanReversionParams,
-    MomentumBreakoutParams,
-    BollingerBreakoutParams,
-    VWAPReversionParams,
-    GreenblattWeeklyParams,
-    BollingerRSIComboParams,
-    TrendAdaptiveRSIParams,
+StrategyParamsUnion = Annotated[
+    Union[
+        MACrossoverParams,
+        RSIMeanReversionParams,
+        MomentumBreakoutParams,
+        BollingerBreakoutParams,
+        VWAPReversionParams,
+        GreenblattWeeklyParams,
+        BollingerRSIComboParams,
+        TrendAdaptiveRSIParams,
+    ],
+    Field(discriminator="strategy_type"),
 ]
 
 
 class StrategyConfig(BaseModel):
-    """Strategy configuration block."""
+    """Strategy configuration block.
+
+    parameters is a Pydantic discriminated union keyed on the strategy_type
+    field each *Params model carries - this is what prevents a valid config
+    for one strategy (e.g. bollinger_rsi_combo) from being silently re-typed
+    as another strategy's parameter model (e.g. GreenblattWeeklyParams) and
+    validated against the wrong field set. A strategy_type that doesn't match
+    any known strategy, or is missing, now raises a clear validation error
+    instead of Pydantic's old best-effort Union coercion picking a plausible
+    but wrong model.
+    """
 
     name: StrategyName = Field(description="Strategy identifier")
     parameters: StrategyParamsUnion = Field(description="Strategy-specific parameters")
     description: str | None = Field(
         default=None, max_length=500, description="Human-readable summary"
     )
+
+    @model_validator(mode="after")
+    def validate_name_matches_parameters(self):
+        if self.name != self.parameters.strategy_type:
+            raise ValueError(
+                f"strategy.name ({self.name!r}) does not match "
+                f"strategy.parameters.strategy_type ({self.parameters.strategy_type!r})"
+            )
+        return self
 
 
 # ============================================================================
@@ -259,7 +319,16 @@ class RiskConfig(BaseModel):
     max_open_positions: int = Field(ge=1, le=50, description="Max concurrent positions per ticker")
     portfolio_max_positions: int = Field(ge=1, le=100, description="Max total concurrent positions")
     trailing_stop_enabled: bool = Field(description="Enable trailing stop-loss")
-    trailing_stop_pct: float = Field(ge=0.0, le=50.0, description="Trailing stop distance (%)")
+    trailing_stop_pct: float = Field(
+        ge=0.0,
+        le=50.0,
+        description=(
+            "Trailing stop distance as an absolute percentage (e.g. 3.0 = 3%). "
+            "Not the same field as greenblatt_weekly's own "
+            "strategy.parameters.trailing_stop_fraction (a 0-1 fraction) - "
+            "deliberately different names to avoid the two being confused."
+        ),
+    )
     commission_per_trade: float = Field(
         ge=0.0, le=100.0, description="Broker commission per trade (USD)"
     )
@@ -398,8 +467,9 @@ class StrategyExportSchema(BaseModel):
                     "strategy": {
                         "name": "ma_crossover",
                         "parameters": {
-                            "short_window": 50,
-                            "long_window": 200,
+                            "strategy_type": "ma_crossover",
+                            "fast_period": 50,
+                            "slow_period": 200,
                             "volume_confirmation": True,
                             "cooldown_days": 5,
                         },
