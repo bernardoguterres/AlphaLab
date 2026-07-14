@@ -4,6 +4,7 @@ import type { StrategyType } from "@/types";
 export const STRATEGY_META: Record<StrategyType, { category: string; icon: LucideIcon; accent: string }> = {
   ma_crossover: { category: "Trend Following", icon: TrendingUp, accent: "text-primary" },
   rsi_mean_reversion: { category: "Mean Reversion", icon: RefreshCcw, accent: "text-lab-secondary" },
+  rsi_simple: { category: "Mean Reversion", icon: RefreshCcw, accent: "text-lab-secondary" },
   momentum_breakout: { category: "Momentum", icon: Zap, accent: "text-warning" },
   bollinger_breakout: { category: "Volatility Breakout", icon: Waves, accent: "text-gain" },
   vwap_reversion: { category: "Mean Reversion", icon: Target, accent: "text-lab-secondary" },

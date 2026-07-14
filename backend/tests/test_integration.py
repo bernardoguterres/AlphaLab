@@ -224,6 +224,39 @@ class TestCompareEndpoint:
         assert "ma_crossover" in data["data"]
         assert "rsi_mean_reversion" in data["data"]
 
+    @patch("src.data.fetcher.yf.download")
+    @patch("src.data.fetcher.yf.Ticker")
+    def test_compare_includes_equity_curve(self, mock_ticker, mock_dl, client):
+        """Regression test for audit bug 3.9: /api/compare previously
+        returned only {total_return_pct, metrics} per strategy, but
+        OverlayEquityChart.tsx and CorrelationMatrix.tsx unconditionally
+        call .equity_curve.map(...)/.equity_curve[i] on a field that didn't
+        exist in the response, crashing the Compare page on any real
+        multi-strategy comparison."""
+        mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
+        mock_dl.return_value = _mock_download(500)
+
+        resp = client.post(
+            "/api/compare",
+            json={
+                "ticker": "AAPL",
+                "strategies": ["ma_crossover", "rsi_mean_reversion"],
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()["data"]
+
+        for strat_name in ("ma_crossover", "rsi_mean_reversion"):
+            result = data[strat_name]
+            assert "equity_curve" in result
+            assert len(result["equity_curve"]) > 0
+            assert "date" in result["equity_curve"][0]
+            assert "value" in result["equity_curve"][0]
+            assert "benchmark" in result
+            assert "equity_curve" in result["benchmark"]
+
     def test_compare_too_few_strategies(self, client):
         resp = client.post(
             "/api/compare",

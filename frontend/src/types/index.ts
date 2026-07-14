@@ -62,11 +62,23 @@ export interface BacktestMetrics {
   };
 }
 
+// Audit bug 3.12: previously declared percentile_25/median/percentile_75,
+// which the backend has never returned (engine.py's _monte_carlo() only
+// computes percentile_5/95) - and every field here was rendered through
+// formatPercent() despite being a dollar amount (final portfolio value
+// across simulated runs), producing outputs like "+125430.00%". Backend
+// is the source of truth (it's a coherent, already-correct distribution
+// of final dollar values); this type and its renderer (Backtest.tsx) now
+// match what engine.py's _monte_carlo() actually returns.
 export interface MonteCarloResult {
+  runs: number;
+  mean_final_value: number;
+  median_final_value: number;
+  std_final_value: number;
+  min_final_value: number;
+  max_final_value: number;
+  prob_profit: number; // 0-1 fraction
   percentile_5: number;
-  percentile_25: number;
-  median: number;
-  percentile_75: number;
   percentile_95: number;
 }
 
@@ -100,7 +112,7 @@ export interface BacktestHistoryItem {
   result: BacktestResult;
 }
 
-export type StrategyType = "ma_crossover" | "rsi_mean_reversion" | "momentum_breakout" | "bollinger_breakout" | "vwap_reversion" | "bollinger_rsi_combo" | "trend_adaptive_rsi" | "greenblatt_weekly";
+export type StrategyType = "ma_crossover" | "rsi_mean_reversion" | "rsi_simple" | "momentum_breakout" | "bollinger_breakout" | "vwap_reversion" | "bollinger_rsi_combo" | "trend_adaptive_rsi" | "greenblatt_weekly";
 
 export interface MACrossoverParams {
   short_window: number;
@@ -115,6 +127,12 @@ export interface RSIMeanReversionParams {
   overbought: number;
   use_bb_confirmation: boolean;
   adx_threshold: number;
+}
+
+export interface RSISimpleParams {
+  period: number;
+  oversold: number;
+  overbought: number;
 }
 
 export interface MomentumBreakoutParams {
@@ -175,7 +193,7 @@ export interface GreenblattWeeklyParams {
   exit_sma_cross: boolean;
 }
 
-export type StrategyParams = MACrossoverParams | RSIMeanReversionParams | MomentumBreakoutParams | BollingerBreakoutParams | VWAPReversionParams | BollingerRSIComboParams | TrendAdaptiveRSIParams | GreenblattWeeklyParams;
+export type StrategyParams = MACrossoverParams | RSIMeanReversionParams | RSISimpleParams | MomentumBreakoutParams | BollingerBreakoutParams | VWAPReversionParams | BollingerRSIComboParams | TrendAdaptiveRSIParams | GreenblattWeeklyParams;
 
 export interface CachedTicker {
   ticker: string;
@@ -308,10 +326,21 @@ export interface ParameterOptimizeResult {
   total_trades: number;
 }
 
+// One entry per walk-forward FOLD (not per parameter combination) -
+// each fold selects its own best-scoring params using only that fold's
+// train window, then evaluates just that selection on the held-out test
+// window. See backend parameter_optimizer.py's _walk_forward_optimize
+// docstring (bug 3.3 fix, 2026-07-14) for why a per-combination table
+// is no longer meaningful once selection is leakage-free.
 export interface WalkForwardResult {
-  params: Record<string, number>;
-  avg_out_of_sample_score: number;
-  fold_scores: number[];
+  fold: number;
+  train_start: string | null;
+  train_end: string | null;
+  test_start: string | null;
+  test_end: string | null;
+  selected_params: Record<string, number>;
+  train_score: number;
+  avg_out_of_sample_score: number | null;
 }
 
 export interface ParameterOptimizeResponse {
@@ -415,6 +444,10 @@ export const STRATEGY_INFO: Record<StrategyType, { name: string; description: st
     name: "RSI Mean Reversion",
     description: "Buys oversold conditions and sells overbought using RSI indicator",
   },
+  rsi_simple: {
+    name: "RSI Simple",
+    description: "Ultra-simple RSI mean reversion for frequent trading - no BB/ADX confirmation, no state machine",
+  },
   momentum_breakout: {
     name: "Momentum Breakout",
     description: "Enters positions on price breakouts confirmed by volume surge",
@@ -454,6 +487,11 @@ export const DEFAULT_PARAMS: Record<StrategyType, StrategyParams> = {
     overbought: 70,
     use_bb_confirmation: true,
     adx_threshold: 25,
+  },
+  rsi_simple: {
+    period: 14,
+    oversold: 40,
+    overbought: 60,
   },
   momentum_breakout: {
     lookback: 20,

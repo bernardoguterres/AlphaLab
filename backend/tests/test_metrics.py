@@ -1,5 +1,8 @@
 """Tests for PerformanceMetrics calculator."""
 
+import json
+import math
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -164,3 +167,158 @@ class TestPerformanceMetrics:
         result = m.calculate_all(curve, [])
         assert result["risk"]["var_95_pct"] < 0  # VaR is negative (loss)
         assert result["risk"]["cvar_95_pct"] <= result["risk"]["var_95_pct"]
+
+
+def _assert_no_nan_or_inf(obj, path="result"):
+    """Recursively assert no float in `obj` is NaN or +/-Infinity - both
+    are invalid JSON per RFC 8259 and throw on strict client-side
+    JSON.parse, even though Python's json module emits them by default."""
+    if isinstance(obj, float):
+        assert not math.isnan(obj), f"{path} is NaN"
+        assert not math.isinf(obj), f"{path} is Infinity"
+    elif isinstance(obj, dict):
+        for k, v in obj.items():
+            _assert_no_nan_or_inf(v, f"{path}.{k}")
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            _assert_no_nan_or_inf(v, f"{path}[{i}]")
+
+
+class TestSharpeRatioFloor:
+    """Regression tests for audit bug 3.6: Sharpe (and Sortino/Calmar)
+    previously guarded only against exactly-zero volatility/drawdown
+    (`vol > 0`), so a near-zero-but-nonzero denominator produced a
+    meaningless-magnitude ratio (reproduced by the audit: ~1.2e14 on a
+    synthetic near-constant-return series) instead of failing safely.
+    _MIN_RATIO_DENOMINATOR now floors all three ratios consistently.
+    """
+
+    def test_near_constant_returns_does_not_blow_up_sharpe(self):
+        """A near-flat equity curve (tiny but real day-to-day noise) must
+        not produce an astronomically large Sharpe ratio."""
+        m = PerformanceMetrics()
+        rng = np.random.RandomState(7)
+        n = 252
+        # Returns on the order of 1e-9 - far below any realistic asset's
+        # volatility, but not exactly zero (floating point noise, the
+        # exact scenario the old `vol > 0` guard let through).
+        values = [100_000.0]
+        for _ in range(n):
+            values.append(values[-1] * (1 + rng.normal(1e-9, 1e-9)))
+        dates = pd.bdate_range("2023-01-01", periods=n + 1)
+        curve = [{"date": str(d.date()), "value": v} for d, v in zip(dates, values)]
+
+        result = m.calculate_all(curve, [])
+        sharpe = result["risk"]["sharpe_ratio"]
+        vol = result["risk"]["volatility_annual_pct"]
+
+        assert (
+            abs(sharpe) < 1000
+        ), f"Sharpe blew up to a meaningless magnitude: {sharpe}"
+        # Internal consistency the audit specifically flagged as missing:
+        # a near-zero volatility must not be paired with a huge Sharpe.
+        assert round(vol, 1) == 0.0
+        assert sharpe == 0.0
+
+    def test_normal_volatility_sharpe_unaffected(self):
+        """Sanity check the floor doesn't suppress ordinary, real Sharpe
+        ratios on a normal (non-degenerate) equity curve."""
+        m = PerformanceMetrics()
+        result = m.calculate_all(_make_equity_curve(annual_return=0.15), [])
+        assert result["risk"]["sharpe_ratio"] != 0.0
+        assert abs(result["risk"]["sharpe_ratio"]) < 100
+
+
+class TestNaNInfinitySanitization:
+    """Regression tests for audit bug 3.5: thin/early-backtest equity
+    curves produced NaN for mean_daily_return/skewness/etc. (too few return
+    observations), and an all-winning-trade backtest produced
+    profit_factor=Infinity with no cap anywhere in the Flask path (one of
+    two standalone export scripts capped it at 999, the other didn't -
+    inconsistent). calculate_all() now sanitizes its entire return value at
+    the boundary: NaN -> None, +/-Infinity -> +/-999.0.
+    """
+
+    def test_all_winning_trades_caps_profit_factor_instead_of_infinity(self):
+        """Zero gross loss (every trade a winner) previously produced
+        profit_factor=Infinity."""
+        m = PerformanceMetrics()
+        trades = [
+            {
+                "side": "buy",
+                "status": "filled",
+                "filled_price": 100,
+                "shares": 10,
+                "commission": 0,
+            },
+            {
+                "side": "sell",
+                "status": "filled",
+                "filled_price": 110,
+                "shares": 10,
+                "commission": 0,
+            },
+        ]
+        result = m.calculate_all(_make_equity_curve(), trades)
+        assert result["trades"]["profit_factor"] == 999.0
+        assert not math.isinf(result["trades"]["profit_factor"])
+
+    def test_thin_equity_curve_does_not_produce_nan_return_metrics(self):
+        """A 2-bar equity curve (1 return observation) can't support
+        skewness/kurtosis (need >=3-4 points) - these must come back as
+        None, not a bare NaN float."""
+        m = PerformanceMetrics()
+        curve = [
+            {"date": "2024-01-01", "value": 10_000.0},
+            {"date": "2024-01-02", "value": 10_050.0},
+        ]
+        result = m.calculate_all(curve, [])
+        _assert_no_nan_or_inf(result, "result")
+        # skewness/kurtosis genuinely can't be computed from 1 observation -
+        # None (JSON null) is the honest representation, not a silent 0.0.
+        assert result["returns"]["skewness"] is None
+        assert result["returns"]["kurtosis"] is None
+
+    def test_single_bar_equity_curve_fully_sanitized(self):
+        """A single-bar curve (0 return observations - the most extreme
+        thin-curve case) must not leak NaN anywhere in the response."""
+        m = PerformanceMetrics()
+        curve = [{"date": "2024-01-01", "value": 10_000.0}]
+        result = m.calculate_all(curve, [])
+        _assert_no_nan_or_inf(result, "result")
+
+    def test_normal_backtest_result_has_no_nan_or_inf(self):
+        """Sanity check the sanitizer doesn't corrupt ordinary finite
+        values in a normal, non-degenerate backtest result."""
+        m = PerformanceMetrics()
+        result = m.calculate_all(_make_equity_curve(), _make_trades())
+        _assert_no_nan_or_inf(result, "result")
+        assert result["trades"]["profit_factor"] == 1.0  # unchanged, not capped
+
+    def test_sanitized_result_is_valid_json(self):
+        """End-to-end proof: json.dumps(..., allow_nan=False) - the RFC
+        8259-strict mode - must not raise on a degenerate result that used
+        to contain NaN/Infinity."""
+        m = PerformanceMetrics()
+        trades = [
+            {
+                "side": "buy",
+                "status": "filled",
+                "filled_price": 100,
+                "shares": 10,
+                "commission": 0,
+            },
+            {
+                "side": "sell",
+                "status": "filled",
+                "filled_price": 110,
+                "shares": 10,
+                "commission": 0,
+            },
+        ]
+        curve = [
+            {"date": "2024-01-01", "value": 10_000.0},
+            {"date": "2024-01-02", "value": 10_050.0},
+        ]
+        result = m.calculate_all(curve, trades)
+        json.dumps(result, allow_nan=False)  # raises ValueError if NaN/Infinity present

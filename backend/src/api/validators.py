@@ -124,6 +124,7 @@ class BacktestRequest(BaseModel):
         allowed = (
             "ma_crossover",
             "rsi_mean_reversion",
+            "rsi_simple",
             "momentum_breakout",
             "bollinger_breakout",
             "vwap_reversion",
@@ -174,6 +175,7 @@ class OptimizeRequest(BaseModel):
         allowed = (
             "ma_crossover",
             "rsi_mean_reversion",
+            "rsi_simple",
             "momentum_breakout",
             "bollinger_breakout",
             "vwap_reversion",
@@ -227,6 +229,7 @@ class HeatmapRequest(BaseModel):
         allowed = (
             "ma_crossover",
             "rsi_mean_reversion",
+            "rsi_simple",
             "momentum_breakout",
             "bollinger_breakout",
             "vwap_reversion",
@@ -297,6 +300,7 @@ class BatchBacktestRequest(BaseModel):
         allowed = (
             "ma_crossover",
             "rsi_mean_reversion",
+            "rsi_simple",
             "momentum_breakout",
             "bollinger_breakout",
             "vwap_reversion",

@@ -5,8 +5,10 @@ import { strategyDisplayName } from "./formatters";
 describe("STRATEGY_META", () => {
   const ids = Object.keys(STRATEGY_META);
 
-  it("covers all 8 strategies", () => {
-    expect(ids).toHaveLength(8);
+  it("covers all 9 strategies", () => {
+    // 9, not 8, since rsi_simple was registered as its own reachable
+    // strategy (audit bug 3.8, 2026-07-14).
+    expect(ids).toHaveLength(9);
   });
 
   it("every strategy has a category, icon, and accent", () => {

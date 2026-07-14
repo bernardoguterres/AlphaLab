@@ -31,6 +31,7 @@ from ...strategies.implementations import (
     MomentumBreakout,
     MovingAverageCrossover,
     RSIMeanReversion,
+    RSISimple,
     TrendAdaptiveRSI,
     VWAPReversion,
 )
@@ -48,6 +49,7 @@ except ImportError:
 STRATEGY_MAP = {
     "ma_crossover": MovingAverageCrossover,
     "rsi_mean_reversion": RSIMeanReversion,
+    "rsi_simple": RSISimple,
     "momentum_breakout": MomentumBreakout,
     "bollinger_breakout": BollingerBreakout,
     "vwap_reversion": VWAPReversion,
@@ -115,6 +117,7 @@ def run_backtest():
         end_date=body.end_date,
         position_sizing=body.position_sizing,
         monte_carlo_runs=body.monte_carlo_runs,
+        risk_settings=(body.risk_settings.model_dump() if body.risk_settings else None),
     )
 
     metrics_calc = PerformanceMetrics()
@@ -282,9 +285,18 @@ def compare_strategies():
             end_date=body.end_date,
         )
         metrics = metrics_calc.calculate_all(results.equity_curve, results.trades)
+        results.metrics = metrics
+        # Bug 3.9: previously only {total_return_pct, metrics} - but
+        # OverlayEquityChart.tsx and CorrelationMatrix.tsx (and Compare.tsx
+        # itself) unconditionally read .equity_curve (and
+        # .benchmark.equity_curve) on every result, which didn't exist in
+        # this trimmed response and crashed the Compare page on any real
+        # multi-strategy comparison. Use the same full to_dict() shape the
+        # single-strategy /api/strategies/backtest endpoint already returns
+        # (frontend's BacktestResult type already expects this shape).
         comparison[strat_name] = {
-            "total_return_pct": results.total_return_pct,
-            "metrics": metrics,
+            **results.to_dict(),
+            "ticker": body.ticker,
         }
 
     return jsonify({"status": "ok", "data": comparison})

@@ -33,6 +33,7 @@ export function strategyDisplayName(strategy: string): string {
   const map: Record<string, string> = {
     ma_crossover: "MA Crossover",
     rsi_mean_reversion: "RSI Mean Reversion",
+    rsi_simple: "RSI Simple",
     momentum_breakout: "Momentum Breakout",
     bollinger_breakout: "Bollinger Breakout",
     vwap_reversion: "VWAP Reversion",
