@@ -519,3 +519,49 @@ class TestAllStrategiesBacktest:
             assert not np.isnan(total_return) and not np.isinf(
                 total_return
             ), f"Strategy {strategy} has invalid total return"
+
+
+class TestVWAPReversionExportBlocked:
+    """Regression test for audit Bug 1.7: vwap_reversion is structurally
+    unexportable (requires an intraday timeframe AlphaLab's data layer can
+    never provide), so the export endpoint must reject it with a clear
+    error rather than shipping a config AlphaLive will also reject - or
+    worse, one that happens to validate against the wrong timeframe.
+    Backtesting vwap_reversion remains supported; only export is blocked.
+    """
+
+    def test_vwap_reversion_export_returns_422(self, client, mock_yfinance):
+        client.post(
+            "/api/data/fetch",
+            json={
+                "tickers": ["AAPL"],
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+                "interval": "1d",
+            },
+        )
+
+        backtest_response = client.post(
+            "/api/strategies/backtest",
+            json={
+                "ticker": "AAPL",
+                "strategy": "vwap_reversion",
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+                "initial_capital": 100000,
+                "params": {},
+                "position_sizing": "equal_weight",
+                "monte_carlo_runs": 0,
+            },
+        )
+        assert backtest_response.status_code == 200
+        backtest_id = backtest_response.get_json()["data"]["backtest_id"]
+
+        export_response = client.post(
+            "/api/strategies/export", json={"backtest_id": backtest_id}
+        )
+
+        assert export_response.status_code == 422
+        body = export_response.get_json()
+        assert body["status"] == "error"
+        assert "vwap_reversion" in body["message"]

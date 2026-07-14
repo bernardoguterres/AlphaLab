@@ -51,6 +51,40 @@ _INTERVAL_TO_TIMEFRAME = {
 }
 
 
+def _translate_params_for_export(strategy_name: str, params: dict) -> dict:
+    """Translate AlphaLab's internal strategy parameter names to the
+    AlphaLive export-contract names, and inject the strategy_type
+    discriminator StrategyExportSchema now requires.
+
+    AlphaLab's internal strategy classes (src/strategies/implementations/)
+    keep their own field names unchanged - only the exported JSON's field
+    names change here, at the export-mapping layer.
+    """
+    out = dict(params)
+
+    if strategy_name == "ma_crossover":
+        if "short_window" in out:
+            out["fast_period"] = out.pop("short_window")
+        if "long_window" in out:
+            out["slow_period"] = out.pop("long_window")
+    elif strategy_name == "momentum_breakout":
+        if "volume_surge_pct" in out:
+            out["surge_pct"] = out.pop("volume_surge_pct") / 100.0
+        if "volume_avg_period" in out:
+            out["volume_ma_period"] = out.pop("volume_avg_period")
+    elif strategy_name == "bollinger_breakout":
+        if "bb_period" in out:
+            out["period"] = out.pop("bb_period")
+        if "bb_std_dev" in out:
+            out["std_dev"] = out.pop("bb_std_dev")
+    elif strategy_name == "greenblatt_weekly":
+        if "trailing_stop_pct" in out:
+            out["trailing_stop_fraction"] = out.pop("trailing_stop_pct")
+
+    out["strategy_type"] = strategy_name
+    return out
+
+
 def _build_export_json(
     backtest_id: str,
     ticker: str,
@@ -77,7 +111,7 @@ def _build_export_json(
         "sortino_ratio": round(metrics.get("risk", {}).get("sortino_ratio", 0.0), 2),
         "total_return_pct": round(results.get("total_return_pct", 0.0), 2),
         "max_drawdown_pct": round(
-            metrics.get("drawdown", {}).get("max_drawdown", 0.0), 2
+            metrics.get("drawdown", {}).get("max_drawdown_pct", 0.0), 2
         ),
         "win_rate_pct": round(metrics.get("trades", {}).get("win_rate", 0.0) * 100, 2),
         "profit_factor": round(metrics.get("trades", {}).get("profit_factor", 0.0), 2),
@@ -115,7 +149,7 @@ def _build_export_json(
         "schema_version": "1.0",
         "strategy": {
             "name": strategy_name,
-            "parameters": params,
+            "parameters": _translate_params_for_export(strategy_name, params),
             "description": f"{strategy_name.replace('_', ' ').title()} strategy for {ticker}",
         },
         "ticker": ticker,

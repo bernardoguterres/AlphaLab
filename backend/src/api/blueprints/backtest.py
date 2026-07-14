@@ -427,6 +427,23 @@ def export_strategy():
     results = stored["results"]
     req = stored["request"]
 
+    if req["strategy"] == "vwap_reversion":
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": (
+                        "vwap_reversion cannot be exported: it requires an intraday "
+                        "timeframe (1Hour/15Min), but AlphaLab's data layer can only "
+                        "fetch 1Day/1Week/1Month bars, so no export could ever satisfy "
+                        "AlphaLive's own intraday validation. Backtesting vwap_reversion "
+                        "is still supported; exporting it to AlphaLive is not."
+                    ),
+                }
+            ),
+            422,
+        )
+
     try:
         config = load_config()
         export_json = _build_export_json(

@@ -762,7 +762,7 @@ class TestExportEdgeCases:
                     "sortino_ratio": 1.5,
                     "calmar_ratio": 1.8,
                 },
-                "drawdown": {"max_drawdown": -8.0},
+                "drawdown": {"max_drawdown_pct": -8.0},
                 "trades": {"win_rate": 0.5, "profit_factor": 1.2},
             },
         }
@@ -789,7 +789,8 @@ class TestExportEdgeCases:
             config=config,
         )
 
-        # Should handle extreme params
-        assert export["strategy"]["parameters"]["short_window"] == 2
-        assert export["strategy"]["parameters"]["long_window"] == 3
+        # Should handle extreme params (short_window/long_window translated
+        # to fast_period/slow_period at the export-mapping layer)
+        assert export["strategy"]["parameters"]["fast_period"] == 2
+        assert export["strategy"]["parameters"]["slow_period"] == 3
         assert export["strategy"]["parameters"]["cooldown_days"] == 0
