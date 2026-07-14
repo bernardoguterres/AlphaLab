@@ -122,12 +122,97 @@ class TestParameterOptimizer:
         assert "sharpe_ratio" in result["final_backtest"]
         assert "max_drawdown_pct" in result["final_backtest"]
 
-        # All results should have fold scores
-        for combo_result in result["all_results"]:
-            assert "params" in combo_result
-            assert "avg_out_of_sample_score" in combo_result
-            assert "fold_scores" in combo_result
-            assert len(combo_result["fold_scores"]) == 3
+        # Bug 3.3 fix: all_results is now one entry per FOLD (each fold's
+        # own train-selected params + honest out-of-sample score), not one
+        # entry per parameter combination - see parameter_optimizer.py's
+        # _walk_forward_optimize docstring for why a per-combination table
+        # is no longer meaningful once selection is leakage-free.
+        assert len(result["all_results"]) == 3
+        for fold_result in result["all_results"]:
+            assert "fold" in fold_result
+            assert "selected_params" in fold_result
+            assert "train_score" in fold_result
+            assert "avg_out_of_sample_score" in fold_result
+            assert "train_start" in fold_result
+            assert "test_end" in fold_result
+
+    def test_walk_forward_never_backtests_test_data_for_parameter_selection(self):
+        """Regression test for audit bug 3.3: the core of the bug was that
+        every parameter combination was backtested directly against each
+        fold's TEST data, and best_params was chosen from those test-data
+        scores - grid search on the test set, not walk-forward validation.
+
+        Wraps BacktestEngine.run_backtest with a spy that records exactly
+        which dataset (by identity) each call received, then asserts that
+        every combination-selection call used a fold's train_data or the
+        full dataset (final selection) - never a fold's held-out test_data.
+        Exactly one call per fold is allowed to touch that fold's test_data:
+        evaluating the ALREADY-SELECTED winning combination.
+        """
+        data = _make_synthetic_data(n=500)
+        optimizer = ParameterOptimizer()
+        real_engine = BacktestEngine()
+        metrics_calc = PerformanceMetrics()
+
+        param_grid = {"short_window": [20, 50], "long_window": [100, 200]}
+        n_folds = 3
+
+        # _create_folds() slices with .iloc[], which allocates a NEW
+        # DataFrame object every call - capture the exact fold objects
+        # _walk_forward_optimize actually uses internally (not a second,
+        # separately-allocated call) so identity comparison below is valid.
+        real_create_folds = optimizer._create_folds
+        captured_folds = {}
+
+        def _spy_create_folds(data_arg, n_folds_arg):
+            folds = real_create_folds(data_arg, n_folds_arg)
+            captured_folds["folds"] = folds
+            return folds
+
+        optimizer._create_folds = _spy_create_folds
+
+        calls = []
+        real_run_backtest = real_engine.run_backtest
+
+        class _SpyEngine:
+            def run_backtest(self, *args, data, **kwargs):
+                calls.append(id(data))
+                return real_run_backtest(*args, data=data, **kwargs)
+
+        result = optimizer.grid_search(
+            strategy_class=MovingAverageCrossover,
+            data=data,
+            param_grid=param_grid,
+            initial_capital=100_000,
+            engine=_SpyEngine(),
+            metrics_calc=metrics_calc,
+            optimization_target="sharpe_ratio",
+            walk_forward=True,
+            n_folds=n_folds,
+        )
+
+        folds = captured_folds["folds"]
+        train_ids = {id(train) for train, test in folds}
+        test_ids = {id(test) for train, test in folds}
+
+        # Every test_data dataset must be touched EXACTLY once per fold -
+        # only for scoring that fold's already-selected winner, never for
+        # comparing multiple combinations against each other.
+        for test_id in test_ids:
+            assert calls.count(test_id) == 1, (
+                "a fold's test_data must be backtested exactly once (the "
+                "selected winner's out-of-sample evaluation), not once per "
+                "candidate parameter combination"
+            )
+
+        # Combination selection happens against train_data (many calls
+        # expected - one per combination per fold) and the full dataset
+        # (final parameter choice) - both are leakage-free by construction,
+        # this just documents that selection calls did happen.
+        assert any(call_id in train_ids for call_id in calls)
+        assert calls.count(id(data)) >= 1  # final full-data selection + final_backtest
+
+        assert result["walk_forward"] is True
 
     def test_fold_splitting(self):
         """Test that folds are created correctly with progressive training."""

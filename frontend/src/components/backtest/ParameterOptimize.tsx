@@ -3,6 +3,8 @@ import { optimizeParameters, generateHeatmap } from "@/services/api";
 import type {
   ParameterOptimizeRequest,
   ParameterOptimizeResponse,
+  ParameterOptimizeResult,
+  WalkForwardResult,
   HeatmapRequest,
   HeatmapResponse,
   StrategyType,
@@ -63,6 +65,18 @@ export default function ParameterOptimize({
       return;
     }
 
+    // Bug 3.11: a step <= 0 makes `val += range.step` never advance past
+    // range.max (or move the wrong direction) - the grid-generation loop
+    // below would hang the browser tab indefinitely, before any network
+    // request is ever sent. Validate every range up front instead.
+    const invalidStepParam = Object.entries(paramRanges).find(
+      ([, range]) => !(range.step > 0)
+    )?.[0];
+    if (invalidStepParam) {
+      toast.error(`Step for "${invalidStepParam}" must be greater than 0`);
+      return;
+    }
+
     setIsOptimizing(true);
     try {
       // Build param grid from ranges
@@ -107,6 +121,18 @@ export default function ParameterOptimize({
     const paramKeys = Object.keys(paramRanges);
     if (paramKeys.length < 2) {
       toast.error("Heatmap requires at least 2 parameters");
+      return;
+    }
+
+    // Same guard as handleOptimize (bug 3.11): a step <= 0 sent to the
+    // backend's np.arange(min, max+step, step) raises ZeroDivisionError -
+    // not a client-side hang, but still worth rejecting client-side with a
+    // clear message rather than a raw 500.
+    const invalidStepParam = [param1, param2].find(
+      (p) => !(paramRanges[p]?.step > 0)
+    );
+    if (invalidStepParam) {
+      toast.error(`Step for "${invalidStepParam}" must be greater than 0`);
       return;
     }
 
@@ -266,6 +292,8 @@ export default function ParameterOptimize({
                     <Label className="text-xs text-muted-foreground">Step</Label>
                     <Input
                       type="number"
+                      min={0.0001}
+                      step="any"
                       value={range.step}
                       onChange={(e) => updateParamRange(paramName, "step", parseFloat(e.target.value))}
                     />
@@ -322,7 +350,7 @@ export default function ParameterOptimize({
               <div className="label-caps">Best Score ({optimizeResult.optimization_target})</div>
               <div className="text-2xl font-bold font-mono-numbers mt-1">
                 {optimizeResult.optimization_target.includes("pct")
-                  ? formatPercent(optimizeResult.best_score / 100)
+                  ? formatPercent(optimizeResult.best_score)
                   : formatNumber(optimizeResult.best_score)}
               </div>
             </div>
@@ -335,7 +363,7 @@ export default function ParameterOptimize({
                   <div>
                     <div className="label-caps">Return</div>
                     <div className="font-bold font-mono-numbers text-gain mt-0.5">
-                      {formatPercent(optimizeResult.final_backtest.total_return_pct / 100)}
+                      {formatPercent(optimizeResult.final_backtest.total_return_pct)}
                     </div>
                   </div>
                   <div>
@@ -345,7 +373,7 @@ export default function ParameterOptimize({
                   <div>
                     <div className="label-caps">Max DD</div>
                     <div className="font-bold font-mono-numbers text-loss mt-0.5">
-                      {formatPercent(optimizeResult.final_backtest.max_drawdown_pct / 100)}
+                      {formatPercent(optimizeResult.final_backtest.max_drawdown_pct)}
                     </div>
                   </div>
                 </div>
@@ -382,7 +410,7 @@ export default function ParameterOptimize({
       </div>
 
       {/* Top Results Table */}
-      {optimizeResult && optimizeResult.all_results.length > 0 && (
+      {optimizeResult && optimizeResult.all_results.length > 0 && !optimizeResult.walk_forward && (
         <div className="card-elevated p-4 sm:p-5">
           <h3 className="text-[15px] font-bold tracking-tight flex items-center gap-2 mb-4">
             <ListOrdered className="h-3.5 w-3.5 text-primary" /> Top 10 Parameter Combinations
@@ -396,34 +424,67 @@ export default function ParameterOptimize({
                     <th key={key} className="text-left py-2.5 px-2 label-caps">{key}</th>
                   ))}
                   <th className="text-right py-2.5 px-2 label-caps">Score</th>
-                  {!optimizeResult.walk_forward && (
-                    <>
-                      <th className="text-right py-2.5 px-2 label-caps">Return %</th>
-                      <th className="text-right py-2.5 px-2 label-caps">Sharpe</th>
-                      <th className="text-right py-2.5 px-2 label-caps">Trades</th>
-                    </>
-                  )}
+                  <th className="text-right py-2.5 px-2 label-caps">Return %</th>
+                  <th className="text-right py-2.5 px-2 label-caps">Sharpe</th>
+                  <th className="text-right py-2.5 px-2 label-caps">Trades</th>
                 </tr>
               </thead>
               <tbody>
-                {optimizeResult.all_results.slice(0, 10).map((result: any, idx) => (
+                {(optimizeResult.all_results as ParameterOptimizeResult[]).slice(0, 10).map((result, idx) => (
                   <tr key={idx} className="border-b border-border/50 hover:bg-secondary/40 transition-colors">
                     <td className="py-2.5 px-2 font-mono-numbers text-muted-foreground">{idx + 1}</td>
                     {Object.keys(optimizeResult.best_params).map(key => (
                       <td key={key} className="py-2.5 px-2 font-mono-numbers text-xs">{result.params[key]}</td>
                     ))}
-                    <td className="text-right py-2.5 px-2 font-bold font-mono-numbers">
-                      {optimizeResult.walk_forward
-                        ? formatNumber(result.avg_out_of_sample_score)
-                        : formatNumber(result.score)}
+                    <td className="text-right py-2.5 px-2 font-bold font-mono-numbers">{formatNumber(result.score)}</td>
+                    <td className="text-right py-2.5 px-2 font-mono-numbers">{formatPercent(result.total_return_pct)}</td>
+                    <td className="text-right py-2.5 px-2 font-mono-numbers">{formatNumber(result.sharpe_ratio, 2)}</td>
+                    <td className="text-right py-2.5 px-2 font-mono-numbers">{result.total_trades}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Walk-Forward Fold Results Table */}
+      {optimizeResult && optimizeResult.all_results.length > 0 && optimizeResult.walk_forward && (
+        <div className="card-elevated p-4 sm:p-5">
+          <h3 className="text-[15px] font-bold tracking-tight flex items-center gap-2 mb-4">
+            <ListOrdered className="h-3.5 w-3.5 text-primary" /> Walk-Forward Folds
+          </h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            Each fold selects its own best parameters using only that fold's training window,
+            then reports the honest out-of-sample score on its held-out test window.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-secondary/20">
+                  <th className="text-left py-2.5 px-2 label-caps">Fold</th>
+                  <th className="text-left py-2.5 px-2 label-caps">Test Period</th>
+                  {Object.keys(optimizeResult.best_params).map(key => (
+                    <th key={key} className="text-left py-2.5 px-2 label-caps">{key}</th>
+                  ))}
+                  <th className="text-right py-2.5 px-2 label-caps">Train Score</th>
+                  <th className="text-right py-2.5 px-2 label-caps">Out-of-Sample Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(optimizeResult.all_results as WalkForwardResult[]).map((result) => (
+                  <tr key={result.fold} className="border-b border-border/50 hover:bg-secondary/40 transition-colors">
+                    <td className="py-2.5 px-2 font-mono-numbers text-muted-foreground">{result.fold + 1}</td>
+                    <td className="py-2.5 px-2 text-xs text-muted-foreground">
+                      {result.test_start?.slice(0, 10)} → {result.test_end?.slice(0, 10)}
                     </td>
-                    {!optimizeResult.walk_forward && (
-                      <>
-                        <td className="text-right py-2.5 px-2 font-mono-numbers">{formatPercent(result.total_return_pct / 100)}</td>
-                        <td className="text-right py-2.5 px-2 font-mono-numbers">{formatNumber(result.sharpe_ratio, 2)}</td>
-                        <td className="text-right py-2.5 px-2 font-mono-numbers">{result.total_trades}</td>
-                      </>
-                    )}
+                    {Object.keys(optimizeResult.best_params).map(key => (
+                      <td key={key} className="py-2.5 px-2 font-mono-numbers text-xs">{result.selected_params[key]}</td>
+                    ))}
+                    <td className="text-right py-2.5 px-2 font-mono-numbers">{formatNumber(result.train_score)}</td>
+                    <td className="text-right py-2.5 px-2 font-bold font-mono-numbers">
+                      {result.avg_out_of_sample_score === null ? '—' : formatNumber(result.avg_out_of_sample_score)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

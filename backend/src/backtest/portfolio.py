@@ -26,6 +26,8 @@ class Portfolio:
         cash_reserve_pct: float = 5.0,
         max_loss_per_trade_pct: float = 2.0,
         max_drawdown_pct: float = 10.0,
+        stop_loss_pct: float | None = None,
+        take_profit_pct: float | None = None,
     ):
         self.initial_capital = initial_capital
         self.cash = initial_capital
@@ -35,6 +37,16 @@ class Portfolio:
         self.cash_reserve_pct = cash_reserve_pct / 100
         self.max_loss_per_trade_pct = max_loss_per_trade_pct / 100
         self.max_drawdown_pct = max_drawdown_pct / 100
+        # Portfolio-level risk overlay (from the Risk Settings UI's
+        # RiskSettings.stop_loss_pct/take_profit_pct) - independent of any
+        # stop-loss a strategy implements internally (e.g. RSIMeanReversion's
+        # own ATR-based stop). None = disabled (audit bug 3.1: previously
+        # Portfolio had no concept of these at all, and take-profit didn't
+        # exist anywhere in the simulation).
+        self.stop_loss_pct = stop_loss_pct / 100 if stop_loss_pct is not None else None
+        self.take_profit_pct = (
+            take_profit_pct / 100 if take_profit_pct is not None else None
+        )
 
         self.positions: dict[str, int] = {}  # ticker -> shares
         self.avg_cost: dict[str, float] = {}  # ticker -> avg cost per share
@@ -65,9 +77,16 @@ class Portfolio:
         Returns:
             The same Order object with updated status/filled fields.
         """
-        if self.halted:
+        # Audit bug 3.2: a drawdown halt must never freeze an open position
+        # indefinitely - it blocks new entries (BUY), but SELL orders
+        # (closing/reducing exposure) always go through. Previously this
+        # blocked ALL orders once halted, with no way to ever close the
+        # position for the rest of the backtest.
+        if self.halted and order.side == OrderSide.BUY:
             order.status = OrderStatus.REJECTED
-            order.reason = "Trading halted - max drawdown exceeded"
+            order.reason = (
+                "Trading halted - max drawdown exceeded (new entries blocked)"
+            )
             self._log_trade(order, timestamp)
             return order
 
@@ -196,6 +215,36 @@ class Portfolio:
             else 0
         )
         return max(0, min(shares, max_by_size))
+
+    def check_risk_overlay_exit(self, ticker: str, close_price: float) -> str | None:
+        """Check the portfolio-level stop-loss/take-profit overlay for an
+        open position against this bar's close price.
+
+        Returns a reason string if the position should be force-exited
+        (stop-loss checked first), or None if neither is configured/triggered.
+        Does not execute anything itself - callers queue the exit for the
+        next bar's open, same no-look-ahead convention as strategy signals.
+        """
+        held = self.positions.get(ticker, 0)
+        if held <= 0:
+            return None
+        entry_price = self.avg_cost.get(ticker)
+        if not entry_price:
+            return None
+
+        if self.stop_loss_pct is not None:
+            stop_level = entry_price * (1 - self.stop_loss_pct)
+            if close_price <= stop_level:
+                return (
+                    f"Stop-loss triggered ({self.stop_loss_pct*100:.1f}% below entry)"
+                )
+
+        if self.take_profit_pct is not None:
+            target_level = entry_price * (1 + self.take_profit_pct)
+            if close_price >= target_level:
+                return f"Take-profit triggered ({self.take_profit_pct*100:.1f}% above entry)"
+
+        return None
 
     def update_trailing_stops(self, current_prices: dict[str, float]):
         """Update trailing stop prices based on current highs."""

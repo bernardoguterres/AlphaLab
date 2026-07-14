@@ -72,6 +72,7 @@ class BacktestEngine:
         position_sizing: str = "equal_weight",
         monte_carlo_runs: int = 0,
         max_drawdown_pct: float = None,
+        risk_settings: dict | None = None,
     ) -> BacktestResults:
         """Run a full backtest simulation.
 
@@ -82,6 +83,15 @@ class BacktestEngine:
             start_date / end_date: Optional date filters (YYYY-MM-DD).
             position_sizing: "equal_weight", "risk_parity", or "volatility_weighted".
             monte_carlo_runs: Number of randomized runs (0 = disabled).
+            risk_settings: Optional dict matching api.validators.RiskSettings
+                (stop_loss_pct, take_profit_pct, max_position_size_pct,
+                commission_per_trade, ...) - wired into the Portfolio-level
+                risk overlay (audit bug 3.1). max_daily_loss_pct and
+                max_open_positions are accepted here but not simulated -
+                this engine is single-ticker/single-position, so there is no
+                "multiple positions to cap" or "rest of day" concept to
+                enforce; both fields still flow through to the AlphaLive
+                export, where they do apply.
 
         Returns:
             BacktestResults with equity curve, trades, and optional MC/WF data.
@@ -102,7 +112,12 @@ class BacktestEngine:
 
         # Run core simulation
         portfolio, trades = self._simulate(
-            df, signals, capital, position_sizing, max_drawdown_pct=max_drawdown_pct
+            df,
+            signals,
+            capital,
+            position_sizing,
+            max_drawdown_pct=max_drawdown_pct,
+            risk_settings=risk_settings,
         )
 
         results = BacktestResults(
@@ -148,6 +163,7 @@ class BacktestEngine:
         capital: float,
         sizing: str,
         max_drawdown_pct: float = None,
+        risk_settings: dict | None = None,
     ) -> tuple[Portfolio, list]:
         """Bar-by-bar simulation executing signals on next bar's open."""
         portfolio_kwargs = dict(
@@ -157,6 +173,23 @@ class BacktestEngine:
         )
         if max_drawdown_pct is not None:
             portfolio_kwargs["max_drawdown_pct"] = max_drawdown_pct
+        if risk_settings:
+            # commission_per_trade is deliberately NOT wired here: it's a
+            # flat USD fee in RiskSettings, but Portfolio.commission_rate is
+            # a percentage-of-notional rate - they're different units, and
+            # mapping one to the other directly would silently produce a
+            # wildly wrong commission (e.g. commission_per_trade=5.0 read as
+            # a 500% rate). Portfolio has no flat-fee commission model;
+            # wiring this correctly would need a real Portfolio change, out
+            # of scope here.
+            if risk_settings.get("stop_loss_pct") is not None:
+                portfolio_kwargs["stop_loss_pct"] = risk_settings["stop_loss_pct"]
+            if risk_settings.get("take_profit_pct") is not None:
+                portfolio_kwargs["take_profit_pct"] = risk_settings["take_profit_pct"]
+            if risk_settings.get("max_position_size_pct") is not None:
+                portfolio_kwargs["max_position_pct"] = risk_settings[
+                    "max_position_size_pct"
+                ]
         portfolio = Portfolio(**portfolio_kwargs)
 
         pending_signal = None  # Signal from previous bar to execute on this bar's open
@@ -168,8 +201,12 @@ class BacktestEngine:
             prices = {ticker: row["Close"]}
             open_prices = {ticker: row["Open"]} if "Open" in data.columns else prices
 
-            # Execute pending signal from previous bar on this bar's open
-            if pending_signal is not None and not portfolio.halted:
+            # Execute pending signal from previous bar on this bar's open.
+            # Audit bug 3.2: no longer gated on `not portfolio.halted` here -
+            # a halt must still allow SELL (exit) orders through; Portfolio.
+            # execute_order() itself now only rejects BUY orders while
+            # halted, so a halted portfolio can still close positions.
+            if pending_signal is not None:
                 sig_val, sig_reason = pending_signal
                 exec_price_map = open_prices
 
@@ -222,6 +259,18 @@ class BacktestEngine:
                         else ""
                     )
                     pending_signal = (sig_val, reason)
+
+            # Portfolio-level stop-loss/take-profit overlay (audit bug 3.1):
+            # checked against this bar's close, queued for execution on the
+            # next bar's open (same no-look-ahead convention as strategy
+            # signals). Takes priority over whatever the strategy decided
+            # this bar - a risk-overlay exit is not something the strategy
+            # opted into per-trade, it's an account-level bracket the user
+            # configured, so it overrides rather than merges with a
+            # same-bar strategy signal.
+            risk_exit_reason = portfolio.check_risk_overlay_exit(ticker, row["Close"])
+            if risk_exit_reason is not None:
+                pending_signal = (-1, risk_exit_reason)
 
         return portfolio, portfolio.ledger
 
@@ -330,11 +379,20 @@ class BacktestEngine:
         running_peak = equity.cummax()
         max_dd = float(((equity - running_peak) / running_peak * 100).min())
 
+        # Field names deliberately match what every frontend consumer reads
+        # (Backtest.tsx, OverlayEquityChart.tsx, CorrelationMatrix.tsx,
+        # types/index.ts's BacktestResult.benchmark) - previously prefixed
+        # buy_and_hold_* here, which no frontend code anywhere actually read
+        # (grepped: zero matches), so benchmark.equity_curve was always
+        # undefined - part of audit bug 3.9's Compare-page crash, and a
+        # latent (non-crashing, since Backtest.tsx uses optional chaining
+        # one level up only) silent-no-benchmark-line bug on the
+        # single-strategy Backtest page too.
         return {
-            "buy_and_hold_return_pct": round(bnh_return, 2),
-            "buy_and_hold_final_value": round(bnh_final, 2),
-            "buy_and_hold_max_drawdown_pct": round(max_dd, 2),
-            "buy_and_hold_equity_curve": bnh_curve,
+            "total_return_pct": round(bnh_return, 2),
+            "final_value": round(bnh_final, 2),
+            "max_drawdown_pct": round(max_dd, 2),
+            "equity_curve": bnh_curve,
         }
 
     @staticmethod

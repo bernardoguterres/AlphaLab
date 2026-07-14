@@ -41,7 +41,7 @@ Version changes:
 {
   "schema_version": "1.0",
   "strategy": {
-    "name": "ma_crossover | rsi_mean_reversion | momentum_breakout | bollinger_breakout | vwap_reversion | bollinger_rsi_combo | trend_adaptive_rsi | greenblatt_weekly",
+    "name": "ma_crossover | rsi_mean_reversion | rsi_simple | momentum_breakout | bollinger_breakout | vwap_reversion | bollinger_rsi_combo | trend_adaptive_rsi | greenblatt_weekly",
     "parameters": { /* strategy-specific params, untyped dict - see note in Adding New Strategies */ },
     "description": "Human-readable summary (optional)"
   },
@@ -185,7 +185,7 @@ All required fields in `metadata.performance`:
 
 ## Per-Strategy Parameters
 
-All 8 strategies below are implemented and tested in both AlphaLab (backtesting) and AlphaLive (live signal generation, verified for parity). AlphaLab's internal strategy classes take their own untyped params dict (see note in [Adding New Strategies](#adding-new-strategies)), with defaults applied via `setdefault()` in each strategy's `validate_params()`. **The JSON shown in this section is the exported/wire format** - what actually appears in `strategy.parameters` after `POST /api/strategies/export`, which is not always identical to AlphaLab's internal field names. Every `parameters` block also carries a `strategy_type` field matching `strategy.name` (a discriminator added 2026-07-14 - see [Versioning Policy](#versioning-policy)); omitted from the examples below for brevity but present in every real export.
+All 9 strategies below are implemented and tested in AlphaLab (backtesting). 8 of the 9 are also verified for signal parity with AlphaLive (live signal generation) - `rsi_simple` is the exception, registered 2026-07-14 (audit bug 3.8) as a reachable AlphaLab strategy, but AlphaLive does not currently register a matching `rsi_simple` strategy name, so it cannot yet be deployed end-to-end. AlphaLab's internal strategy classes take their own untyped params dict (see note in [Adding New Strategies](#adding-new-strategies)), with defaults applied via `setdefault()` in each strategy's `validate_params()`. **The JSON shown in this section is the exported/wire format** - what actually appears in `strategy.parameters` after `POST /api/strategies/export`, which is not always identical to AlphaLab's internal field names. Every `parameters` block also carries a `strategy_type` field matching `strategy.name` (a discriminator added 2026-07-14 - see [Versioning Policy](#versioning-policy)); omitted from the examples below for brevity but present in every real export.
 
 **Export field-name translation (2026-07-14):** four strategies have internal AlphaLab field names that differ from what AlphaLive actually reads; `_build_export_json`'s export-mapping layer (`backend/src/api/helpers.py`) renames them automatically - you never need to do this by hand when exporting through the API, but if you hand-craft a config JSON for AlphaLive, use the exported names below, not AlphaLab's internal ones (`short_window`/`long_window`, `volume_surge_pct`/`volume_avg_period`, `bb_period`/`bb_std_dev`, greenblatt's own `trailing_stop_pct`).
 
@@ -247,7 +247,33 @@ State-aware mean reversion with optional Bollinger Band/ADX confirmation and ATR
 
 ---
 
-### 3. Momentum Breakout (`momentum_breakout`)
+### 3. RSI Simple (`rsi_simple`)
+
+Ultra-simple RSI mean reversion for frequent trading - no BB/ADX confirmation, no state
+machine. Registered 2026-07-14 (audit bug 3.8) - previously fully implemented and
+tested but unreachable through the export pipeline. Note: AlphaLive does not currently
+register a matching `rsi_simple` strategy name of its own, so exports of this strategy
+cannot yet be deployed to AlphaLive - see the class docstring
+(`backend/src/strategies/implementations/rsi_simple.py`) for the separate, cross-repo
+parity question this connects to.
+
+```json
+{
+  "period": 14,
+  "oversold": 40,
+  "overbought": 60
+}
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `period` | 14 | RSI calculation period |
+| `oversold` | 40 | RSI buy threshold (relaxed vs. rsi_mean_reversion's 30, for more frequent signals) |
+| `overbought` | 60 | RSI sell threshold (relaxed vs. rsi_mean_reversion's 70) |
+
+---
+
+### 4. Momentum Breakout (`momentum_breakout`)
 
 Breakout strategy with trailing stop and volume surge confirmation.
 
@@ -275,7 +301,7 @@ Breakout strategy with trailing stop and volume surge confirmation.
 
 ---
 
-### 4. Bollinger Breakout (`bollinger_breakout`)
+### 5. Bollinger Breakout (`bollinger_breakout`)
 
 Trades N-consecutive-close breakouts above/below Bollinger Bands with optional volume confirmation.
 
@@ -301,7 +327,7 @@ Trades N-consecutive-close breakouts above/below Bollinger Bands with optional v
 
 ---
 
-### 5. VWAP Reversion (`vwap_reversion`)
+### 6. VWAP Reversion (`vwap_reversion`)
 
 Mean reversion from a rolling VWAP with RSI confirmation.
 
@@ -327,7 +353,7 @@ Mean reversion from a rolling VWAP with RSI confirmation.
 
 ---
 
-### 6. Bollinger RSI Combo (`bollinger_rsi_combo`)
+### 7. Bollinger RSI Combo (`bollinger_rsi_combo`)
 
 Entry on BB lower-band touch AND RSI oversold together; exit at BB middle or RSI overbought.
 
@@ -353,7 +379,7 @@ Entry on BB lower-band touch AND RSI oversold together; exit at BB middle or RSI
 
 ---
 
-### 7. Trend Adaptive RSI (`trend_adaptive_rsi`)
+### 8. Trend Adaptive RSI (`trend_adaptive_rsi`)
 
 RSI thresholds that adapt to the prevailing trend regime (uptrend/downtrend/range), detected via a slow SMA.
 
@@ -382,7 +408,7 @@ RSI thresholds that adapt to the prevailing trend regime (uptrend/downtrend/rang
 
 ---
 
-### 8. Greenblatt Weekly (`greenblatt_weekly`)
+### 9. Greenblatt Weekly (`greenblatt_weekly`)
 
 Value-factor strategy on weekly bars: Greenblatt Magic Formula screening for candidate selection, then a 10w/50w golden-cross or RSI-oversold entry with a long minimum hold and trailing-stop-only exit by default. Use after `FundamentalScreener` (see `AlphaLab/CLAUDE.md` § Value Factor / Weekly Strategies).
 
