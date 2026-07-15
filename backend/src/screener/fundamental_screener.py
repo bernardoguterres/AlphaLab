@@ -275,12 +275,12 @@ class FundamentalScreener:
 
         # method="first" breaks ties by original list order, matching the
         # tie-breaking a stable sorted()+enumerate() would have produced.
-        ey_ranks = pd.Series(
-            [r.earnings_yield for r in results]
-        ).rank(method="first", ascending=False)
-        roc_ranks = pd.Series(
-            [r.return_on_capital for r in results]
-        ).rank(method="first", ascending=False)
+        ey_ranks = pd.Series([r.earnings_yield for r in results]).rank(
+            method="first", ascending=False
+        )
+        roc_ranks = pd.Series([r.return_on_capital for r in results]).rank(
+            method="first", ascending=False
+        )
 
         for r, ey_rank, roc_rank in zip(results, ey_ranks, roc_ranks):
             r.earnings_yield_rank = int(ey_rank)
