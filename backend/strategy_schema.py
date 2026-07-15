@@ -39,11 +39,15 @@ class MACrossoverParams(BaseModel):
     fast_period: int = Field(ge=2, le=500, description="Short MA period")
     slow_period: int = Field(ge=3, le=500, description="Long MA period")
     volume_confirmation: bool = Field(description="Require volume > avg")
-    volume_avg_period: int = Field(default=20, ge=5, le=100, description="Volume MA period")
+    volume_avg_period: int = Field(
+        default=20, ge=5, le=100, description="Volume MA period"
+    )
     min_separation_pct: float = Field(
         default=0.0, ge=0.0, le=10.0, description="Min % separation before cross"
     )
-    cooldown_days: int = Field(default=5, ge=0, le=100, description="Min days between signals")
+    cooldown_days: int = Field(
+        default=5, ge=0, le=100, description="Min days between signals"
+    )
 
     @model_validator(mode="after")
     def validate_windows(self):
@@ -60,12 +64,22 @@ class RSIMeanReversionParams(BaseModel):
     oversold: int = Field(ge=1, le=49, description="RSI buy threshold")
     overbought: int = Field(ge=51, le=99, description="RSI sell threshold")
     use_bb_confirmation: bool = Field(description="Require price near BB")
-    bb_period: int = Field(default=20, ge=5, le=100, description="Bollinger Band period")
-    bb_std: float = Field(default=2.0, ge=1.0, le=4.0, description="BB standard deviations")
+    bb_period: int = Field(
+        default=20, ge=5, le=100, description="Bollinger Band period"
+    )
+    bb_std: float = Field(
+        default=2.0, ge=1.0, le=4.0, description="BB standard deviations"
+    )
     use_adx_filter: bool = Field(default=False, description="Filter choppy markets")
-    adx_threshold: int = Field(default=25, ge=10, le=50, description="Min ADX for signal")
-    stop_loss_atr_mult: float = Field(ge=0.5, le=10.0, description="Stop-loss distance (× ATR)")
-    max_holding_days: int = Field(ge=1, le=365, description="Max position holding period")
+    adx_threshold: int = Field(
+        default=25, ge=10, le=50, description="Min ADX for signal"
+    )
+    stop_loss_atr_mult: float = Field(
+        ge=0.5, le=10.0, description="Stop-loss distance (× ATR)"
+    )
+    max_holding_days: int = Field(
+        ge=1, le=365, description="Max position holding period"
+    )
 
     @model_validator(mode="after")
     def validate_rsi_thresholds(self):
@@ -121,14 +135,22 @@ class MomentumBreakoutParams(BaseModel):
 
     strategy_type: Literal["momentum_breakout"] = "momentum_breakout"
     lookback: int = Field(ge=5, le=200, description="Breakout lookback period")
-    surge_pct: float = Field(ge=1.0, le=10.0, description="Required volume surge (× avg)")
-    volume_ma_period: int = Field(default=20, ge=5, le=100, description="Volume MA period")
+    surge_pct: float = Field(
+        ge=1.0, le=10.0, description="Required volume surge (× avg)"
+    )
+    volume_ma_period: int = Field(
+        default=20, ge=5, le=100, description="Volume MA period"
+    )
     rsi_min: int = Field(ge=30, le=80, description="Min RSI for confirmation")
-    stop_loss_atr_mult: float = Field(ge=0.5, le=10.0, description="Initial stop-loss (× ATR)")
+    stop_loss_atr_mult: float = Field(
+        ge=0.5, le=10.0, description="Initial stop-loss (× ATR)"
+    )
     trailing_stop_atr_mult: float = Field(
         ge=0.5, le=10.0, description="Trailing stop distance (× ATR)"
     )
-    cooldown_days: int = Field(default=3, ge=0, le=100, description="Min days between signals")
+    cooldown_days: int = Field(
+        default=3, ge=0, le=100, description="Min days between signals"
+    )
 
 
 class BollingerBreakoutParams(BaseModel):
@@ -143,12 +165,16 @@ class BollingerBreakoutParams(BaseModel):
     strategy_type: Literal["bollinger_breakout"] = "bollinger_breakout"
     period: int = Field(ge=5, le=100, description="Bollinger Band period")
     std_dev: float = Field(ge=0.5, le=4.0, description="BB standard deviations")
-    confirmation_bars: int = Field(ge=1, le=5, description="Consecutive closes required")
+    confirmation_bars: int = Field(
+        ge=1, le=5, description="Consecutive closes required"
+    )
     volume_filter: bool = Field(description="Enable volume confirmation")
     volume_threshold: float = Field(
         default=1.5, ge=1.0, le=5.0, description="Volume threshold multiplier"
     )
-    cooldown_days: int = Field(default=3, ge=0, le=100, description="Min days between signals")
+    cooldown_days: int = Field(
+        default=3, ge=0, le=100, description="Min days between signals"
+    )
 
 
 class VWAPReversionParams(BaseModel):
@@ -156,11 +182,15 @@ class VWAPReversionParams(BaseModel):
 
     strategy_type: Literal["vwap_reversion"] = "vwap_reversion"
     vwap_period: int = Field(ge=5, le=50, description="Rolling VWAP period")
-    deviation_threshold: float = Field(ge=0.5, le=5.0, description="Deviation from VWAP (std dev)")
+    deviation_threshold: float = Field(
+        ge=0.5, le=5.0, description="Deviation from VWAP (std dev)"
+    )
     rsi_period: int = Field(ge=5, le=30, description="RSI calculation period")
     oversold: int = Field(ge=10, le=40, description="RSI oversold threshold")
     overbought: int = Field(ge=60, le=90, description="RSI overbought threshold")
-    cooldown_days: int = Field(default=3, ge=0, le=100, description="Min days between signals")
+    cooldown_days: int = Field(
+        default=3, ge=0, le=100, description="Min days between signals"
+    )
 
     @model_validator(mode="after")
     def validate_rsi_thresholds(self):
@@ -190,10 +220,16 @@ class GreenblattWeeklyParams(BaseModel):
     """
 
     strategy_type: Literal["greenblatt_weekly"] = "greenblatt_weekly"
-    fast_sma: int = Field(default=10, ge=2, le=50, description="Fast SMA period (weeks)")
-    slow_sma: int = Field(default=50, ge=5, le=200, description="Slow SMA period (weeks)")
+    fast_sma: int = Field(
+        default=10, ge=2, le=50, description="Fast SMA period (weeks)"
+    )
+    slow_sma: int = Field(
+        default=50, ge=5, le=200, description="Slow SMA period (weeks)"
+    )
     rsi_period: int = Field(default=14, ge=2, le=50, description="RSI period (weeks)")
-    rsi_oversold: int = Field(default=35, ge=10, le=49, description="RSI entry threshold")
+    rsi_oversold: int = Field(
+        default=35, ge=10, le=49, description="RSI entry threshold"
+    )
     rsi_overbought: int = Field(
         default=65,
         ge=51,
@@ -201,7 +237,10 @@ class GreenblattWeeklyParams(BaseModel):
         description="RSI exit threshold (used if exit_rsi_overbought=True)",
     )
     min_hold_bars: int = Field(
-        default=52, ge=1, le=260, description="Minimum hold in bars (weeks). Default 52 ≈ 1 year."
+        default=52,
+        ge=1,
+        le=260,
+        description="Minimum hold in bars (weeks). Default 52 ≈ 1 year.",
     )
     trailing_stop_fraction: float = Field(
         default=0.20,
@@ -214,7 +253,8 @@ class GreenblattWeeklyParams(BaseModel):
         description="Exit when RSI > rsi_overbought after min_hold_bars (off by default)",
     )
     exit_sma_cross: bool = Field(
-        default=False, description="Exit on SMA death-cross after min_hold_bars (off by default)"
+        default=False,
+        description="Exit on SMA death-cross after min_hold_bars (off by default)",
     )
 
     @model_validator(mode="after")
@@ -230,18 +270,31 @@ class BollingerRSIComboParams(BaseModel):
     """Bollinger Bands + RSI combination strategy parameters."""
 
     strategy_type: Literal["bollinger_rsi_combo"] = "bollinger_rsi_combo"
-    bb_period: int = Field(default=20, ge=5, le=100, description="Bollinger Bands period")
+    bb_period: int = Field(
+        default=20, ge=5, le=100, description="Bollinger Bands period"
+    )
     bb_std: float = Field(
-        default=2.0, ge=0.5, le=5.0, description="Bollinger Bands standard deviation multiplier"
+        default=2.0,
+        ge=0.5,
+        le=5.0,
+        description="Bollinger Bands standard deviation multiplier",
     )
     rsi_period: int = Field(default=14, ge=2, le=50, description="RSI period")
     rsi_oversold: int = Field(
-        default=45, ge=10, le=50, description="RSI entry threshold (relaxed vs standard 30)"
+        default=45,
+        ge=10,
+        le=50,
+        description="RSI entry threshold (relaxed vs standard 30)",
     )
     rsi_overbought: int = Field(
-        default=55, ge=50, le=90, description="RSI exit threshold (relaxed vs standard 70)"
+        default=55,
+        ge=50,
+        le=90,
+        description="RSI exit threshold (relaxed vs standard 70)",
     )
-    exit_at_middle: bool = Field(default=True, description="Exit when price reaches BB middle band")
+    exit_at_middle: bool = Field(
+        default=True, description="Exit when price reaches BB middle band"
+    )
 
     @model_validator(mode="after")
     def validate_rsi_levels(self):
@@ -255,20 +308,30 @@ class TrendAdaptiveRSIParams(BaseModel):
 
     strategy_type: Literal["trend_adaptive_rsi"] = "trend_adaptive_rsi"
     rsi_period: int = Field(default=14, ge=2, le=50, description="RSI period")
-    trend_sma: int = Field(default=50, ge=10, le=200, description="SMA period for trend detection")
+    trend_sma: int = Field(
+        default=50, ge=10, le=200, description="SMA period for trend detection"
+    )
     trend_lookback: int = Field(
         default=5, ge=1, le=20, description="Bars to confirm trend direction"
     )
-    uptrend_buy: int = Field(default=45, ge=20, le=60, description="RSI entry threshold in uptrend")
-    uptrend_sell: int = Field(default=65, ge=55, le=90, description="RSI exit threshold in uptrend")
+    uptrend_buy: int = Field(
+        default=45, ge=20, le=60, description="RSI entry threshold in uptrend"
+    )
+    uptrend_sell: int = Field(
+        default=65, ge=55, le=90, description="RSI exit threshold in uptrend"
+    )
     downtrend_buy: int = Field(
         default=35, ge=10, le=50, description="RSI entry threshold in downtrend"
     )
     downtrend_sell: int = Field(
         default=55, ge=45, le=80, description="RSI exit threshold in downtrend"
     )
-    range_buy: int = Field(default=35, ge=10, le=50, description="RSI entry threshold in range")
-    range_sell: int = Field(default=65, ge=50, le=90, description="RSI exit threshold in range")
+    range_buy: int = Field(
+        default=35, ge=10, le=50, description="RSI entry threshold in range"
+    )
+    range_sell: int = Field(
+        default=65, ge=50, le=90, description="RSI exit threshold in range"
+    )
 
     @model_validator(mode="after")
     def validate_thresholds(self):
@@ -346,14 +409,24 @@ class StrategyConfig(BaseModel):
 class RiskConfig(BaseModel):
     """Risk management parameters. All percentages are absolute (e.g., 2.0 = 2%)."""
 
-    stop_loss_pct: float = Field(ge=0.1, le=50.0, description="Max loss per position (%)")
-    take_profit_pct: float = Field(ge=0.1, le=200.0, description="Profit target per position (%)")
+    stop_loss_pct: float = Field(
+        ge=0.1, le=50.0, description="Max loss per position (%)"
+    )
+    take_profit_pct: float = Field(
+        ge=0.1, le=200.0, description="Profit target per position (%)"
+    )
     max_position_size_pct: float = Field(
         ge=1.0, le=100.0, description="Max % of portfolio per position"
     )
-    max_daily_loss_pct: float = Field(ge=0.1, le=50.0, description="Max portfolio loss per day (%)")
-    max_open_positions: int = Field(ge=1, le=50, description="Max concurrent positions per ticker")
-    portfolio_max_positions: int = Field(ge=1, le=100, description="Max total concurrent positions")
+    max_daily_loss_pct: float = Field(
+        ge=0.1, le=50.0, description="Max portfolio loss per day (%)"
+    )
+    max_open_positions: int = Field(
+        ge=1, le=50, description="Max concurrent positions per ticker"
+    )
+    portfolio_max_positions: int = Field(
+        ge=1, le=100, description="Max total concurrent positions"
+    )
     trailing_stop_enabled: bool = Field(description="Enable trailing stop-loss")
     trailing_stop_pct: float = Field(
         ge=0.0,
@@ -372,7 +445,9 @@ class RiskConfig(BaseModel):
     @model_validator(mode="after")
     def validate_trailing_stop(self):
         if self.trailing_stop_enabled and self.trailing_stop_pct < 0.1:
-            raise ValueError("trailing_stop_pct must be >= 0.1 if trailing_stop_enabled=True")
+            raise ValueError(
+                "trailing_stop_pct must be >= 0.1 if trailing_stop_enabled=True"
+            )
         return self
 
 
@@ -386,7 +461,9 @@ class ExecutionConfig(BaseModel):
         le=5.0,
         description="Offset from current price (%) for limit orders",
     )
-    cooldown_bars: int = Field(ge=0, le=100, description="Min bars between signals for same ticker")
+    cooldown_bars: int = Field(
+        ge=0, le=100, description="Min bars between signals for same ticker"
+    )
 
     @model_validator(mode="after")
     def validate_limit_offset(self):
@@ -432,21 +509,31 @@ class SafetyLimitsConfig(BaseModel):
 class BacktestPeriod(BaseModel):
     """Backtest date range."""
 
-    start: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$", description="Start date (YYYY-MM-DD)")
-    end: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$", description="End date (YYYY-MM-DD)")
+    start: str = Field(
+        pattern=r"^\d{4}-\d{2}-\d{2}$", description="Start date (YYYY-MM-DD)"
+    )
+    end: str = Field(
+        pattern=r"^\d{4}-\d{2}-\d{2}$", description="End date (YYYY-MM-DD)"
+    )
 
 
 class PerformanceMetrics(BaseModel):
     """Backtest performance metrics."""
 
     sharpe_ratio: float = Field(ge=-10.0, le=10.0, description="Risk-adjusted return")
-    sortino_ratio: float = Field(ge=-10.0, le=10.0, description="Downside risk-adjusted return")
-    total_return_pct: float = Field(ge=-100.0, le=10000.0, description="Total backtest return (%)")
+    sortino_ratio: float = Field(
+        ge=-10.0, le=10.0, description="Downside risk-adjusted return"
+    )
+    total_return_pct: float = Field(
+        ge=-100.0, le=10000.0, description="Total backtest return (%)"
+    )
     max_drawdown_pct: float = Field(
         ge=-100.0, le=0.0, description="Maximum drawdown (negative value)"
     )
     win_rate_pct: float = Field(ge=0.0, le=100.0, description="% of winning trades")
-    profit_factor: float = Field(ge=0.0, le=100.0, description="Gross profit / gross loss")
+    profit_factor: float = Field(
+        ge=0.0, le=100.0, description="Gross profit / gross loss"
+    )
     total_trades: int = Field(ge=0, le=100000, description="Total number of trades")
     calmar_ratio: float = Field(ge=-10.0, le=10.0, description="CAGR / max drawdown")
 
@@ -478,8 +565,12 @@ class StrategyExportSchema(BaseModel):
 
     schema_version: Literal["1.0"] = Field(description="Schema version")
     strategy: StrategyConfig
-    ticker: str = Field(min_length=1, max_length=10, description="Primary ticker symbol")
-    timeframe: Literal["1Day", "1Hour", "15Min", "1Week"] = Field(description="Trading timeframe")
+    ticker: str = Field(
+        min_length=1, max_length=10, description="Primary ticker symbol"
+    )
+    timeframe: Literal["1Day", "1Hour", "15Min", "1Week"] = Field(
+        description="Trading timeframe"
+    )
     risk: RiskConfig
     execution: ExecutionConfig
     safety_limits: SafetyLimitsConfig = Field(
@@ -492,7 +583,9 @@ class StrategyExportSchema(BaseModel):
     def validate_timeframe_compatibility(self):
         """VWAP strategies require intraday timeframes."""
         if self.strategy.name == "vwap_reversion" and self.timeframe == "1Day":
-            raise ValueError("VWAP strategies require intraday timeframe (1Hour or 15Min)")
+            raise ValueError(
+                "VWAP strategies require intraday timeframe (1Hour or 15Min)"
+            )
         return self
 
     model_config = {
@@ -566,7 +659,9 @@ class StrategyExportSchema(BaseModel):
 # ============================================================================
 
 
-def validate_strategy_export(data: dict, auto_migrate: bool = True) -> StrategyExportSchema:
+def validate_strategy_export(
+    data: dict, auto_migrate: bool = True
+) -> StrategyExportSchema:
     """Validate and parse strategy export JSON with optional migration.
 
     Args:

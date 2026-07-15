@@ -39,7 +39,7 @@ from src.strategies.implementations.greenblatt_weekly import GreenblattWeekly
 
 ALPHALIVE_CONFIGS = SCRIPT_DIR.parent / "AlphaLive" / "configs" / "production"
 BACKTEST_START = "2015-01-01"
-BACKTEST_END   = "2025-12-31"
+BACKTEST_END = "2025-12-31"
 INITIAL_CAPITAL = 100_000.0
 
 TICKERS = ["META", "JPM", "AAPL"]
@@ -74,9 +74,19 @@ RISK = {
 
 
 def fetch_weekly(ticker: str) -> pd.DataFrame:
-    print(f"  Fetching {ticker} weekly {BACKTEST_START} → {BACKTEST_END} …", end=" ", flush=True)
-    raw = yf.download(ticker, start=BACKTEST_START, end=BACKTEST_END,
-                      interval="1wk", auto_adjust=True, progress=False)
+    print(
+        f"  Fetching {ticker} weekly {BACKTEST_START} → {BACKTEST_END} …",
+        end=" ",
+        flush=True,
+    )
+    raw = yf.download(
+        ticker,
+        start=BACKTEST_START,
+        end=BACKTEST_END,
+        interval="1wk",
+        auto_adjust=True,
+        progress=False,
+    )
     if raw.empty:
         raise RuntimeError(f"No weekly data returned for {ticker}")
     if isinstance(raw.columns, pd.MultiIndex):
@@ -96,16 +106,24 @@ def engineer(df: pd.DataFrame) -> pd.DataFrame:
 
 def build_config(ticker: str, metrics: dict, bt_result) -> dict:
     perf = {
-        "sharpe_ratio":    round(metrics.get("risk", {}).get("sharpe_ratio", 0.0), 2),
-        "sortino_ratio":   round(metrics.get("risk", {}).get("sortino_ratio", 0.0), 2),
+        "sharpe_ratio": round(metrics.get("risk", {}).get("sharpe_ratio", 0.0), 2),
+        "sortino_ratio": round(metrics.get("risk", {}).get("sortino_ratio", 0.0), 2),
         "total_return_pct": round(
             (bt_result.final_value - INITIAL_CAPITAL) / INITIAL_CAPITAL * 100, 2
         ),
-        "max_drawdown_pct": round(metrics.get("drawdown", {}).get("max_drawdown_pct", 0.0), 2),
-        "win_rate_pct":    round((metrics.get("trades", {}).get("win_rate", 0.0) or 0.0) * 100, 2),
-        "profit_factor":   round(min(metrics.get("trades", {}).get("profit_factor", 0.0) or 0.0, 999.0), 2),
-        "total_trades":    metrics.get("trades", {}).get("total_trades", 0) or 0,
-        "calmar_ratio":    round(metrics.get("risk", {}).get("calmar_ratio", 0.0) or 0.0, 2),
+        "max_drawdown_pct": round(
+            metrics.get("drawdown", {}).get("max_drawdown_pct", 0.0), 2
+        ),
+        "win_rate_pct": round(
+            (metrics.get("trades", {}).get("win_rate", 0.0) or 0.0) * 100, 2
+        ),
+        "profit_factor": round(
+            min(metrics.get("trades", {}).get("profit_factor", 0.0) or 0.0, 999.0), 2
+        ),
+        "total_trades": metrics.get("trades", {}).get("total_trades", 0) or 0,
+        "calmar_ratio": round(
+            metrics.get("risk", {}).get("calmar_ratio", 0.0) or 0.0, 2
+        ),
     }
     return {
         "schema_version": "1.0",
@@ -168,22 +186,29 @@ def main():
         print(f"\n  {ticker}")
         strategy = GreenblattWeekly(STRATEGY_PARAMS.copy())
         bt = engine.run_backtest(
-            strategy, data[ticker],
+            strategy,
+            data[ticker],
             initial_capital=INITIAL_CAPITAL,
             max_drawdown_pct=40,
         )
-        bm_curve = bt.benchmark.get("buy_and_hold_equity_curve") if bt.benchmark else None
-        m = metrics_calc.calculate_all(bt.equity_curve, bt.trades, benchmark_curve=bm_curve)
+        bm_curve = (
+            bt.benchmark.get("buy_and_hold_equity_curve") if bt.benchmark else None
+        )
+        m = metrics_calc.calculate_all(
+            bt.equity_curve, bt.trades, benchmark_curve=bm_curve
+        )
 
         sharpe = m.get("risk", {}).get("sharpe_ratio", 0.0) or 0.0
-        cagr   = m.get("returns", {}).get("cagr_pct", 0.0) or 0.0
-        dd     = m.get("drawdown", {}).get("max_drawdown_pct", 0.0) or 0.0
-        wr     = (m.get("trades", {}).get("win_rate", 0.0) or 0.0) * 100
-        n      = m.get("trades", {}).get("total_trades", 0) or 0
-        ret    = (bt.final_value - INITIAL_CAPITAL) / INITIAL_CAPITAL * 100
+        cagr = m.get("returns", {}).get("cagr_pct", 0.0) or 0.0
+        dd = m.get("drawdown", {}).get("max_drawdown_pct", 0.0) or 0.0
+        wr = (m.get("trades", {}).get("win_rate", 0.0) or 0.0) * 100
+        n = m.get("trades", {}).get("total_trades", 0) or 0
+        ret = (bt.final_value - INITIAL_CAPITAL) / INITIAL_CAPITAL * 100
 
-        print(f"    Sharpe={sharpe:.2f}  CAGR={cagr:.1f}%  Return={ret:.1f}%  "
-              f"WinRate={wr:.1f}%  MaxDD={dd:.1f}%  Trades={n}")
+        print(
+            f"    Sharpe={sharpe:.2f}  CAGR={cagr:.1f}%  Return={ret:.1f}%  "
+            f"WinRate={wr:.1f}%  MaxDD={dd:.1f}%  Trades={n}"
+        )
 
         cfg = build_config(ticker, m, bt)
         configs.append((ticker, cfg))
@@ -197,13 +222,17 @@ def main():
             json.dump(cfg, f, indent=2)
         perf = cfg["metadata"]["performance"]
         years = int(BACKTEST_END[:4]) - int(BACKTEST_START[:4])
-        print(f"{filename} (Sharpe={perf['sharpe_ratio']}, "
-              f"Return={perf['total_return_pct']:.0f}% over {years}y, "
-              f"Trades={perf['total_trades']})")
+        print(
+            f"{filename} (Sharpe={perf['sharpe_ratio']}, "
+            f"Return={perf['total_return_pct']:.0f}% over {years}y, "
+            f"Trades={perf['total_trades']})"
+        )
 
     print(f"\n  All configs written to: {ALPHALIVE_CONFIGS}")
     print("\n  Next steps:")
-    print("  1. cd AlphaLive && pytest tests/test_signal_parity.py - verify no regressions")
+    print(
+        "  1. cd AlphaLive && pytest tests/test_signal_parity.py - verify no regressions"
+    )
     print("  2. Add greenblatt_weekly parity test (Priority 4 in MASTER_PLAN)")
     print("  3. Deploy to Railway in DRY_RUN mode first, then paper, then live")
     print()
