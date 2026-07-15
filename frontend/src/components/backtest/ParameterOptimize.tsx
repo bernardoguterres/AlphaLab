@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { optimizeParameters, generateHeatmap } from "@/services/api";
 import type {
   ParameterOptimizeRequest,
@@ -30,6 +30,58 @@ interface ParameterOptimizeProps {
   onApplyParams: (params: Record<string, number>) => void;
 }
 
+// Default optimizable (numeric-only) parameter ranges per strategy, mirroring the
+// per-strategy fields in Backtest.tsx's forms and DEFAULT_PARAMS in types/index.ts.
+// Boolean flags (volume_confirmation, use_bb_confirmation, etc.) aren't included -
+// grid search only varies numeric params.
+const STRATEGY_PARAM_RANGES: Record<StrategyType, Record<string, { min: number; max: number; step: number }>> = {
+  ma_crossover: {
+    short_window: { min: 20, max: 50, step: 10 },
+    long_window: { min: 100, max: 200, step: 50 },
+  },
+  rsi_mean_reversion: {
+    rsi_period: { min: 10, max: 20, step: 5 },
+    oversold: { min: 20, max: 35, step: 5 },
+    overbought: { min: 65, max: 80, step: 5 },
+  },
+  rsi_simple: {
+    period: { min: 10, max: 20, step: 5 },
+    oversold: { min: 30, max: 45, step: 5 },
+    overbought: { min: 55, max: 70, step: 5 },
+  },
+  momentum_breakout: {
+    lookback: { min: 10, max: 40, step: 10 },
+    volume_surge_pct: { min: 120, max: 200, step: 20 },
+    rsi_min: { min: 40, max: 60, step: 5 },
+  },
+  bollinger_breakout: {
+    bb_period: { min: 10, max: 30, step: 10 },
+    bb_std_dev: { min: 1.5, max: 3, step: 0.5 },
+    confirmation_bars: { min: 1, max: 3, step: 1 },
+  },
+  vwap_reversion: {
+    vwap_period: { min: 10, max: 30, step: 10 },
+    deviation_threshold: { min: 1, max: 3, step: 0.5 },
+    rsi_period: { min: 10, max: 20, step: 5 },
+  },
+  bollinger_rsi_combo: {
+    bb_period: { min: 10, max: 30, step: 10 },
+    rsi_period: { min: 10, max: 20, step: 5 },
+    rsi_oversold: { min: 35, max: 49, step: 7 },
+  },
+  trend_adaptive_rsi: {
+    rsi_period: { min: 10, max: 20, step: 5 },
+    trend_sma: { min: 30, max: 100, step: 10 },
+    trend_lookback: { min: 3, max: 10, step: 2 },
+  },
+  greenblatt_weekly: {
+    // fast_sma/slow_sma only 10/20/50/100/200 - FeatureEngineer's precomputed SMA windows
+    fast_sma: { min: 10, max: 20, step: 10 },
+    slow_sma: { min: 50, max: 100, step: 50 },
+    min_hold_bars: { min: 26, max: 78, step: 26 },
+  },
+};
+
 export default function ParameterOptimize({
   ticker,
   strategy,
@@ -43,21 +95,34 @@ export default function ParameterOptimize({
   const [walkForward, setWalkForward] = useState(false);
   const [nFolds, setNFolds] = useState(5);
 
-  // Parameter ranges (example for MA Crossover)
-  const [paramRanges, setParamRanges] = useState<Record<string, { min: number; max: number; step: number }>>({
-    short_window: { min: 20, max: 50, step: 10 },
-    long_window: { min: 100, max: 200, step: 50 },
-  });
+  // Parameter ranges - defaults per strategy (see STRATEGY_PARAM_RANGES above)
+  const [paramRanges, setParamRanges] = useState<Record<string, { min: number; max: number; step: number }>>(
+    STRATEGY_PARAM_RANGES[strategy]
+  );
 
   // Heatmap settings
-  const [param1, setParam1] = useState("short_window");
-  const [param2, setParam2] = useState("long_window");
+  const defaultKeys = Object.keys(STRATEGY_PARAM_RANGES[strategy]);
+  const [param1, setParam1] = useState(defaultKeys[0]);
+  const [param2, setParam2] = useState(defaultKeys[1] ?? defaultKeys[0]);
 
   // Results
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isGeneratingHeatmap, setIsGeneratingHeatmap] = useState(false);
   const [optimizeResult, setOptimizeResult] = useState<ParameterOptimizeResponse["data"] | null>(null);
   const [heatmapResult, setHeatmapResult] = useState<HeatmapResponse["data"] | null>(null);
+
+  // Reset ranges/results whenever the selected strategy changes - each strategy
+  // has different (and differently-named) numeric parameters (F2 fix: this
+  // previously stayed hardcoded to MA Crossover's fields for every strategy).
+  useEffect(() => {
+    const ranges = STRATEGY_PARAM_RANGES[strategy];
+    setParamRanges(ranges);
+    const keys = Object.keys(ranges);
+    setParam1(keys[0]);
+    setParam2(keys[1] ?? keys[0]);
+    setOptimizeResult(null);
+    setHeatmapResult(null);
+  }, [strategy]);
 
   const handleOptimize = async () => {
     if (!ticker || !strategy) {
