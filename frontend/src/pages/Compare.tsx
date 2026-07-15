@@ -341,7 +341,7 @@ export default function Compare() {
                     <td className={cn("px-4 py-3 text-right font-mono-numbers", pnlColor(result.metrics.returns.cagr_pct))}>{formatPercent(result.metrics.returns.cagr_pct)}</td>
                     <td className="px-4 py-3 text-right font-mono-numbers">{formatNumber(result.metrics.risk.sharpe_ratio)}</td>
                     <td className="px-4 py-3 text-right font-mono-numbers text-loss">{formatPercent(result.metrics.drawdown.max_drawdown_pct)}</td>
-                    <td className="px-4 py-3 text-right font-mono-numbers">{formatPercent(result.metrics.trades.win_rate)}</td>
+                    <td className="px-4 py-3 text-right font-mono-numbers">{formatPercent(result.metrics.trades.win_rate * 100)}</td>
                     <td className="px-4 py-3 text-right font-mono-numbers">{result.total_trades}</td>
                   </tr>
                 ))}
