@@ -32,14 +32,14 @@ export function BestStrategySummary({ results }: BestStrategySummaryProps) {
       // For drawdown, "best" means closest to 0 (least negative)
       let best = entries[0];
       for (const entry of entries) {
-        const curr = entry[1].metrics.drawdown.max_drawdown;
-        const bestVal = best[1].metrics.drawdown.max_drawdown;
+        const curr = entry[1].metrics.drawdown.max_drawdown_pct;
+        const bestVal = best[1].metrics.drawdown.max_drawdown_pct;
         if (curr > bestVal) {
           // Less negative is better
           best = entry;
         }
       }
-      return { strategy: best[0], value: best[1].metrics.drawdown.max_drawdown };
+      return { strategy: best[0], value: best[1].metrics.drawdown.max_drawdown_pct };
     };
 
     const bestSharpe = findBest((r) => r.metrics.risk.sharpe_ratio);
