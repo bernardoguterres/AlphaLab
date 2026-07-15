@@ -159,8 +159,8 @@ export default function Dashboard() {
               <div className="grid grid-cols-3 gap-2 px-5 py-4 border-t border-border/60 bg-secondary/20">
                 <div>
                   <p className="label-caps">CAGR</p>
-                  <p className={cn("text-sm font-mono-numbers font-semibold mt-0.5", pnlColor(bestStrategy.result.metrics.returns.cagr))}>
-                    {formatPercent(bestStrategy.result.metrics.returns.cagr)}
+                  <p className={cn("text-sm font-mono-numbers font-semibold mt-0.5", pnlColor(bestStrategy.result.metrics.returns.cagr_pct))}>
+                    {formatPercent(bestStrategy.result.metrics.returns.cagr_pct)}
                   </p>
                 </div>
                 <div className="border-x border-border/50 px-2">
