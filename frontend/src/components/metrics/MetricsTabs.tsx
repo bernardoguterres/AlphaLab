@@ -29,25 +29,25 @@ export function MetricsTabs({ metrics }: MetricsTabsProps) {
 
       <TabsContent value="returns" className="mt-3">
         <MetricRow label="Total Return" value={formatPercent(metrics.returns.total_return_pct)} />
-        <MetricRow label="CAGR" value={formatPercent(metrics.returns.cagr)} />
-        <MetricRow label="Mean Daily Return" value={formatPercent(metrics.returns.mean_return, 4)} />
+        <MetricRow label="CAGR" value={formatPercent(metrics.returns.cagr_pct)} />
+        <MetricRow label="Mean Daily Return" value={formatPercent(metrics.returns.mean_daily_return, 4)} />
         <MetricRow label="Skewness" value={formatNumber(metrics.returns.skewness)} />
         <MetricRow label="Kurtosis" value={formatNumber(metrics.returns.kurtosis)} />
       </TabsContent>
 
       <TabsContent value="risk" className="mt-3">
-        <MetricRow label="Volatility" value={formatPercent(metrics.risk.volatility)} />
+        <MetricRow label="Volatility" value={formatPercent(metrics.risk.volatility_annual_pct)} />
         <MetricRow label="Sharpe Ratio" value={formatNumber(metrics.risk.sharpe_ratio)} />
         <MetricRow label="Sortino Ratio" value={formatNumber(metrics.risk.sortino_ratio)} />
         <MetricRow label="Calmar Ratio" value={formatNumber(metrics.risk.calmar_ratio)} />
-        <MetricRow label="VaR (95%)" value={formatPercent(metrics.risk.var_95)} />
-        <MetricRow label="CVaR (95%)" value={formatPercent(metrics.risk.cvar_95)} />
+        <MetricRow label="VaR (95%)" value={formatPercent(metrics.risk.var_95_pct)} />
+        <MetricRow label="CVaR (95%)" value={formatPercent(metrics.risk.cvar_95_pct)} />
       </TabsContent>
 
       <TabsContent value="drawdown" className="mt-3">
-        <MetricRow label="Max Drawdown" value={formatPercent(metrics.drawdown.max_drawdown)} />
-        <MetricRow label="Avg Drawdown" value={formatPercent(metrics.drawdown.avg_drawdown)} />
-        <MetricRow label="Max Duration (days)" value={formatNumber(metrics.drawdown.max_drawdown_duration, 0)} />
+        <MetricRow label="Max Drawdown" value={formatPercent(metrics.drawdown.max_drawdown_pct)} />
+        <MetricRow label="Avg Drawdown" value={formatPercent(metrics.drawdown.avg_drawdown_pct)} />
+        <MetricRow label="Max Duration (days)" value={formatNumber(metrics.drawdown.max_drawdown_duration_days, 0)} />
         <MetricRow label="Recovery Days" value={formatNumber(metrics.drawdown.recovery_days, 0)} />
       </TabsContent>
 

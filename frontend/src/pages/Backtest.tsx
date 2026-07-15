@@ -114,7 +114,7 @@ export default function Backtest() {
       strategy,
       total_return_pct: currentResult.total_return_pct,
       sharpe_ratio: currentResult.metrics.risk.sharpe_ratio,
-      max_drawdown: currentResult.metrics.drawdown.max_drawdown,
+      max_drawdown: currentResult.metrics.drawdown.max_drawdown_pct,
       total_trades: currentResult.total_trades,
       result: currentResult,
     });
@@ -475,9 +475,9 @@ export default function Backtest() {
                 colorClass={pnlColor(currentResult.total_return_pct)}
                 icon={currentResult.total_return_pct >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
               />
-              <MetricCard label="CAGR" value={formatPercent(currentResult.metrics.returns.cagr)} colorClass={pnlColor(currentResult.metrics.returns.cagr)} />
+              <MetricCard label="CAGR" value={formatPercent(currentResult.metrics.returns.cagr_pct)} colorClass={pnlColor(currentResult.metrics.returns.cagr_pct)} />
               <MetricCard label="Sharpe Ratio" value={formatNumber(currentResult.metrics.risk.sharpe_ratio)} icon={<Target className="h-4 w-4" />} />
-              <MetricCard label="Max Drawdown" value={formatPercent(currentResult.metrics.drawdown.max_drawdown)} colorClass="text-loss" />
+              <MetricCard label="Max Drawdown" value={formatPercent(currentResult.metrics.drawdown.max_drawdown_pct)} colorClass="text-loss" />
               <MetricCard label="Win Rate" value={formatPercent(currentResult.metrics.trades.win_rate * 100)} icon={<Percent className="h-4 w-4" />} />
               <MetricCard label="Total Trades" value={currentResult.total_trades.toString()} />
             </div>

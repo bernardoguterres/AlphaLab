@@ -17,23 +17,23 @@ export interface Trade {
 export interface BacktestMetrics {
   returns: {
     total_return_pct: number;
-    cagr: number;
-    mean_return: number;
+    cagr_pct: number;
+    mean_daily_return: number;
     skewness: number;
     kurtosis: number;
   };
   risk: {
-    volatility: number;
+    volatility_annual_pct: number;
     sharpe_ratio: number;
     sortino_ratio: number;
     calmar_ratio: number;
-    var_95: number;
-    cvar_95: number;
+    var_95_pct: number;
+    cvar_95_pct: number;
   };
   drawdown: {
-    max_drawdown: number;
-    avg_drawdown: number;
-    max_drawdown_duration: number;
+    max_drawdown_pct: number;
+    avg_drawdown_pct: number;
+    max_drawdown_duration_days: number;
     recovery_days: number;
   };
   trades: {
