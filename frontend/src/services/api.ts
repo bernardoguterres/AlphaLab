@@ -57,12 +57,31 @@ export async function compareStrategies(request: CompareRequest): Promise<Compar
 }
 
 export async function exportStrategy(backtest_id: string): Promise<Blob> {
-  const response = await api.post(
-    "/strategies/export",
-    { backtest_id },
-    { responseType: "blob" }
-  );
-  return response.data;
+  try {
+    const response = await api.post(
+      "/strategies/export",
+      { backtest_id },
+      { responseType: "blob" }
+    );
+    return response.data;
+  } catch (error) {
+    // responseType: "blob" means axios can't auto-parse a JSON error body -
+    // error.message ends up as a generic "Request failed with status code
+    // 422" instead of the backend's actual message. Read the blob as text
+    // and re-throw with the real message.
+    if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+      const text = await error.response.data.text();
+      const message = (() => {
+        try {
+          return JSON.parse(text).message as string | undefined;
+        } catch {
+          return undefined;
+        }
+      })();
+      if (message) throw new Error(message);
+    }
+    throw error;
+  }
 }
 
 export async function runBatchBacktest(request: BatchBacktestRequest): Promise<BatchBacktestResponse> {
