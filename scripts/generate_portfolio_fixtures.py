@@ -93,11 +93,15 @@ def main():
         writer = csv.writer(f)
         writer.writerow(["ticker", "rank", "target_weight", "target_shares", "price"])
         for r in sorted(rows, key=lambda r: r.ticker):
-            writer.writerow([r.ticker, r.rank, r.target_weight, r.target_shares, r.price])
+            writer.writerow(
+                [r.ticker, r.rank, r.target_weight, r.target_shares, r.price]
+            )
 
     print(f"Wrote {len(rows)} rows to {OUT_PATH}")
     for r in sorted(rows, key=lambda r: r.ticker):
-        print(f"  {r.ticker}: rank={r.rank} weight={r.target_weight:.4f} shares={r.target_shares} price={r.price}")
+        print(
+            f"  {r.ticker}: rank={r.rank} weight={r.target_weight:.4f} shares={r.target_shares} price={r.price}"
+        )
 
 
 if __name__ == "__main__":

@@ -18,7 +18,8 @@ Usage:
 
 import math
 import warnings
-warnings.filterwarnings("ignore")          # suppress pandas / scipy noise
+
+warnings.filterwarnings("ignore")  # suppress pandas / scipy noise
 
 from wf_common import setup_backend_path, fmt, print_table_header, print_table_row
 
@@ -48,16 +49,16 @@ WINDOWS = [
     {
         "label": "Window 1",
         "train_start": "2019-01-01",
-        "train_end":   "2021-12-31",
-        "test_start":  "2022-01-01",
-        "test_end":    "2022-12-31",
+        "train_end": "2021-12-31",
+        "test_start": "2022-01-01",
+        "test_end": "2022-12-31",
     },
     {
         "label": "Window 2",
         "train_start": "2020-01-01",
-        "train_end":   "2022-12-31",
-        "test_start":  "2023-01-01",
-        "test_end":    "2023-12-31",
+        "train_end": "2022-12-31",
+        "test_start": "2023-01-01",
+        "test_end": "2023-12-31",
     },
 ]
 
@@ -67,8 +68,8 @@ STRATEGIES = [
         "name": "rsi_simple",
         "class": RSISimple,
         "params": {
-            "period":     14,
-            "oversold":   40,
+            "period": 14,
+            "oversold": 40,
             "overbought": 60,
         },
     },
@@ -76,10 +77,10 @@ STRATEGIES = [
         "name": "bollinger_rsi_combo",
         "class": BollingerRSICombo,
         "params": {
-            "bb_period":      20,
-            "bb_std":         2.0,
-            "rsi_period":     14,
-            "rsi_oversold":   45,
+            "bb_period": 20,
+            "bb_std": 2.0,
+            "rsi_period": 14,
+            "rsi_oversold": 45,
             "rsi_overbought": 55,
             "exit_at_middle": True,
         },
@@ -88,15 +89,15 @@ STRATEGIES = [
         "name": "trend_adaptive_rsi",
         "class": TrendAdaptiveRSI,
         "params": {
-            "rsi_period":      14,
-            "trend_sma":       50,
-            "trend_lookback":  5,
-            "uptrend_buy":     45,
-            "uptrend_sell":    65,
-            "downtrend_buy":   35,
-            "downtrend_sell":  55,
-            "range_buy":       35,
-            "range_sell":      65,
+            "rsi_period": 14,
+            "trend_sma": 50,
+            "trend_lookback": 5,
+            "uptrend_buy": 45,
+            "uptrend_sell": 65,
+            "downtrend_buy": 35,
+            "downtrend_sell": 55,
+            "range_buy": 35,
+            "range_sell": 65,
         },
     },
 ]
@@ -107,6 +108,7 @@ SHARPE_THRESHOLD = 0.5
 # ---------------------------------------------------------------------------
 # Data helpers
 # ---------------------------------------------------------------------------
+
 
 def fetch_data(ticker: str, start: str, end: str) -> pd.DataFrame:
     """Download OHLCV data from yfinance and normalise column names."""
@@ -122,7 +124,7 @@ def fetch_data(ticker: str, start: str, end: str) -> pd.DataFrame:
         raw.columns = [col[0] for col in raw.columns]
 
     # Ensure standard column names
-    raw = raw.rename(columns=str.title)          # open→Open, etc.
+    raw = raw.rename(columns=str.title)  # open→Open, etc.
     required = {"Open", "High", "Low", "Close", "Volume"}
     missing = required - set(raw.columns)
     if missing:
@@ -144,6 +146,7 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # Backtest helpers
 # ---------------------------------------------------------------------------
+
 
 def run_one_backtest(
     strategy_class,
@@ -174,34 +177,38 @@ def run_one_backtest(
 
     # Calculate performance metrics
     calculator = PerformanceMetrics(risk_free_rate=0.04)
-    bm_curve = results.benchmark.get("buy_and_hold_equity_curve") if results.benchmark else None
+    bm_curve = (
+        results.benchmark.get("buy_and_hold_equity_curve")
+        if results.benchmark
+        else None
+    )
     metrics = calculator.calculate_all(
         equity_curve=results.equity_curve,
         trades=results.trades,
         benchmark_curve=bm_curve,
     )
 
-    sharpe      = metrics.get("risk", {}).get("sharpe_ratio", 0.0) or 0.0
-    max_dd      = metrics.get("drawdown", {}).get("max_drawdown_pct", 0.0) or 0.0
-    win_rate    = metrics.get("trades", {}).get("win_rate", 0.0) or 0.0
+    sharpe = metrics.get("risk", {}).get("sharpe_ratio", 0.0) or 0.0
+    max_dd = metrics.get("drawdown", {}).get("max_drawdown_pct", 0.0) or 0.0
+    win_rate = metrics.get("trades", {}).get("win_rate", 0.0) or 0.0
     total_trades = metrics.get("trades", {}).get("total_trades", 0) or 0
 
     return {
-        "sharpe":        sharpe,
-        "win_rate":      win_rate,
-        "max_drawdown":  max_dd,
-        "total_trades":  total_trades,
-        "error":         None,
+        "sharpe": sharpe,
+        "win_rate": win_rate,
+        "max_drawdown": max_dd,
+        "total_trades": total_trades,
+        "error": None,
     }
 
 
 def _empty_metrics_row(reason: str) -> dict:
     return {
-        "sharpe":       float("nan"),
-        "win_rate":     float("nan"),
+        "sharpe": float("nan"),
+        "win_rate": float("nan"),
         "max_drawdown": float("nan"),
         "total_trades": 0,
-        "error":        reason,
+        "error": reason,
     }
 
 
@@ -228,7 +235,11 @@ def print_header():
 def print_row(strategy_label, window_label, phase, period, m):
     """Print one result row."""
     wr = m["win_rate"]
-    if m["error"] is not None or wr is None or (isinstance(wr, float) and math.isnan(wr)):
+    if (
+        m["error"] is not None
+        or wr is None
+        or (isinstance(wr, float) and math.isnan(wr))
+    ):
         win_rate_str = "  N/A  "
     else:
         win_rate_str = f"{wr * 100:.1f}%"
@@ -253,22 +264,25 @@ def print_row(strategy_label, window_label, phase, period, m):
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
     print()
     print("=" * 70)
     print("  AlphaLab Walk-Forward Validation")
     print(f"  Ticker : {TICKER}")
     print(f"  Windows: {len(WINDOWS)}  (3-year train / 1-year test, step 1 year)")
-    print(f"  Verdict threshold: out-of-sample Sharpe > {SHARPE_THRESHOLD} in all windows")
+    print(
+        f"  Verdict threshold: out-of-sample Sharpe > {SHARPE_THRESHOLD} in all windows"
+    )
     print("=" * 70)
 
     # ------------------------------------------------------------------
     # 1. Determine the full date range needed and fetch once
     # ------------------------------------------------------------------
     all_starts = [w["train_start"] for w in WINDOWS]
-    all_ends   = [w["test_end"]    for w in WINDOWS]
+    all_ends = [w["test_end"] for w in WINDOWS]
     fetch_start = min(all_starts)
-    fetch_end   = max(all_ends)
+    fetch_end = max(all_ends)
 
     print(f"\n[1/3] Downloading market data …")
     raw_data = fetch_data(TICKER, fetch_start, fetch_end)
@@ -291,7 +305,7 @@ def main():
     all_results: dict[str, dict] = {}
 
     for strat_cfg in STRATEGIES:
-        sname  = strat_cfg["name"]
+        sname = strat_cfg["name"]
         sclass = strat_cfg["class"]
         sparams = strat_cfg["params"]
         all_results[sname] = {}
@@ -301,20 +315,32 @@ def main():
             print(f"  {sname} / {wlabel}")
 
             # In-sample (training window)
-            print(f"    In-sample  {window['train_start']} → {window['train_end']}", end=" … ")
-            in_m = run_one_backtest(sclass, sparams, featured_data,
-                                    window["train_start"], window["train_end"])
+            print(
+                f"    In-sample  {window['train_start']} → {window['train_end']}",
+                end=" … ",
+            )
+            in_m = run_one_backtest(
+                sclass,
+                sparams,
+                featured_data,
+                window["train_start"],
+                window["train_end"],
+            )
             print(f"Sharpe={fmt(in_m['sharpe'], '.4f')}")
 
             # Out-of-sample (test window)
-            print(f"    Out-sample {window['test_start']} → {window['test_end']}", end=" … ")
-            out_m = run_one_backtest(sclass, sparams, featured_data,
-                                     window["test_start"], window["test_end"])
+            print(
+                f"    Out-sample {window['test_start']} → {window['test_end']}",
+                end=" … ",
+            )
+            out_m = run_one_backtest(
+                sclass, sparams, featured_data, window["test_start"], window["test_end"]
+            )
             print(f"Sharpe={fmt(out_m['sharpe'], '.4f')}")
 
             all_results[sname][wlabel] = {
-                "in_sample":      in_m,
-                "out_of_sample":  out_m,
+                "in_sample": in_m,
+                "out_of_sample": out_m,
             }
 
     # ------------------------------------------------------------------
@@ -362,8 +388,11 @@ def main():
     # ------------------------------------------------------------------
     print()
     print("=" * 70)
-    print("  VERDICTS  (threshold: out-of-sample Sharpe > {:.1f} in BOTH windows)".format(
-        SHARPE_THRESHOLD))
+    print(
+        "  VERDICTS  (threshold: out-of-sample Sharpe > {:.1f} in BOTH windows)".format(
+            SHARPE_THRESHOLD
+        )
+    )
     print("=" * 70)
 
     for strat_cfg in STRATEGIES:
@@ -377,9 +406,8 @@ def main():
             oos_sharpes.append(sharpe)
 
         valid_sharpes = [s for s in oos_sharpes if not math.isnan(s)]
-        all_pass = (
-            len(valid_sharpes) == len(WINDOWS)
-            and all(s > SHARPE_THRESHOLD for s in valid_sharpes)
+        all_pass = len(valid_sharpes) == len(WINDOWS) and all(
+            s > SHARPE_THRESHOLD for s in valid_sharpes
         )
 
         verdict = "CONSISTENT" if all_pass else "UNSTABLE"
@@ -391,9 +419,14 @@ def main():
         print(f"  {marker} {sname:<22}  {verdict:<12}  (OOS Sharpes: {sharpe_summary})")
 
     print()
-    print("  CONSISTENT = strategy generalises; OOS Sharpe held above {:.1f} in every window.".format(
-        SHARPE_THRESHOLD))
-    print("  UNSTABLE   = possible overfitting or regime sensitivity; review parameters.")
+    print(
+        "  CONSISTENT = strategy generalises; OOS Sharpe held above {:.1f} in every window.".format(
+            SHARPE_THRESHOLD
+        )
+    )
+    print(
+        "  UNSTABLE   = possible overfitting or regime sensitivity; review parameters."
+    )
     print()
 
 

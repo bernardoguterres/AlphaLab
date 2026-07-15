@@ -32,8 +32,8 @@ from src.strategies.implementations.greenblatt_weekly import GreenblattWeekly
 FIXTURES_DIR = SCRIPT_DIR.parent / "AlphaLive" / "tests" / "fixtures"
 
 TICKER = "AAPL"
-START  = "2015-01-01"
-END    = "2024-12-31"
+START = "2015-01-01"
+END = "2024-12-31"
 
 STRATEGY_PARAMS = {
     "fast_sma": 10,
@@ -55,13 +55,16 @@ def main():
 
     # 1. Fetch weekly data
     print(f"\n[1/3] Fetching weekly data …", end=" ", flush=True)
-    raw = yf.download(TICKER, start=START, end=END, interval="1wk",
-                      auto_adjust=True, progress=False)
+    raw = yf.download(
+        TICKER, start=START, end=END, interval="1wk", auto_adjust=True, progress=False
+    )
     if raw.empty:
         raise RuntimeError("yfinance returned no data")
     if isinstance(raw.columns, pd.MultiIndex):
         raw.columns = [col[0] for col in raw.columns]
-    raw = raw.rename(columns=str.title)[["Open", "High", "Low", "Close", "Volume"]].dropna()
+    raw = raw.rename(columns=str.title)[
+        ["Open", "High", "Low", "Close", "Volume"]
+    ].dropna()
     raw.index = pd.to_datetime(raw.index)
     raw.index.name = "Date"
     print(f"{len(raw)} bars")
@@ -70,9 +73,13 @@ def main():
     # AlphaLive computes indicators incrementally from raw bars.
     # AlphaLab's generate_signals already skips NaN bars in its loop.
     # Using the full raw dataset ensures both engines warm up from the same bar 0.
-    print(f"[2/3] Engineering features + generating AlphaLab signals …", end=" ", flush=True)
+    print(
+        f"[2/3] Engineering features + generating AlphaLab signals …",
+        end=" ",
+        flush=True,
+    )
     fe = FeatureEngineer()
-    featured = fe.process(raw)   # NO dropna - keep all bars including warmup period
+    featured = fe.process(raw)  # NO dropna - keep all bars including warmup period
 
     strategy = GreenblattWeekly(STRATEGY_PARAMS.copy())
     strategy.validate_params()
@@ -98,23 +105,29 @@ def main():
 
     for i, (idx, row) in enumerate(signals_df.iterrows()):
         sig = int(row["signal"])
-        expected_rows.append({
-            "bar_index": i,
-            "signal": signal_map[sig],
-            "confidence": round(float(row["confidence"]), 4),
-            "reason": str(row["reason"]),
-        })
+        expected_rows.append(
+            {
+                "bar_index": i,
+                "signal": signal_map[sig],
+                "confidence": round(float(row["confidence"]), 4),
+                "reason": str(row["reason"]),
+            }
+        )
 
     expected_df = pd.DataFrame(expected_rows)
     signals_path = FIXTURES_DIR / "expected_signals_greenblatt_weekly.csv"
     expected_df.to_csv(signals_path, index=False)
 
     non_hold = expected_df[expected_df["signal"] != "HOLD"]
-    print(f"{signals_path.name} ({len(expected_df)} rows, {len(non_hold)} non-HOLD signals)")
+    print(
+        f"{signals_path.name} ({len(expected_df)} rows, {len(non_hold)} non-HOLD signals)"
+    )
     print()
     print("  Non-HOLD signals:")
     for _, r in non_hold.iterrows():
-        print(f"    bar {int(r['bar_index']):3d}  {r['signal']:4s}  conf={r['confidence']:.2f}  {r['reason'][:70]}")
+        print(
+            f"    bar {int(r['bar_index']):3d}  {r['signal']:4s}  conf={r['confidence']:.2f}  {r['reason'][:70]}"
+        )
 
     print(f"\nDone. Run: cd AlphaLive && pytest tests/test_greenblatt_parity.py -v")
 
