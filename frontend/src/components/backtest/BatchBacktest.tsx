@@ -289,7 +289,12 @@ export function BatchBacktest() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <div className="label-caps">Tested</div>
-                <div className="text-2xl font-bold font-mono-numbers mt-0.5">{summary.total_tickers}</div>
+                <div className="text-2xl font-bold font-mono-numbers mt-0.5">
+                  {summary.successful}/{summary.total_tickers}
+                  {summary.failed > 0 && (
+                    <span className="text-sm text-muted-foreground"> ({summary.failed} failed)</span>
+                  )}
+                </div>
               </div>
               <div>
                 <div className="label-caps">Profitable</div>
