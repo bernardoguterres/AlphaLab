@@ -49,9 +49,9 @@ setup_backend_path()
 
 import pandas as pd
 
-from src.screener.fundamental_screener import FundamentalScreener
-from src.backtest.portfolio_constructor import PortfolioConstructor
-from src.backtest.equal_weight_benchmark import equal_weight_benchmark
+from alphalab.screener.fundamental_screener import FundamentalScreener
+from alphalab.backtest.portfolio_constructor import PortfolioConstructor
+from alphalab.backtest.equal_weight_benchmark import equal_weight_benchmark
 
 UNIVERSE = [
     "MSFT",

@@ -15,7 +15,7 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.api.routes import create_app
+from alphalab.api.routes import create_app
 
 
 @pytest.fixture
@@ -30,7 +30,7 @@ def client():
 @pytest.fixture
 def mock_yfinance():
     """Mock yfinance data fetching."""
-    with patch("src.data.fetcher.yf.download") as mock_download:
+    with patch("alphalab.data.fetcher.yf.download") as mock_download:
         # Create synthetic price data
         dates = pd.bdate_range("2020-01-01", periods=1000)
         np.random.seed(42)

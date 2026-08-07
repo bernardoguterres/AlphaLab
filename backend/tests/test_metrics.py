@@ -11,7 +11,7 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.backtest.metrics import PerformanceMetrics
+from alphalab.backtest.metrics import PerformanceMetrics
 
 
 def _make_equity_curve(n=252, start_val=10_000, annual_return=0.10, seed=42):

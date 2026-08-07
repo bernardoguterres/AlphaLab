@@ -9,7 +9,7 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.api.routes import create_app
+from alphalab.api.routes import create_app
 
 
 def _mock_fetch_response(ticker):
@@ -47,7 +47,7 @@ class TestBatchBacktest:
         self.app = create_app()
         self.client = self.app.test_client()
 
-    @patch("src.api.routes.DataFetcher")
+    @patch("alphalab.api.routes.DataFetcher")
     def test_valid_batch_request(self, mock_fetcher_cls):
         """Test batch backtest with valid request."""
         # Create app inside patch so the shared fetcher instance is the mock
@@ -157,7 +157,7 @@ class TestBatchBacktest:
         data = json.loads(response.data)
         assert data["status"] == "error"
 
-    @patch("src.api.routes.DataFetcher")
+    @patch("alphalab.api.routes.DataFetcher")
     def test_partial_failures(self, mock_fetcher_cls):
         """Test batch where some tickers fail."""
         # Create app inside patch so the shared fetcher instance is the mock
@@ -166,7 +166,7 @@ class TestBatchBacktest:
 
         def fetch_side_effect(ticker, *args, **kwargs):
             if ticker == "MSFT":
-                from src.data.fetcher import DataFetchError
+                from alphalab.data.fetcher import DataFetchError
 
                 raise DataFetchError(f"Failed to fetch {ticker}")
             return _mock_fetch_response(ticker)

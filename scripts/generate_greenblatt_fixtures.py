@@ -26,8 +26,8 @@ sys.path.insert(0, str(BACKEND))
 import yfinance as yf
 import pandas as pd
 
-from src.data.processor import FeatureEngineer
-from src.strategies.implementations.greenblatt_weekly import GreenblattWeekly
+from alphalab.data.processor import FeatureEngineer
+from alphalab.strategies.implementations.greenblatt_weekly import GreenblattWeekly
 
 FIXTURES_DIR = SCRIPT_DIR.parent / "AlphaLive" / "tests" / "fixtures"
 

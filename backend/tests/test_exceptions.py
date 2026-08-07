@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
 
-from src.utils.exceptions import (
+from alphalab.utils.exceptions import (
     AlphaLabException,
     DataFetchError,
     InvalidTickerError,

@@ -8,8 +8,8 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.strategies.implementations import BollingerBreakout, VWAPReversion
-from src.data.processor import FeatureEngineer
+from alphalab.strategies.implementations import BollingerBreakout, VWAPReversion
+from alphalab.data.processor import FeatureEngineer
 
 
 def _make_test_data(n=300, trend=True):

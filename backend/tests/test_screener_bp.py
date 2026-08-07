@@ -9,8 +9,8 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.api.routes import create_app
-from src.screener.fundamental_screener import ScreenerResult
+from alphalab.api.routes import create_app
+from alphalab.screener.fundamental_screener import ScreenerResult
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ class TestGreenblattScreenEndpoint:
 
     def test_successful_screen_returns_ranked_candidates(self, client):
         fake_results = [_fake_result("AAPL", 1), _fake_result("MSFT", 2)]
-        with patch("src.api.blueprints.screener.FundamentalScreener") as mock_cls:
+        with patch("alphalab.api.blueprints.screener.FundamentalScreener") as mock_cls:
             mock_instance = MagicMock()
             mock_instance.screen.return_value = fake_results
             mock_cls.return_value = mock_instance
@@ -85,7 +85,7 @@ class TestGreenblattScreenEndpoint:
         assert kwargs["universe"] == ["AAPL", "MSFT"]
 
     def test_custom_filters_passed_through(self, client):
-        with patch("src.api.blueprints.screener.FundamentalScreener") as mock_cls:
+        with patch("alphalab.api.blueprints.screener.FundamentalScreener") as mock_cls:
             mock_instance = MagicMock()
             mock_instance.screen.return_value = []
             mock_cls.return_value = mock_instance
@@ -109,7 +109,7 @@ class TestGreenblattScreenEndpoint:
 
     def test_screener_exception_returns_500(self, client):
         with patch(
-            "src.api.blueprints.screener.FundamentalScreener",
+            "alphalab.api.blueprints.screener.FundamentalScreener",
             side_effect=RuntimeError("yfinance down"),
         ):
             resp = client.post(
@@ -121,7 +121,7 @@ class TestGreenblattScreenEndpoint:
         assert "yfinance down" in resp.get_json()["message"]
 
     def test_empty_qualified_results(self, client):
-        with patch("src.api.blueprints.screener.FundamentalScreener") as mock_cls:
+        with patch("alphalab.api.blueprints.screener.FundamentalScreener") as mock_cls:
             mock_instance = MagicMock()
             mock_instance.screen.return_value = []
             mock_cls.return_value = mock_instance

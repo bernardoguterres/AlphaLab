@@ -8,13 +8,13 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.strategies.implementations.moving_average_crossover import (
+from alphalab.strategies.implementations.moving_average_crossover import (
     MovingAverageCrossover,
 )
-from src.strategies.implementations.rsi_mean_reversion import RSIMeanReversion
-from src.strategies.implementations.momentum_breakout import MomentumBreakout
-from src.strategies.implementations.bollinger_breakout import BollingerBreakout
-from src.strategies.implementations.vwap_reversion import VWAPReversion
+from alphalab.strategies.implementations.rsi_mean_reversion import RSIMeanReversion
+from alphalab.strategies.implementations.momentum_breakout import MomentumBreakout
+from alphalab.strategies.implementations.bollinger_breakout import BollingerBreakout
+from alphalab.strategies.implementations.vwap_reversion import VWAPReversion
 from helpers import make_featured_data as _make_featured_data
 
 

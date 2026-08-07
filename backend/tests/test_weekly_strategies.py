@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from src.strategies.implementations.greenblatt_weekly import GreenblattWeekly
+from alphalab.strategies.implementations.greenblatt_weekly import GreenblattWeekly
 
 
 def _make_weekly_data(n=200, base_price=100.0, trend="flat", seed=42) -> pd.DataFrame:

@@ -28,13 +28,13 @@ warnings.filterwarnings("ignore")
 import yfinance as yf
 import pandas as pd
 
-from src.data.processor import FeatureEngineer
-from src.backtest.engine import BacktestEngine
-from src.backtest.metrics import PerformanceMetrics
-from src.strategies.implementations.moving_average_crossover import (
+from alphalab.data.processor import FeatureEngineer
+from alphalab.backtest.engine import BacktestEngine
+from alphalab.backtest.metrics import PerformanceMetrics
+from alphalab.strategies.implementations.moving_average_crossover import (
     MovingAverageCrossover,
 )
-from src.strategies.implementations.rsi_mean_reversion import RSIMeanReversion
+from alphalab.strategies.implementations.rsi_mean_reversion import RSIMeanReversion
 
 ALPHALIVE_CONFIGS = SCRIPT_DIR.parent / "AlphaLive" / "configs" / "production"
 

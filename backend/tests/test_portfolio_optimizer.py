@@ -8,7 +8,7 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.backtest.portfolio_optimizer import (
+from alphalab.backtest.portfolio_optimizer import (
     PortfolioOptimizer,
     extract_daily_returns,
     build_returns_matrix,

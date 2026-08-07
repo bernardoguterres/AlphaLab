@@ -44,12 +44,12 @@ setup_backend_path()
 
 import pandas as pd
 
-from src.screener.relative_strength_ranker import (
+from alphalab.screener.relative_strength_ranker import (
     RelativeStrengthRanker,
     SPDR_SECTOR_ETFS,
 )
-from src.backtest.portfolio_constructor import PortfolioConstructor
-from src.backtest.equal_weight_benchmark import equal_weight_benchmark
+from alphalab.backtest.portfolio_constructor import PortfolioConstructor
+from alphalab.backtest.equal_weight_benchmark import equal_weight_benchmark
 
 N_TRIALS = 6  # locked roster, EXPERIMENT_REGISTRY_SCHEMA.md
 

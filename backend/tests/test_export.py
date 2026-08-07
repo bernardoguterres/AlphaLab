@@ -7,7 +7,7 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.api.routes import _build_export_json, _translate_params_for_export
+from alphalab.api.routes import _build_export_json, _translate_params_for_export
 
 # Import schema validator if available
 try:

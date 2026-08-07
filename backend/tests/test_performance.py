@@ -28,11 +28,11 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.backtest.engine import BacktestEngine
-from src.backtest.portfolio_optimizer import PortfolioOptimizer
-from src.data.processor import FeatureEngineer
-from src.data.fetcher import DataFetcher
-from src.strategies.implementations import MovingAverageCrossover
+from alphalab.backtest.engine import BacktestEngine
+from alphalab.backtest.portfolio_optimizer import PortfolioOptimizer
+from alphalab.data.processor import FeatureEngineer
+from alphalab.data.fetcher import DataFetcher
+from alphalab.strategies.implementations import MovingAverageCrossover
 
 
 @pytest.fixture
@@ -250,7 +250,7 @@ def test_batch_backtest_10_tickers_under_3_minutes():
     - Add early termination for failed tickers
     """
     # Mock yfinance to avoid real API calls
-    with patch("src.data.fetcher.yf.download") as mock_download:
+    with patch("alphalab.data.fetcher.yf.download") as mock_download:
         # Create synthetic data for 10 tickers
         np.random.seed(42)
         dates = pd.bdate_range("2023-01-01", periods=252)
@@ -286,8 +286,8 @@ def test_batch_backtest_10_tickers_under_3_minutes():
         mock_download.side_effect = mock_fetch
 
         # Run batch backtest
-        from src.data.fetcher import DataFetcher
-        from src.data.processor import FeatureEngineer
+        from alphalab.data.fetcher import DataFetcher
+        from alphalab.data.processor import FeatureEngineer
 
         tickers = [
             "AAPL",
@@ -372,7 +372,7 @@ def test_data_fetch_and_cache_1_ticker_under_2_seconds():
     - Verify cache_manager is using pyarrow engine
     - Check if cache expiry logic is too aggressive
     """
-    with patch("src.data.fetcher.yf.download") as mock_download:
+    with patch("alphalab.data.fetcher.yf.download") as mock_download:
         # Mock yfinance response
         np.random.seed(42)
         dates = pd.bdate_range("2024-01-01", periods=252)

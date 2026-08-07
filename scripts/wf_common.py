@@ -63,7 +63,7 @@ def print_table_row(
 
 def fetch_weekly_close(ticker: str, start: str, end: str, min_bars: int = 10):
     """Fetch weekly Close prices via yfinance. Returns None if unavailable
-    or too short. `src.backtest.*` imports are deferred inside callers that
+    or too short. `alphalab.backtest.*` imports are deferred inside callers that
     need them, not here - this function only needs yfinance/pandas, which
     don't require setup_backend_path() to have run first."""
     import yfinance as yf
@@ -106,8 +106,8 @@ def compute_metrics_and_dsr(equity_curve, ledger, window_start_ts, n_trials: int
     """Restrict an equity curve to a window, compute PerformanceMetrics, and
     layer the Deflated Sharpe Ratio on top. Requires setup_backend_path() to
     have already run in the caller."""
-    from src.backtest.metrics import PerformanceMetrics
-    from src.backtest.deflated_sharpe import deflated_sharpe_ratio
+    from alphalab.backtest.metrics import PerformanceMetrics
+    from alphalab.backtest.deflated_sharpe import deflated_sharpe_ratio
 
     in_window = [p for p in equity_curve if p["date"] >= window_start_ts]
     calc = PerformanceMetrics(risk_free_rate=0.04)
@@ -140,7 +140,7 @@ def compute_metrics_and_dsr(equity_curve, ledger, window_start_ts, n_trials: int
 def faber_benchmark_for_window(window_start: str, window_end: str, ticker: str = "SPY"):
     """Faber 10-month-SMA overlay CAGR/Sharpe for one window. Requires
     setup_backend_path() to have already run in the caller."""
-    from src.backtest.faber_overlay import faber_overlay_returns
+    from alphalab.backtest.faber_overlay import faber_overlay_returns
 
     monthly = fetch_monthly_close(ticker, window_start, window_end)
     if monthly is None:

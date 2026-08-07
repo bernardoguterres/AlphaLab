@@ -10,7 +10,7 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.data.cache_manager import CacheManager
+from alphalab.data.cache_manager import CacheManager
 
 
 def _sample_df():

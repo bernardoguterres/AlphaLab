@@ -9,7 +9,7 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.api.routes import create_app
+from alphalab.api.routes import create_app
 
 
 @pytest.fixture
@@ -21,8 +21,8 @@ def client(tmp_path, monkeypatch):
     # Point every SettingsManager() call at an isolated tmp file so tests
     # don't clobber the real backend/configs/app_settings.json.
     settings_file = tmp_path / "app_settings.json"
-    with patch("src.api.blueprints.settings_bp.SettingsManager") as mock_mgr_cls:
-        from src.utils.settings_manager import SettingsManager as RealMgr
+    with patch("alphalab.api.blueprints.settings_bp.SettingsManager") as mock_mgr_cls:
+        from alphalab.utils.settings_manager import SettingsManager as RealMgr
 
         real = RealMgr(settings_file)
         mock_mgr_cls.side_effect = lambda *a, **k: real
