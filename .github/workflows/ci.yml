@@ -12,21 +12,37 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: AlphaLab
+
+      # Checks out AlphaLive as a sibling directory so test_schema_contract.py
+      # (cross-repo StrategyExportSchema/StrategySchema parity check) actually
+      # runs in CI instead of hitting its own "AlphaLive not found" skip branch.
+      # Uses ALPHA_CROSS_REPO_PAT if set (needed if AlphaLive is private), else
+      # falls back to the default token (works if AlphaLive is public).
+      # continue-on-error so a missing/misscoped secret degrades to a skipped
+      # contract test rather than failing the whole build.
+      - uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          repository: bernardoguterres/AlphaLive
+          path: AlphaLive
+          token: ${{ secrets.ALPHA_CROSS_REPO_PAT || github.token }}
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: backend/requirements-dev.txt
+          cache-dependency-path: AlphaLab/backend/requirements-dev.txt
 
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
-        working-directory: backend
+        working-directory: AlphaLab/backend
 
       - name: Check formatting (Black)
-        run: python -m black --check src/ tests/
-        working-directory: backend
+        run: python -m black --check alphalab/ tests/
+        working-directory: AlphaLab/backend
 
       - name: Run tests
-        run: pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
-        working-directory: backend
+        run: pytest tests/ -v --tb=short --cov=alphalab --cov-report=term-missing
+        working-directory: AlphaLab/backend
