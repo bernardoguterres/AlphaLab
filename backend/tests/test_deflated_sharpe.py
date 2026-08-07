@@ -2,7 +2,10 @@
 
 import pytest
 
-from alphalab.backtest.deflated_sharpe import deflated_sharpe_ratio, DeflatedSharpeResult
+from alphalab.backtest.deflated_sharpe import (
+    deflated_sharpe_ratio,
+    DeflatedSharpeResult,
+)
 
 
 class TestDeflatedSharpeRatio:
