@@ -501,9 +501,9 @@ npm run tauri:dev    # Desktop version
 3. **Run all tests** - Ensure nothing breaks
 4. **Commit with clear messages:**
    ```
-   feat: Add Bollinger Band breakout strategy
-   fix: Correct slippage calculation in portfolio
-   docs: Update API documentation for new endpoint
+   feat: add Bollinger Band breakout strategy
+   fix: correct slippage calculation in portfolio
+   docs: update API documentation for new endpoint
    ```
 
 5. **Push to your fork:**
@@ -515,22 +515,29 @@ npm run tauri:dev    # Desktop version
 
 ### Commit Message Guidelines
 
-We follow conventional commits:
+Conventional-commits-style prefix, lowercase and imperative after the colon
+(matches this repo's actual history - `git log --oneline -15` before writing
+one, don't assume the style is static):
 
 - `feat:` New feature
 - `fix:` Bug fix
 - `docs:` Documentation changes
 - `test:` Adding or updating tests
 - `refactor:` Code refactoring
+- `style:` Formatting only, no behavior change
 - `perf:` Performance improvements
 - `chore:` Maintenance tasks
 
+Scoped forms (`fix(deps):`, `refactor(logging):`) are fine. Body is optional -
+short prose explaining *why* or the mechanism, not a bullet-list restatement
+of the diff; omit for small/obvious changes.
+
 **Examples:**
 ```
-feat: Add walk-forward validation to backtest engine
-fix: Handle missing data in RSI calculation
-docs: Add examples to METRICS_GUIDE.md
-test: Add unit tests for DataValidator
+feat: add walk-forward validation to backtest engine
+fix: handle missing data in RSI calculation
+docs: add examples to METRICS_GUIDE.md
+test: add unit tests for DataValidator
 ```
 
 ### Code Review Checklist
