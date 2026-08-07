@@ -17,10 +17,10 @@ import json
 backend_path = Path(__file__).parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
-from src.strategies.implementations.rsi_simple import RSISimple
-from src.strategies.implementations.bollinger_rsi_combo import BollingerRSICombo
-from src.strategies.implementations.trend_adaptive_rsi import TrendAdaptiveRSI
-from src.data.processor import FeatureEngineer
+from alphalab.strategies.implementations.rsi_simple import RSISimple
+from alphalab.strategies.implementations.bollinger_rsi_combo import BollingerRSICombo
+from alphalab.strategies.implementations.trend_adaptive_rsi import TrendAdaptiveRSI
+from alphalab.data.processor import FeatureEngineer
 
 
 def fetch_data(ticker, years=5):

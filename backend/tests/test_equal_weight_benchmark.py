@@ -8,7 +8,7 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.backtest.equal_weight_benchmark import equal_weight_benchmark
+from alphalab.backtest.equal_weight_benchmark import equal_weight_benchmark
 
 
 def _make_price_data(tickers, n=60, seed=42):

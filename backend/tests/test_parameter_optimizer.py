@@ -8,11 +8,11 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.backtest.parameter_optimizer import ParameterOptimizer
-from src.strategies.implementations import MovingAverageCrossover
-from src.backtest.engine import BacktestEngine
-from src.backtest.metrics import PerformanceMetrics
-from src.data.processor import FeatureEngineer
+from alphalab.backtest.parameter_optimizer import ParameterOptimizer
+from alphalab.strategies.implementations import MovingAverageCrossover
+from alphalab.backtest.engine import BacktestEngine
+from alphalab.backtest.metrics import PerformanceMetrics
+from alphalab.data.processor import FeatureEngineer
 
 
 def _make_synthetic_data(n=500, seed=42):

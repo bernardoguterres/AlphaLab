@@ -8,9 +8,9 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.strategies.implementations.rsi_simple import RSISimple
-from src.strategies.implementations.bollinger_rsi_combo import BollingerRSICombo
-from src.strategies.implementations.trend_adaptive_rsi import TrendAdaptiveRSI
+from alphalab.strategies.implementations.rsi_simple import RSISimple
+from alphalab.strategies.implementations.bollinger_rsi_combo import BollingerRSICombo
+from alphalab.strategies.implementations.trend_adaptive_rsi import TrendAdaptiveRSI
 from helpers import make_featured_data as _make_featured_data
 
 

@@ -10,7 +10,7 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.backtest.portfolio_constructor import PortfolioConstructor
+from alphalab.backtest.portfolio_constructor import PortfolioConstructor
 
 
 @dataclass

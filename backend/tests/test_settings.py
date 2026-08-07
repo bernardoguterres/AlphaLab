@@ -10,8 +10,8 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.utils.settings_manager import SettingsManager
-from src.api.settings_validators import (
+from alphalab.utils.settings_manager import SettingsManager
+from alphalab.api.settings_validators import (
     NotificationSettingsRequest,
     TelegramSettings,
     AlpacaSettings,

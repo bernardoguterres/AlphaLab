@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from src.screener.fundamental_screener import FundamentalScreener, ScreenerResult
+from alphalab.screener.fundamental_screener import FundamentalScreener, ScreenerResult
 
 
 def _make_info(
@@ -54,7 +54,7 @@ class TestFundamentalScreener(unittest.TestCase):
             request_delay=0.0,
         )
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_basic_screen_returns_ranked_results(self, mock_ticker_cls):
         specs = {
             # A: EY=50/500=0.10 (best), ROC=50/20=2.5 (best) -> should rank first
@@ -84,7 +84,7 @@ class TestFundamentalScreener(unittest.TestCase):
         self.assertEqual(len(results), 3)
         self.assertEqual(results[0].ticker, "A")
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_earnings_yield_is_ebit_over_ev(self, mock_ticker_cls):
         mock_ticker_cls.return_value = _mock_ticker(
             _make_info(enterprise_value=1000e9),
@@ -97,7 +97,7 @@ class TestFundamentalScreener(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertAlmostEqual(result.earnings_yield, 50e9 / 1000e9, places=6)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_return_on_capital_is_ebit_over_nwc_plus_net_ppe(self, mock_ticker_cls):
         mock_ticker_cls.return_value = _mock_ticker(
             _make_info(),
@@ -111,7 +111,7 @@ class TestFundamentalScreener(unittest.TestCase):
         self.assertAlmostEqual(result.invested_capital, 30e9, places=2)
         self.assertAlmostEqual(result.return_on_capital, 50e9 / 30e9, places=6)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_negative_working_capital_still_ranked_if_invested_capital_positive(
         self, mock_ticker_cls
     ):
@@ -128,7 +128,7 @@ class TestFundamentalScreener(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertAlmostEqual(result.invested_capital, 28e9, places=2)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_falls_back_to_current_assets_minus_liabilities_when_no_working_capital_row(
         self, mock_ticker_cls
     ):
@@ -146,7 +146,7 @@ class TestFundamentalScreener(unittest.TestCase):
         # NWC = 40 - 25 = 15; invested_capital = 15 + 20 = 35
         self.assertAlmostEqual(result.invested_capital, 35e9, places=2)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_negative_ebit_excluded(self, mock_ticker_cls):
         specs = {
             "A": (_make_info(), _make_income_stmt(-5e9), _make_balance_sheet()),
@@ -161,7 +161,7 @@ class TestFundamentalScreener(unittest.TestCase):
         self.assertNotIn("A", tickers)
         self.assertIn("B", tickers)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_negative_invested_capital_excluded(self, mock_ticker_cls):
         specs = {
             # NWC + NetPPE = -50 + 10 = -40 <= 0 -> excluded, ratio not meaningful
@@ -180,7 +180,7 @@ class TestFundamentalScreener(unittest.TestCase):
         tickers = [r.ticker for r in results]
         self.assertNotIn("A", tickers)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_missing_ebit_returns_none(self, mock_ticker_cls):
         empty_income = pd.DataFrame({"2025-09-30": []}, index=[])
         mock_ticker_cls.return_value = _mock_ticker(
@@ -191,7 +191,7 @@ class TestFundamentalScreener(unittest.TestCase):
 
         self.assertIsNone(result)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_missing_enterprise_value_returns_none(self, mock_ticker_cls):
         info = _make_info()
         info["enterpriseValue"] = None
@@ -203,7 +203,7 @@ class TestFundamentalScreener(unittest.TestCase):
 
         self.assertIsNone(result)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_financials_sector_excluded_by_default(self, mock_ticker_cls):
         specs = {
             "A": (
@@ -226,7 +226,7 @@ class TestFundamentalScreener(unittest.TestCase):
         self.assertNotIn("A", tickers)
         self.assertIn("B", tickers)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_utilities_sector_excluded_by_default(self, mock_ticker_cls):
         mock_ticker_cls.return_value = _mock_ticker(
             _make_info(sector="Utilities"), _make_income_stmt(), _make_balance_sheet()
@@ -236,7 +236,7 @@ class TestFundamentalScreener(unittest.TestCase):
 
         self.assertIsNone(result)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_can_disable_sector_exclusion(self, mock_ticker_cls):
         mock_ticker_cls.return_value = _mock_ticker(
             _make_info(sector="Utilities"), _make_income_stmt(), _make_balance_sheet()
@@ -248,7 +248,7 @@ class TestFundamentalScreener(unittest.TestCase):
 
         self.assertIsNotNone(result)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_filters_out_small_cap(self, mock_ticker_cls):
         specs = {
             "A": (
@@ -271,7 +271,7 @@ class TestFundamentalScreener(unittest.TestCase):
         self.assertNotIn("A", tickers)
         self.assertIn("B", tickers)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_filters_out_high_debt(self, mock_ticker_cls):
         specs = {
             "A": (_make_info(dte=300.0), _make_income_stmt(), _make_balance_sheet()),
@@ -285,7 +285,7 @@ class TestFundamentalScreener(unittest.TestCase):
         tickers = [r.ticker for r in results]
         self.assertNotIn("A", tickers)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_handles_fetch_failure_gracefully(self, mock_ticker_cls):
         def side_effect(ticker):
             if ticker == "BAD":
@@ -302,7 +302,7 @@ class TestFundamentalScreener(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].ticker, "GOOD")
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_top_n_limits_output(self, mock_ticker_cls):
         tickers = [f"T{i}" for i in range(10)]
         mock_ticker_cls.side_effect = lambda t: _mock_ticker(
@@ -316,7 +316,7 @@ class TestFundamentalScreener(unittest.TestCase):
 
         self.assertLessEqual(len(results), 3)
 
-    @patch("src.screener.fundamental_screener.yf.Ticker")
+    @patch("alphalab.screener.fundamental_screener.yf.Ticker")
     def test_combined_rank_is_sum_of_individual_ranks(self, mock_ticker_cls):
         specs = {
             "A": (

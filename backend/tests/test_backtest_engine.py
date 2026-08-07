@@ -8,10 +8,10 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.backtest.engine import BacktestEngine
-from src.backtest.portfolio import Portfolio
-from src.backtest.order import Order, OrderSide, OrderType, OrderStatus
-from src.strategies.implementations.moving_average_crossover import (
+from alphalab.backtest.engine import BacktestEngine
+from alphalab.backtest.portfolio import Portfolio
+from alphalab.backtest.order import Order, OrderSide, OrderType, OrderStatus
+from alphalab.strategies.implementations.moving_average_crossover import (
     MovingAverageCrossover,
 )
 from helpers import make_featured_data as _make_featured_data_base

@@ -8,7 +8,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.data.processor import FeatureEngineer
+from alphalab.data.processor import FeatureEngineer
 
 
 def make_featured_data(n: int = 500, seed: int = 42) -> pd.DataFrame:

@@ -16,12 +16,12 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.data.processor import FeatureEngineer
-from src.data.validator import DataValidator
-from src.strategies.implementations import MovingAverageCrossover, MomentumBreakout
-from src.backtest.engine import BacktestEngine
-from src.backtest.metrics import PerformanceMetrics
-from src.api.routes import _build_export_json
+from alphalab.data.processor import FeatureEngineer
+from alphalab.data.validator import DataValidator
+from alphalab.strategies.implementations import MovingAverageCrossover, MomentumBreakout
+from alphalab.backtest.engine import BacktestEngine
+from alphalab.backtest.metrics import PerformanceMetrics
+from alphalab.api.routes import _build_export_json
 
 
 class TestDataQualityEdgeCases:

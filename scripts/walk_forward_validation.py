@@ -31,12 +31,12 @@ import pandas as pd
 # ---------------------------------------------------------------------------
 # AlphaLab internal imports
 # ---------------------------------------------------------------------------
-from src.data.processor import FeatureEngineer
-from src.backtest.engine import BacktestEngine
-from src.backtest.metrics import PerformanceMetrics
-from src.strategies.implementations.rsi_simple import RSISimple
-from src.strategies.implementations.bollinger_rsi_combo import BollingerRSICombo
-from src.strategies.implementations.trend_adaptive_rsi import TrendAdaptiveRSI
+from alphalab.data.processor import FeatureEngineer
+from alphalab.backtest.engine import BacktestEngine
+from alphalab.backtest.metrics import PerformanceMetrics
+from alphalab.strategies.implementations.rsi_simple import RSISimple
+from alphalab.strategies.implementations.bollinger_rsi_combo import BollingerRSICombo
+from alphalab.strategies.implementations.trend_adaptive_rsi import TrendAdaptiveRSI
 
 # ---------------------------------------------------------------------------
 # Configuration

@@ -32,10 +32,10 @@ sys.path.insert(0, str(BACKEND))
 import yfinance as yf
 import pandas as pd
 
-from src.data.processor import FeatureEngineer
-from src.backtest.engine import BacktestEngine
-from src.backtest.metrics import PerformanceMetrics
-from src.strategies.implementations.greenblatt_weekly import GreenblattWeekly
+from alphalab.data.processor import FeatureEngineer
+from alphalab.backtest.engine import BacktestEngine
+from alphalab.backtest.metrics import PerformanceMetrics
+from alphalab.strategies.implementations.greenblatt_weekly import GreenblattWeekly
 
 ALPHALIVE_CONFIGS = SCRIPT_DIR.parent / "AlphaLive" / "configs" / "production"
 BACKTEST_START = "2015-01-01"

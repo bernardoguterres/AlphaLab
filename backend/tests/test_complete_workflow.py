@@ -10,16 +10,16 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.data.fetcher import DataFetcher
-from src.data.validator import DataValidator
-from src.data.processor import FeatureEngineer
-from src.strategies.implementations.moving_average_crossover import (
+from alphalab.data.fetcher import DataFetcher
+from alphalab.data.validator import DataValidator
+from alphalab.data.processor import FeatureEngineer
+from alphalab.strategies.implementations.moving_average_crossover import (
     MovingAverageCrossover,
 )
-from src.strategies.implementations.rsi_mean_reversion import RSIMeanReversion
-from src.strategies.implementations.momentum_breakout import MomentumBreakout
-from src.backtest.engine import BacktestEngine
-from src.backtest.metrics import PerformanceMetrics
+from alphalab.strategies.implementations.rsi_mean_reversion import RSIMeanReversion
+from alphalab.strategies.implementations.momentum_breakout import MomentumBreakout
+from alphalab.backtest.engine import BacktestEngine
+from alphalab.backtest.metrics import PerformanceMetrics
 
 
 def _make_ohlcv(n=600, seed=42):

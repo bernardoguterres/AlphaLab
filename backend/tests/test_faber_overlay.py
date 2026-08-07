@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.backtest.faber_overlay import faber_signal, faber_overlay_returns
+from alphalab.backtest.faber_overlay import faber_signal, faber_overlay_returns
 
 
 def _monthly_series(prices: list[float]) -> pd.Series:

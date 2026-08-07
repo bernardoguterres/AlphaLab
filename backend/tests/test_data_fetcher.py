@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.data.fetcher import (
+from alphalab.data.fetcher import (
     DataFetcher,
     DataFetchError,
     InvalidTickerError,
@@ -40,7 +40,7 @@ def _mock_download(n=200):
 # Patch time.sleep globally for all tests in this module to avoid retry delays
 @pytest.fixture(autouse=True)
 def no_sleep():
-    with patch("src.data.fetcher.time.sleep"):
+    with patch("alphalab.data.fetcher.time.sleep"):
         yield
 
 
@@ -51,8 +51,8 @@ def clean_cache(tmp_path):
 
 
 class TestDataFetcher:
-    @patch("src.data.fetcher.yf.download")
-    @patch("src.data.fetcher.yf.Ticker")
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
     def test_fetch_returns_data(self, mock_ticker, mock_download, tmp_path):
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         mock_download.return_value = _mock_download()
@@ -66,7 +66,7 @@ class TestDataFetcher:
         assert result["metadata"]["records"] > 0
         assert 0 <= result["metadata"]["quality_score"] <= 1
 
-    @patch("src.data.fetcher.yf.Ticker")
+    @patch("alphalab.data.fetcher.yf.Ticker")
     def test_invalid_ticker(self, mock_ticker, tmp_path):
         mock_ticker.return_value.info = {"regularMarketPrice": None}
 
@@ -74,8 +74,8 @@ class TestDataFetcher:
         with pytest.raises(InvalidTickerError):
             fetcher.fetch("XYZXYZ", "2023-01-01", "2023-12-31")
 
-    @patch("src.data.fetcher.yf.download")
-    @patch("src.data.fetcher.yf.Ticker")
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
     def test_insufficient_data(self, mock_ticker, mock_download, tmp_path):
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         mock_download.return_value = _mock_download(n=3)
@@ -89,8 +89,8 @@ class TestDataFetcher:
         with pytest.raises(ValueError, match="Invalid interval"):
             fetcher.fetch("AAPL", "2023-01-01", "2023-12-31", interval="5m")
 
-    @patch("src.data.fetcher.yf.download")
-    @patch("src.data.fetcher.yf.Ticker")
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
     def test_cache_hit(self, mock_ticker, mock_download, tmp_path):
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         mock_download.return_value = _mock_download()
@@ -103,8 +103,8 @@ class TestDataFetcher:
         assert result2["metadata"]["from_cache"]
         assert mock_download.call_count == 1
 
-    @patch("src.data.fetcher.yf.download")
-    @patch("src.data.fetcher.yf.Ticker")
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
     def test_retry_on_failure(self, mock_ticker, mock_download, tmp_path):
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         mock_download.side_effect = [
@@ -118,8 +118,8 @@ class TestDataFetcher:
         assert len(result["data"]) > 0
         assert mock_download.call_count == 3
 
-    @patch("src.data.fetcher.yf.download")
-    @patch("src.data.fetcher.yf.Ticker")
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
     def test_all_retries_fail(self, mock_ticker, mock_download, tmp_path):
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         mock_download.side_effect = Exception("Persistent failure")
@@ -128,8 +128,8 @@ class TestDataFetcher:
         with pytest.raises(DataFetchError, match="Failed to download"):
             fetcher.fetch("AAPL", "2023-01-01", "2023-12-31")
 
-    @patch("src.data.fetcher.yf.download")
-    @patch("src.data.fetcher.yf.Ticker")
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
     def test_fetch_multiple(self, mock_ticker, mock_download, tmp_path):
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         mock_download.return_value = _mock_download()
@@ -139,7 +139,7 @@ class TestDataFetcher:
         assert "AAPL" in results
         assert "MSFT" in results
 
-    @patch("src.data.fetcher.yf.Ticker")
+    @patch("alphalab.data.fetcher.yf.Ticker")
     def test_fetch_company_info(self, mock_ticker, tmp_path):
         mock_ticker.return_value.info = {
             "longName": "Apple Inc.",

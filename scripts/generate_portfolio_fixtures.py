@@ -39,7 +39,7 @@ import pandas as pd
 BACKEND = Path(__file__).parent.parent / "backend"
 sys.path.insert(0, str(BACKEND))
 
-from src.backtest.portfolio_constructor import PortfolioConstructor
+from alphalab.backtest.portfolio_constructor import PortfolioConstructor
 
 OUT_PATH = (
     Path(__file__).parent.parent.parent

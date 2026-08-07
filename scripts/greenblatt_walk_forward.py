@@ -35,11 +35,11 @@ setup_backend_path()
 import yfinance as yf
 import pandas as pd
 
-from src.data.processor import FeatureEngineer
-from src.backtest.engine import BacktestEngine
-from src.backtest.metrics import PerformanceMetrics
-from src.screener.fundamental_screener import FundamentalScreener
-from src.strategies.implementations.greenblatt_weekly import GreenblattWeekly
+from alphalab.data.processor import FeatureEngineer
+from alphalab.backtest.engine import BacktestEngine
+from alphalab.backtest.metrics import PerformanceMetrics
+from alphalab.screener.fundamental_screener import FundamentalScreener
+from alphalab.strategies.implementations.greenblatt_weekly import GreenblattWeekly
 
 # ---------------------------------------------------------------------------
 # Configuration

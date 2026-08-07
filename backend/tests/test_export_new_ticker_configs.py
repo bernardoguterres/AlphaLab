@@ -25,7 +25,7 @@ REPO_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from export_new_ticker_configs import _internal_params, JOBS  # noqa: E402
-from src.strategies.implementations.moving_average_crossover import (  # noqa: E402
+from alphalab.strategies.implementations.moving_average_crossover import (  # noqa: E402
     MovingAverageCrossover,
 )
 

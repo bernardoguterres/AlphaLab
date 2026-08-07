@@ -8,11 +8,11 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.api.validators import RiskSettings
-from src.backtest.engine import BacktestEngine
-from src.backtest.portfolio import Portfolio
-from src.strategies.implementations import MovingAverageCrossover
-from src.data.processor import FeatureEngineer
+from alphalab.api.validators import RiskSettings
+from alphalab.backtest.engine import BacktestEngine
+from alphalab.backtest.portfolio import Portfolio
+from alphalab.strategies.implementations import MovingAverageCrossover
+from alphalab.data.processor import FeatureEngineer
 from pydantic import ValidationError
 
 

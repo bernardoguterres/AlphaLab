@@ -8,7 +8,7 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.data.validator import DataValidator, QualityReport
+from alphalab.data.validator import DataValidator, QualityReport
 
 
 def _make_ohlcv(n=100, seed=42):

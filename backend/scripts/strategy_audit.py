@@ -19,15 +19,15 @@ sys.path.insert(0, os.path.dirname(__file__))
 import numpy as np
 import pandas as pd
 
-from src.data.fetcher import DataFetcher
-from src.data.processor import FeatureEngineer
-from src.backtest.engine import BacktestEngine
-from src.backtest.metrics import PerformanceMetrics
-from src.backtest.portfolio import Portfolio
-from src.backtest.order import Order, OrderSide, OrderType
-from src.strategies.base_strategy import BaseStrategy
-from src.strategies.implementations.momentum_breakout import MomentumBreakout
-from src.strategies.implementations.vwap_reversion import VWAPReversion
+from alphalab.data.fetcher import DataFetcher
+from alphalab.data.processor import FeatureEngineer
+from alphalab.backtest.engine import BacktestEngine
+from alphalab.backtest.metrics import PerformanceMetrics
+from alphalab.backtest.portfolio import Portfolio
+from alphalab.backtest.order import Order, OrderSide, OrderType
+from alphalab.strategies.base_strategy import BaseStrategy
+from alphalab.strategies.implementations.momentum_breakout import MomentumBreakout
+from alphalab.strategies.implementations.vwap_reversion import VWAPReversion
 
 # ---------------------------------------------------------------------------
 # Constants

@@ -11,12 +11,12 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.api.routes import create_app
+from alphalab.api.routes import create_app
 
 
 @pytest.fixture(autouse=True)
 def no_sleep():
-    with patch("src.data.fetcher.time.sleep"):
+    with patch("alphalab.data.fetcher.time.sleep"):
         yield
 
 
@@ -55,8 +55,8 @@ class TestHealthEndpoint:
 
 
 class TestDataEndpoints:
-    @patch("src.data.fetcher.yf.download")
-    @patch("src.data.fetcher.yf.Ticker")
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
     def test_fetch_data(self, mock_ticker, mock_dl, client):
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         mock_dl.return_value = _mock_download()
@@ -126,8 +126,8 @@ class TestDataEndpoints:
 
 
 class TestBacktestEndpoints:
-    @patch("src.data.fetcher.yf.download")
-    @patch("src.data.fetcher.yf.Ticker")
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
     def test_run_backtest(self, mock_ticker, mock_dl, client):
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         mock_dl.return_value = _mock_download(500)
@@ -175,8 +175,8 @@ class TestBacktestEndpoints:
         )
         assert resp.status_code == 422
 
-    @patch("src.data.fetcher.yf.download")
-    @patch("src.data.fetcher.yf.Ticker")
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
     def test_get_metrics_after_backtest(self, mock_ticker, mock_dl, client):
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         mock_dl.return_value = _mock_download(500)
@@ -204,8 +204,8 @@ class TestBacktestEndpoints:
 
 
 class TestCompareEndpoint:
-    @patch("src.data.fetcher.yf.download")
-    @patch("src.data.fetcher.yf.Ticker")
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
     def test_compare_strategies(self, mock_ticker, mock_dl, client):
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         mock_dl.return_value = _mock_download(500)
@@ -224,8 +224,8 @@ class TestCompareEndpoint:
         assert "ma_crossover" in data["data"]
         assert "rsi_mean_reversion" in data["data"]
 
-    @patch("src.data.fetcher.yf.download")
-    @patch("src.data.fetcher.yf.Ticker")
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
     def test_compare_includes_equity_curve(self, mock_ticker, mock_dl, client):
         """Regression test for audit bug 3.9: /api/compare previously
         returned only {total_return_pct, metrics} per strategy, but
