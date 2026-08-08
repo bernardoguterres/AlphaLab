@@ -38,7 +38,6 @@ htmlcov/
 # Node (frontend)
 node_modules/
 frontend/dist/
-frontend/src-tauri/target/
 package-lock.json
 bun.lockb
 
