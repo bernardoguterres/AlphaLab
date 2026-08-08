@@ -231,33 +231,6 @@ class TestCreateMinimalConfig:
 
 
 # ============================================================================
-# Future Migration Tests (Placeholder)
-# ============================================================================
-
-
-class TestFutureMigrations:
-    """Placeholder for future migration tests (v1.1, v2.0, etc.)."""
-
-    @pytest.mark.skip(reason="v1.1 not yet implemented")
-    def test_migrate_1_0_to_1_1(self):
-        """Test migration from v1.0 to v1.1 (when implemented)."""
-        pass
-
-    @pytest.mark.skip(reason="v2.0 not yet implemented")
-    def test_migrate_1_1_to_2_0(self):
-        """Test migration from v1.1 to v2.0 (when implemented)."""
-        pass
-
-    @pytest.mark.skip(reason="Migration chaining not yet needed")
-    def test_migration_chaining(self):
-        """Test migration chaining (1.0 → 1.1 → 2.0)."""
-        # config = create_minimal_v1_0_config()
-        # migrated = migrate_schema(config)
-        # assert migrated["schema_version"] == "2.0"
-        pass
-
-
-# ============================================================================
 # Regression Tests
 # ============================================================================
 
