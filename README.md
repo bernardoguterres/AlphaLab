@@ -1,6 +1,6 @@
 # AlphaLab
 
-Web application for backtesting algorithmic trading strategies with production-grade execution simulation. Deployable to Railway (backend + frontend, two services); also available as an optional native desktop build via Tauri for local/offline use.
+Web application for backtesting algorithmic trading strategies with production-grade execution simulation. Deployable to Railway (backend + frontend, two services).
 
 ## Why AlphaLab?
 
@@ -137,7 +137,6 @@ AlphaLab is the development platform in a three-repo algorithmic trading system:
 - **Backend**: Python, Flask, pandas, numpy, scipy, yfinance, stockstats, Pydantic, httpx, alpaca-py
 - **Frontend**: React, TypeScript, Vite, shadcn/ui, Tailwind CSS, Recharts, Zustand
 - **Deployment**: Railway, two services (backend via Docker + gunicorn, frontend via Docker + nginx static serve)
-- **Desktop (optional)**: Tauri (Rust) - native macOS/Windows/Linux app with <10MB footprint, for local/offline use outside the hosted deployment
 
 ## Quick Start
 
@@ -159,7 +158,6 @@ The API starts at `http://127.0.0.1:5050`.
 
 ### Frontend Setup
 
-**Option 1: Web Version**
 ```bash
 cd frontend
 npm install
@@ -167,45 +165,16 @@ npm run dev
 ```
 The UI starts at `http://localhost:8080`.
 
-**Option 2: Desktop App (Tauri, optional local build)**
-
-Prerequisites (one-time):
-```bash
-# macOS only: Accept Xcode license (if not already done)
-sudo xcodebuild -license
-
-# Install Rust (all platforms)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env
-```
-
-Run:
-```bash
-cd frontend
-npm install                 # First time only
-npm run tauri:dev          # Launch desktop app (first run: 2-3 min)
-npm run tauri:build        # Build installer (.dmg/.msi/.deb)
-```
-
-**Installing the .dmg (macOS):**
-After running `npm run tauri:build`, find the installer at:
-```
-frontend/src-tauri/target/release/bundle/dmg/AlphaLab_*.dmg
-```
-Double-click to install, then drag AlphaLab.app to your Applications folder.
-
 ### Full Application
 
 Run backend + frontend in separate terminals:
 
 ```bash
-# Terminal 1 - Backend (REQUIRED for both web and desktop)
+# Terminal 1 - Backend
 cd backend && source venv/bin/activate && python run.py
 
-# Terminal 2 - Frontend (choose one):
-cd frontend && npm run dev           # Web → http://localhost:8080
-# OR
-cd frontend && npm run tauri:dev     # Desktop → native app window
+# Terminal 2 - Frontend
+cd frontend && npm run dev           # → http://localhost:8080
 ```
 
 ### Run Tests
@@ -354,7 +323,7 @@ AlphaLab/
 │   ├── walk_forward_validation.py  # Walk-forward validation for daily strategies
 │   ├── greenblatt_walk_forward.py  # Walk-forward validation for GreenblattWeekly
 │   └── wf_common.py           # Shared helpers for the walk-forward scripts
-├── frontend/                   # React UI (TypeScript + Vite + Tauri)
+├── frontend/                   # React UI (TypeScript + Vite)
 │   ├── src/
 │   │   ├── pages/             # Dashboard, Backtest, Compare, DataManager
 │   │   ├── components/        # UI components (charts, forms, metrics)
@@ -362,7 +331,6 @@ AlphaLab/
 │   │   ├── stores/            # Zustand state management
 │   │   ├── types/             # TypeScript types
 │   │   └── utils/             # Formatters, validators
-│   ├── src-tauri/             # Tauri desktop app config
 │   ├── package.json
 │   ├── vite.config.ts
 │   ├── tailwind.config.ts
@@ -396,7 +364,6 @@ Both `backend/` and `frontend/` have a `Dockerfile` for deploying to Railway as 
 - [x] React + TypeScript frontend with interactive charts (Recharts)
 - [x] Dashboard with backtest history and quick stats
 - [x] Strategy comparison page (side-by-side analysis)
-- [x] Tauri desktop packaging (.dmg for macOS, .msi for Windows, .deb for Linux)
 - [x] Bollinger Band Breakout and VWAP Reversion strategies
 - [x] Portfolio optimization (Max Sharpe, Min Variance, Risk Parity, Equal Weight)
 - [x] Batch backtesting (test one strategy across multiple tickers)
@@ -447,8 +414,7 @@ python run.py
 
 ```bash
 cd frontend
-npm run dev          # Web version
-npm run tauri:dev    # Desktop version
+npm run dev
 ```
 
 **Making changes:**
@@ -593,14 +559,6 @@ Before submitting, ensure:
 - Zustand state management
 - React Query for API calls
 - Tailwind CSS styling
-
-#### Desktop App (Tauri, optional - separate from the Railway deployment setup)
-- Tauri configured and working
-- macOS .dmg installer (5.5MB)
-- Correct app icons installed (1024x1024 source)
-- App ID: com.alphalab.app
-- Window: 1400x900 (min 1200x700)
-- Build scripts: `tauri:dev`, `tauri:build`
 
 ### Project Stats
 
