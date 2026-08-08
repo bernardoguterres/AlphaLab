@@ -11,7 +11,6 @@ This solves the problem of mean reversion strategies not trading in strong trend
 Target: 10-20 trades/month on daily bars, 2-4/day on 15Min bars.
 """
 
-import numpy as np
 import pandas as pd
 
 from ..base_strategy import BaseStrategy
@@ -66,10 +65,7 @@ class TrendAdaptiveRSI(BaseStrategy):
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         """Generate adaptive signals based on market regime."""
         p = self.params
-        signals = pd.DataFrame(index=data.index)
-        signals["signal"] = 0
-        signals["confidence"] = 0.0
-        signals["reason"] = ""
+        signals = self._init_signals_frame(data)
 
         close = data["Close"]
         rsi = data["RSI"]

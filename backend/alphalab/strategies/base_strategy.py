@@ -43,6 +43,15 @@ class BaseStrategy(ABC):
     # ------------------------------------------------------------------
 
     @staticmethod
+    def _init_signals_frame(data: pd.DataFrame) -> pd.DataFrame:
+        """Build the empty signals DataFrame every strategy starts from."""
+        signals = pd.DataFrame(index=data.index)
+        signals["signal"] = 0
+        signals["confidence"] = 0.0
+        signals["reason"] = ""
+        return signals
+
+    @staticmethod
     def _apply_cooldown(signals: pd.DataFrame, cooldown: int) -> pd.DataFrame:
         """Enforce a minimum number of bars between consecutive signals."""
         if cooldown <= 0:

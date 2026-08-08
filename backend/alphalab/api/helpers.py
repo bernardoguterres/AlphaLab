@@ -1,6 +1,5 @@
 """Shared helper functions for API route handlers."""
 
-import json
 from datetime import datetime, timezone
 
 from flask import jsonify

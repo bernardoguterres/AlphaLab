@@ -2,7 +2,6 @@
 
 from datetime import datetime
 
-import numpy as np
 
 from .order import Order, OrderSide, OrderStatus
 from ..utils.logger import setup_logger

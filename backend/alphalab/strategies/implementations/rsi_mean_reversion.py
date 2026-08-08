@@ -1,6 +1,5 @@
 """RSI Mean Reversion strategy with Bollinger Band confirmation, ADX filter, and stop-loss."""
 
-import numpy as np
 import pandas as pd
 
 from ..base_strategy import BaseStrategy
@@ -44,10 +43,7 @@ class RSIMeanReversion(BaseStrategy):
 
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         p = self.params
-        signals = pd.DataFrame(index=data.index)
-        signals["signal"] = 0
-        signals["confidence"] = 0.0
-        signals["reason"] = ""
+        signals = self._init_signals_frame(data)
 
         rsi = data["RSI"]
         close = data["Close"]

@@ -1,7 +1,6 @@
 """Bollinger Band Breakout strategy with confirmation and volume filter."""
 
 import pandas as pd
-import numpy as np
 
 from ..base_strategy import BaseStrategy
 from ...utils.logger import setup_logger
@@ -60,10 +59,7 @@ class BollingerBreakout(BaseStrategy):
         upper_band = sma + (rolling_std * std_dev)
         lower_band = sma - (rolling_std * std_dev)
 
-        signals = pd.DataFrame(index=data.index)
-        signals["signal"] = 0
-        signals["confidence"] = 0.0
-        signals["reason"] = ""
+        signals = self._init_signals_frame(data)
 
         # Check for consecutive closes above/below bands
         above_upper = close > upper_band

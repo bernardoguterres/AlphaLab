@@ -64,10 +64,7 @@ class GreenblattWeekly(BaseStrategy):
         fast_col = f"SMA_{p['fast_sma']}"
         slow_col = f"SMA_{p['slow_sma']}"
 
-        signals = pd.DataFrame(index=data.index)
-        signals["signal"] = 0
-        signals["confidence"] = 0.0
-        signals["reason"] = ""
+        signals = self._init_signals_frame(data)
 
         close = data["Close"]
         rsi = data["RSI"]

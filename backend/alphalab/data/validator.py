@@ -1,7 +1,6 @@
 """Data validation and cleaning pipeline for market data."""
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 import numpy as np
 import pandas as pd

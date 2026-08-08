@@ -81,6 +81,23 @@ def _resolve_interval(strategy_name: str, requested_interval: str | None) -> str
     return _DEFAULT_INTERVAL_BY_STRATEGY.get(strategy_name, "1d")
 
 
+def _resolve_strategy_or_400(strategy_name: str):
+    """Look up a strategy class by name.
+
+    Returns (strategy_cls, None) on success, or (None, error_response) where
+    error_response is a ready-to-return (jsonify(...), 400) tuple.
+    """
+    strategy_cls = STRATEGY_MAP.get(strategy_name)
+    if not strategy_cls:
+        return None, (
+            jsonify(
+                {"status": "error", "message": f"Unknown strategy: {strategy_name}"}
+            ),
+            400,
+        )
+    return strategy_cls, None
+
+
 backtest_bp = Blueprint("backtest", __name__)
 
 
@@ -97,14 +114,9 @@ def run_backtest():
     if err:
         return err
 
-    strategy_cls = STRATEGY_MAP.get(body.strategy)
-    if not strategy_cls:
-        return (
-            jsonify(
-                {"status": "error", "message": f"Unknown strategy: {body.strategy}"}
-            ),
-            400,
-        )
+    strategy_cls, err = _resolve_strategy_or_400(body.strategy)
+    if err:
+        return err
 
     strategy = strategy_cls(body.params or {})
 
@@ -159,9 +171,9 @@ def optimize_strategy():
     if err:
         return err
 
-    strategy_cls = STRATEGY_MAP.get(body.strategy)
-    if not strategy_cls:
-        return jsonify({"status": "error", "message": "Unknown strategy"}), 400
+    strategy_cls, err = _resolve_strategy_or_400(body.strategy)
+    if err:
+        return err
 
     param_optimizer = ParameterOptimizer()
     engine = BacktestEngine()
@@ -199,9 +211,9 @@ def parameter_heatmap():
     if err:
         return err
 
-    strategy_cls = STRATEGY_MAP.get(body.strategy)
-    if not strategy_cls:
-        return jsonify({"status": "error", "message": "Unknown strategy"}), 400
+    strategy_cls, err = _resolve_strategy_or_400(body.strategy)
+    if err:
+        return err
 
     param1_values = list(
         np.arange(body.param1_min, body.param1_max + body.param1_step, body.param1_step)
@@ -318,14 +330,9 @@ def batch_backtest():
     engine = BacktestEngine()
     metrics_calc = PerformanceMetrics()
 
-    strategy_cls = STRATEGY_MAP.get(body.strategy)
-    if not strategy_cls:
-        return (
-            jsonify(
-                {"status": "error", "message": f"Unknown strategy: {body.strategy}"}
-            ),
-            400,
-        )
+    strategy_cls, err = _resolve_strategy_or_400(body.strategy)
+    if err:
+        return err
 
     results = []
     errors = []
