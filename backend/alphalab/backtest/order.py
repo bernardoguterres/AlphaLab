@@ -1,6 +1,6 @@
 """Order model and enums for the backtesting engine."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 

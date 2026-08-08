@@ -38,10 +38,7 @@ class MomentumBreakout(BaseStrategy):
 
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         p = self.params
-        signals = pd.DataFrame(index=data.index)
-        signals["signal"] = 0
-        signals["confidence"] = 0.0
-        signals["reason"] = ""
+        signals = self._init_signals_frame(data)
         signals["stop_loss"] = np.nan
 
         close = data["Close"]

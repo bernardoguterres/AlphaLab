@@ -56,10 +56,7 @@ class VWAPReversion(BaseStrategy):
         overbought = p["overbought"]
         cooldown = p["cooldown_days"]
 
-        signals = pd.DataFrame(index=data.index)
-        signals["signal"] = 0
-        signals["confidence"] = 0.0
-        signals["reason"] = ""
+        signals = self._init_signals_frame(data)
 
         # Calculate rolling VWAP
         typical_price = (data["High"] + data["Low"] + data["Close"]) / 3

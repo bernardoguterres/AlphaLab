@@ -287,8 +287,6 @@ class PerformanceMetrics:
             return {"total_trades": 0, "win_rate": 0}
 
         filled = [t for t in trades if t.get("status") == "filled"]
-        buys = [t for t in filled if t.get("side") == "buy"]
-        sells = [t for t in filled if t.get("side") == "sell"]
 
         # Pair buys and sells to compute per-trade P&L
         pnls = []

@@ -46,10 +46,7 @@ class MovingAverageCrossover(BaseStrategy):
         short_ma = close.rolling(short_w, min_periods=short_w).mean()
         long_ma = close.rolling(long_w, min_periods=long_w).mean()
 
-        signals = pd.DataFrame(index=data.index)
-        signals["signal"] = 0
-        signals["confidence"] = 0.0
-        signals["reason"] = ""
+        signals = self._init_signals_frame(data)
 
         prev_short = short_ma.shift(1)
         prev_long = long_ma.shift(1)

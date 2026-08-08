@@ -9,7 +9,6 @@ Generates more signals than pure RSI because it catches bounces off support.
 Target: 10-20 trades/month on daily bars, 2-5/day on 15Min bars.
 """
 
-import numpy as np
 import pandas as pd
 
 from ..base_strategy import BaseStrategy
@@ -61,15 +60,11 @@ class BollingerRSICombo(BaseStrategy):
         - When in: Look for SELL signals (BB middle reach OR RSI overbought)
         """
         p = self.params
-        signals = pd.DataFrame(index=data.index)
-        signals["signal"] = 0
-        signals["confidence"] = 0.0
-        signals["reason"] = ""
+        signals = self._init_signals_frame(data)
 
         close = data["Close"]
         bb_lower = data["BB_Lower"]
         bb_middle = data["BB_Middle"]
-        bb_upper = data["BB_Upper"]
         rsi = data["RSI"]
 
         # State machine
