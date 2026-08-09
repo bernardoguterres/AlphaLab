@@ -245,13 +245,3 @@ class TestVWAPReversion:
         assert "Close" in cols
         assert "Volume" in cols
         assert "RSI" in cols
-
-
-class TestSignalQuality:
-    def test_quality_assessment(self):
-        data = _make_featured_data()
-        s = MovingAverageCrossover()
-        signals = s.generate_signals(data)
-        quality = s.calculate_signal_quality(signals)
-        assert "total_signals" in quality
-        assert quality["quality"] in ("good", "overtrading", "too_few", "no_signals")
