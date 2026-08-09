@@ -192,7 +192,7 @@ def main():
             max_drawdown_pct=40,
         )
         bm_curve = (
-            bt.benchmark.get("buy_and_hold_equity_curve") if bt.benchmark else None
+            bt.benchmark.get("equity_curve") if bt.benchmark else None
         )
         m = metrics_calc.calculate_all(
             bt.equity_curve, bt.trades, benchmark_curve=bm_curve

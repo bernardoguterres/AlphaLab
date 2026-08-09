@@ -427,6 +427,32 @@ class MACDMomentumStrategy(BaseStrategy):
 # ---------------------------------------------------------------------------
 
 
+def _add_macd(df: pd.DataFrame, fast=12, slow=26, signal=9) -> pd.DataFrame:
+    """Add MACD_Line/MACD_Signal/MACD_Hist columns.
+
+    FeatureEngineer (alphalab/data/processor.py) deliberately does not
+    compute MACD - it only computes indicators actually consumed by a
+    registered strategy's required_columns(), and MACDMomentumStrategy
+    below is a one-off experiment in this script, never adopted into
+    STRATEGY_MAP. Without this, MACDMomentumStrategy.required_columns()
+    (MACD_Hist) was never satisfied, backtest_ready_check() always failed,
+    and every run of "Task 4" below silently returned an empty/zero result
+    - indistinguishable from "this strategy generates no signals" rather
+    than "this strategy could never run." Computed locally here rather
+    than added to the production FeatureEngineer, since this strategy was
+    never adopted.
+    """
+    close = df["Close"]
+    ema_fast = close.ewm(span=fast, adjust=False).mean()
+    ema_slow = close.ewm(span=slow, adjust=False).mean()
+    macd_line = ema_fast - ema_slow
+    macd_signal = macd_line.ewm(span=signal, adjust=False).mean()
+    df["MACD_Line"] = macd_line
+    df["MACD_Signal"] = macd_signal
+    df["MACD_Hist"] = macd_line - macd_signal
+    return df
+
+
 def load_data():
     """Fetch and process data for all tickers."""
     print("\n" + "=" * 70)
@@ -449,6 +475,7 @@ def load_data():
                 continue
             raw.attrs["ticker"] = ticker
             processed = engineer.process(raw)
+            processed = _add_macd(processed)
             processed.attrs["ticker"] = ticker
             data_map[ticker] = processed
             print(f"OK ({len(processed)} bars)")
@@ -487,12 +514,17 @@ def print_results_table(all_results, title):
     print(f"{'-'*90}")
 
     for r in all_results:
+        # Both branches used to be "" (a real bug - the marker column,
+        # sized for exactly this 2-char prefix per the header's <22 vs
+        # rows' <20 width, never showed anything regardless of
+        # performance, even though the final summary message references
+        # "marks for deployment-ready strategies").
         deploy = (
-            ""
+            "* "
             if r["sharpe"] >= 1.5
             and r["total_trades"] >= 5
             and abs(r["max_drawdown_pct"]) <= 20
-            else ""
+            else "  "
         )
         print(
             f"{deploy}{r['strategy']:<20} {r['ticker']:<6} {r['period']:<12} "

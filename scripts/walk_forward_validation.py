@@ -178,7 +178,7 @@ def run_one_backtest(
     # Calculate performance metrics
     calculator = PerformanceMetrics(risk_free_rate=0.04)
     bm_curve = (
-        results.benchmark.get("buy_and_hold_equity_curve")
+        results.benchmark.get("equity_curve")
         if results.benchmark
         else None
     )
