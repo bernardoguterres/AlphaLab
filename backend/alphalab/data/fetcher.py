@@ -290,7 +290,7 @@ class DataFetcher:
                 issues.append(f"Low > min(Open, Close) on {bad_low} rows")
 
             # Extreme daily moves (>50%)
-            daily_return = df["Close"].pct_change().abs()
+            daily_return = df["Close"].pct_change(fill_method=None).abs()
             extreme = (daily_return > 0.5).sum()
             if extreme == 0:
                 passed_checks += 1

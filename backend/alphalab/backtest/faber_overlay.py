@@ -35,7 +35,7 @@ def faber_overlay_returns(
     monthly close series. Returns NaN for the first period (no prior return).
     """
     signal = faber_signal(monthly_close, sma_months)
-    asset_returns = monthly_close.pct_change()
+    asset_returns = monthly_close.pct_change(fill_method=None)
     # Decision at month t (signal) governs exposure for the return realized
     # AT month t (i.e. the return from t-1 to t) is NOT what t's signal
     # governs - t's signal governs the NEXT period's return, hence shift(1).

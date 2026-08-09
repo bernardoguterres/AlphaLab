@@ -1,5 +1,7 @@
 """Portfolio optimization using Modern Portfolio Theory."""
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -218,7 +220,7 @@ class PortfolioOptimizer:
         return result.x
 
 
-def extract_daily_returns(equity_curve: list[dict[str, any]]) -> pd.Series:
+def extract_daily_returns(equity_curve: list[dict[str, Any]]) -> pd.Series:
     """Extract daily returns from equity curve.
 
     Args:
@@ -233,7 +235,7 @@ def extract_daily_returns(equity_curve: list[dict[str, any]]) -> pd.Series:
     df = df.sort_index()
 
     # Calculate daily returns
-    returns = df["value"].pct_change().dropna()
+    returns = df["value"].pct_change(fill_method=None).dropna()
     return returns
 
 
