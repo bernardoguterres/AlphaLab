@@ -49,7 +49,7 @@ from .portfolio import Portfolio
 class RankedCandidate(Protocol):
     """Structural type for anything PortfolioConstructor can rank on.
 
-    ScreenerResult (src/screener/fundamental_screener.py) already satisfies
+    ScreenerResult (alphalab/screener/fundamental_screener.py) already satisfies
     this - any future ranking source (e.g. a sector relative-strength score)
     just needs a `.ticker` attribute and a sortable `.combined_rank`.
     """
