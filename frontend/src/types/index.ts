@@ -3,6 +3,11 @@ export interface EquityCurvePoint {
   value: number;
 }
 
+// Paired round-trip trade (entry + matching exit), as rendered by TradeTable.
+// Not what the backend sends directly - see RawOrder below and
+// utils/tradePairing.ts's pairTradesFIFO(), which derives this shape from
+// the raw per-order ledger, mirroring the backend's own FIFO buy/sell
+// matching in alphalab/backtest/metrics.py's _trade_metrics().
 export interface Trade {
   entry_date: string;
   exit_date: string;
@@ -12,6 +17,28 @@ export interface Trade {
   exit_price: number;
   pnl: number;
   pnl_pct: number;
+}
+
+// Raw per-order ledger entry - what BacktestResult.trades actually contains
+// (Portfolio._log_trade()/Order.to_dict() in portfolio.py/order.py): one
+// row per individual BUY or SELL order, not a paired trade. Previously
+// BacktestResult.trades was typed as Trade[] directly and passed straight
+// into TradeTable, which expected entry_date/exit_date/action/entry_price/
+// exit_price/pnl/pnl_pct - none of which exist on this shape, so every
+// cell in the Trade Table silently rendered "-" for every backtest.
+export interface RawOrder {
+  ticker: string;
+  side: "buy" | "sell";
+  shares: number;
+  order_type: string;
+  status: string;
+  filled_price: number | null;
+  commission: number;
+  slippage: number;
+  timestamp: string | null;
+  filled_timestamp: string | null;
+  reason: string;
+  portfolio_cash: number;
 }
 
 export interface BacktestMetrics {
@@ -53,12 +80,14 @@ export interface BacktestMetrics {
   };
   vs_benchmark: {
     beta: number;
-    alpha: number;
+    alpha_annual_pct: number;
+    alpha_t_stat: number;
     alpha_p_value: number;
-    tracking_error: number;
+    alpha_significant: boolean;
+    tracking_error_pct: number;
     information_ratio: number;
-    up_capture: number;
-    down_capture: number;
+    up_capture_pct: number;
+    down_capture_pct: number;
   };
 }
 
@@ -91,7 +120,7 @@ export interface BacktestResult {
   total_return_pct: number;
   total_trades: number;
   equity_curve: EquityCurvePoint[];
-  trades: Trade[];
+  trades: RawOrder[];
   metrics: BacktestMetrics;
   benchmark: {
     equity_curve: EquityCurvePoint[];

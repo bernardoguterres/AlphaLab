@@ -1,5 +1,5 @@
 import type { BacktestMetrics } from "@/types";
-import { formatPercent, formatNumber } from "@/utils/formatters";
+import { formatPercent, formatNumber, formatCurrency } from "@/utils/formatters";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface MetricsTabsProps {
@@ -53,12 +53,12 @@ export function MetricsTabs({ metrics }: MetricsTabsProps) {
 
       <TabsContent value="trades" className="mt-3">
         <MetricRow label="Win Rate" value={formatPercent(metrics.trades.win_rate)} />
-        <MetricRow label="Avg Win" value={formatPercent(metrics.trades.avg_win)} />
-        <MetricRow label="Avg Loss" value={formatPercent(metrics.trades.avg_loss)} />
+        <MetricRow label="Avg Win" value={formatCurrency(metrics.trades.avg_win)} />
+        <MetricRow label="Avg Loss" value={formatCurrency(metrics.trades.avg_loss)} />
         <MetricRow label="Profit Factor" value={formatNumber(metrics.trades.profit_factor)} />
-        <MetricRow label="Expectancy" value={formatPercent(metrics.trades.expectancy)} />
-        <MetricRow label="Best Trade" value={formatPercent(metrics.trades.best_trade)} />
-        <MetricRow label="Worst Trade" value={formatPercent(metrics.trades.worst_trade)} />
+        <MetricRow label="Expectancy" value={formatCurrency(metrics.trades.expectancy)} />
+        <MetricRow label="Best Trade" value={formatCurrency(metrics.trades.best_trade)} />
+        <MetricRow label="Worst Trade" value={formatCurrency(metrics.trades.worst_trade)} />
       </TabsContent>
 
       <TabsContent value="consistency" className="mt-3">
@@ -70,12 +70,12 @@ export function MetricsTabs({ metrics }: MetricsTabsProps) {
 
       <TabsContent value="benchmark" className="mt-3">
         <MetricRow label="Beta" value={formatNumber(metrics.vs_benchmark.beta)} />
-        <MetricRow label="Alpha" value={formatPercent(metrics.vs_benchmark.alpha)} />
+        <MetricRow label="Alpha" value={formatPercent(metrics.vs_benchmark.alpha_annual_pct)} />
         <MetricRow label="Alpha p-value" value={formatNumber(metrics.vs_benchmark.alpha_p_value, 4)} />
-        <MetricRow label="Tracking Error" value={formatPercent(metrics.vs_benchmark.tracking_error)} />
+        <MetricRow label="Tracking Error" value={formatPercent(metrics.vs_benchmark.tracking_error_pct)} />
         <MetricRow label="Information Ratio" value={formatNumber(metrics.vs_benchmark.information_ratio)} />
-        <MetricRow label="Up Capture" value={formatPercent(metrics.vs_benchmark.up_capture)} />
-        <MetricRow label="Down Capture" value={formatPercent(metrics.vs_benchmark.down_capture)} />
+        <MetricRow label="Up Capture" value={formatPercent(metrics.vs_benchmark.up_capture_pct)} />
+        <MetricRow label="Down Capture" value={formatPercent(metrics.vs_benchmark.down_capture_pct)} />
       </TabsContent>
     </Tabs>
   );

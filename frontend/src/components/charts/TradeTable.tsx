@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Trade } from "@/types";
 import { formatCurrency, formatDate, formatPercent, pnlColor } from "@/utils/formatters";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,10 @@ export function TradeTable({ trades }: TradeTableProps) {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
   const perPage = 15;
+
+  useEffect(() => {
+    setPage(0);
+  }, [trades]);
 
   const sorted = [...trades].sort((a, b) => {
     const mul = sortDir === "asc" ? 1 : -1;
