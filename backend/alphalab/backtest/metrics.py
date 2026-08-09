@@ -161,7 +161,9 @@ class PerformanceMetrics:
         cagr = (1 + total) ** (1 / years) - 1 if total > -1 else -1
 
         rets = eq["return"].dropna()
-        monthly = eq["value"].resample("ME").last().pct_change(fill_method=None).dropna()
+        monthly = (
+            eq["value"].resample("ME").last().pct_change(fill_method=None).dropna()
+        )
         yearly = eq["value"].resample("YE").last().pct_change(fill_method=None).dropna()
 
         return {
@@ -338,7 +340,9 @@ class PerformanceMetrics:
 
     @staticmethod
     def _consistency_metrics(eq: pd.DataFrame, periods_per_year: float) -> dict:
-        monthly = eq["value"].resample("ME").last().pct_change(fill_method=None).dropna()
+        monthly = (
+            eq["value"].resample("ME").last().pct_change(fill_method=None).dropna()
+        )
         yearly = eq["value"].resample("YE").last().pct_change(fill_method=None).dropna()
 
         profitable_months = (monthly > 0).sum()
