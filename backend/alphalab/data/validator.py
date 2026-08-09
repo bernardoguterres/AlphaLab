@@ -196,7 +196,7 @@ class DataValidator:
 
         # Price outliers via IQR on daily returns
         if "Close" in df.columns and len(df) > 20:
-            returns = df["Close"].pct_change().dropna()
+            returns = df["Close"].pct_change(fill_method=None).dropna()
             q1 = returns.quantile(0.25)
             q3 = returns.quantile(0.75)
             iqr = q3 - q1

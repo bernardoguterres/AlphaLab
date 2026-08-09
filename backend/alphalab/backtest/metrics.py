@@ -103,7 +103,7 @@ class PerformanceMetrics:
         eq = pd.DataFrame(equity_curve)
         eq["date"] = pd.to_datetime(eq["date"])
         eq = eq.set_index("date").sort_index()
-        eq["return"] = eq["value"].pct_change()
+        eq["return"] = eq["value"].pct_change(fill_method=None)
 
         periods_per_year = self._infer_periods_per_year(eq.index)
 
@@ -119,7 +119,7 @@ class PerformanceMetrics:
             bm = pd.DataFrame(benchmark_curve)
             bm["date"] = pd.to_datetime(bm["date"])
             bm = bm.set_index("date").sort_index()
-            bm["return"] = bm["value"].pct_change()
+            bm["return"] = bm["value"].pct_change(fill_method=None)
             result["vs_benchmark"] = self._benchmark_metrics(eq, bm, periods_per_year)
         else:
             result["vs_benchmark"] = {}
@@ -161,8 +161,8 @@ class PerformanceMetrics:
         cagr = (1 + total) ** (1 / years) - 1 if total > -1 else -1
 
         rets = eq["return"].dropna()
-        monthly = eq["value"].resample("ME").last().pct_change().dropna()
-        yearly = eq["value"].resample("YE").last().pct_change().dropna()
+        monthly = eq["value"].resample("ME").last().pct_change(fill_method=None).dropna()
+        yearly = eq["value"].resample("YE").last().pct_change(fill_method=None).dropna()
 
         return {
             "total_return_pct": round(total * 100, 2),
@@ -338,8 +338,8 @@ class PerformanceMetrics:
 
     @staticmethod
     def _consistency_metrics(eq: pd.DataFrame, periods_per_year: float) -> dict:
-        monthly = eq["value"].resample("ME").last().pct_change().dropna()
-        yearly = eq["value"].resample("YE").last().pct_change().dropna()
+        monthly = eq["value"].resample("ME").last().pct_change(fill_method=None).dropna()
+        yearly = eq["value"].resample("YE").last().pct_change(fill_method=None).dropna()
 
         profitable_months = (monthly > 0).sum()
         total_months = len(monthly)

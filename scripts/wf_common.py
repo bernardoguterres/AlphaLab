@@ -168,7 +168,7 @@ def spy_buyhold_for_window(window_start: str, window_end: str, ticker: str = "SP
     df = fetch_weekly_close(ticker, window_start, window_end)
     if df is None:
         return None
-    rets = df["Close"].pct_change().dropna()
+    rets = df["Close"].pct_change(fill_method=None).dropna()
     n = len(rets)
     if n < 2:
         return None

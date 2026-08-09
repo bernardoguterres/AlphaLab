@@ -5,7 +5,7 @@ Produces one file in AlphaLive/tests/fixtures/:
   expected_portfolio_positions.csv - ticker,rank,target_weight,target_shares,price
 
 AlphaLab is the oracle: this runs the REAL PortfolioConstructor
-(backend/src/backtest/portfolio_constructor.py) against synthetic-but-fixed
+(backend/alphalab/backtest/portfolio_constructor.py) against synthetic-but-fixed
 candidates and prices (no network calls, fully reproducible), and exports
 its rebalance-at-bar-0 output. AlphaLive's tests/test_portfolio_parity.py
 independently recomputes the same scenario via
