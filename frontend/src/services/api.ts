@@ -24,6 +24,24 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+// Flask's error responses (validation failures, missing credentials, etc.)
+// return 4xx/5xx with a real {"status":"error","message":"..."} body, but
+// axios rejects on non-2xx before any call site's own `data.status ===
+// "error"` check can run - err.message ends up as a generic "Request
+// failed with status code 400" and the backend's actual reason is
+// discarded, even though it's sitting right there on err.response.data.
+// Every toast.error(err.message) across the app inherited this.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const backendMessage = error?.response?.data?.message;
+    if (backendMessage) {
+      error.message = backendMessage;
+    }
+    return Promise.reject(error);
+  }
+);
+
 export async function checkHealth(): Promise<{ status: string; version: string }> {
   const { data } = await api.get("/health");
   return data;

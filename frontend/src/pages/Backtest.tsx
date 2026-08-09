@@ -9,6 +9,7 @@ import { EquityChart } from "@/components/charts/EquityChart";
 import { DrawdownChart } from "@/components/charts/DrawdownChart";
 import { MonthlyReturnsHeatmap } from "@/components/charts/MonthlyReturnsHeatmap";
 import { TradeTable } from "@/components/charts/TradeTable";
+import { pairTradesFIFO } from "@/utils/tradePairing";
 import { ExportButton } from "@/components/export/ExportButton";
 import { RiskSettingsPanel } from "@/components/backtest/RiskSettingsPanel";
 import { BatchBacktest } from "@/components/backtest/BatchBacktest";
@@ -508,7 +509,7 @@ export default function Backtest() {
                 </TabsContent>
 
                 <TabsContent value="trades" className="mt-4">
-                  <TradeTable trades={currentResult.trades} />
+                  <TradeTable trades={pairTradesFIFO(currentResult.trades)} />
                 </TabsContent>
               </Tabs>
             </div>
