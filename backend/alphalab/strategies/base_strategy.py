@@ -73,33 +73,3 @@ class BaseStrategy(ABC):
             logger.warning("%s: missing columns for backtest: %s", self.name, missing)
             return False
         return True
-
-    @staticmethod
-    def calculate_signal_quality(signals: pd.DataFrame) -> dict:
-        """Evaluate signal quality - flag overtrading or sparse signals."""
-        if signals.empty or "signal" not in signals.columns:
-            return {"trades": 0, "quality": "no_signals"}
-
-        trades = (signals["signal"] != 0).sum()
-        total = len(signals)
-        trade_pct = trades / total if total else 0
-
-        # Overtrading: more than 20% of bars
-        if trade_pct > 0.20:
-            quality = "overtrading"
-        elif trade_pct < 0.005:
-            quality = "too_few"
-        else:
-            quality = "good"
-
-        # Average holding period
-        in_trade = signals["signal"].ne(0)
-        runs = in_trade.ne(in_trade.shift()).cumsum()
-        avg_hold = in_trade.groupby(runs).sum().mean() if in_trade.any() else 0
-
-        return {
-            "total_signals": int(trades),
-            "signal_pct": round(trade_pct, 4),
-            "avg_holding_bars": round(float(avg_hold), 1),
-            "quality": quality,
-        }
