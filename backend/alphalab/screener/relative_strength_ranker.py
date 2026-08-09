@@ -15,7 +15,7 @@ because fundamentals have no point-in-time source available to this
 project), this ranker is price-only: price history is not look-ahead
 biased, so it is designed to be called fresh at EVERY rebalance date using
 only trailing data - see PortfolioConstructor's `rank_fn` mode
-(backend/src/backtest/portfolio_constructor.py, added 2026-07-12
+(backend/alphalab/backtest/portfolio_constructor.py, added 2026-07-12
 specifically to support this).
 
 Data-quality note: sector ETFs are a far more stable, survivorship-bias-

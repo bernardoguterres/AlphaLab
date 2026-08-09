@@ -3,7 +3,12 @@
 NO BB confirmation, NO ADX filter, NO complex logic.
 Just RSI with relaxed thresholds for frequent signals.
 
-EXACT PARITY with AlphaLive implementation.
+Note: AlphaLive does not currently register a distinct "rsi_simple"
+strategy name of its own (see strategy_schema.py's RSISimpleParams
+docstring, audit bug 3.8) - this class's params happen to match what
+AlphaLive's rsi_mean_reversion implementation actually reads, but whether
+that implementation should be backed by this class is a separate,
+unresolved cross-repo parity decision. Do not assume live parity here.
 """
 
 import pandas as pd
@@ -21,7 +26,6 @@ class RSISimple(BaseStrategy):
     Exit: RSI > overbought (default 60)
 
     No confirmation filters, no state machine, no extra logic.
-    Designed to match AlphaLive signal_engine.py EXACTLY for signal parity.
 
     Target: 5-15 signals/month on daily bars, 1-3/day on 15Min bars.
     """
@@ -41,9 +45,8 @@ class RSISimple(BaseStrategy):
         return ["Close", "RSI"]
 
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Generate signals matching AlphaLive logic EXACTLY.
+        """Generate signals from a bare RSI threshold check.
 
-        AlphaLive signal_engine.py _rsi_mean_reversion_signal():
         - BUY when RSI < oversold
         - SELL when RSI > overbought
         - HOLD otherwise

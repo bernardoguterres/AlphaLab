@@ -187,7 +187,7 @@ All required fields in `metadata.performance`:
 
 All 9 strategies below are implemented and tested in AlphaLab (backtesting). 8 of the 9 are also verified for signal parity with AlphaLive (live signal generation) - `rsi_simple` is the exception, registered 2026-07-14 (audit bug 3.8) as a reachable AlphaLab strategy, but AlphaLive does not currently register a matching `rsi_simple` strategy name, so it cannot yet be deployed end-to-end. AlphaLab's internal strategy classes take their own untyped params dict (see note in [Adding New Strategies](#adding-new-strategies)), with defaults applied via `setdefault()` in each strategy's `validate_params()`. **The JSON shown in this section is the exported/wire format** - what actually appears in `strategy.parameters` after `POST /api/strategies/export`, which is not always identical to AlphaLab's internal field names. Every `parameters` block also carries a `strategy_type` field matching `strategy.name` (a discriminator added 2026-07-14 - see [Versioning Policy](#versioning-policy)); omitted from the examples below for brevity but present in every real export.
 
-**Export field-name translation (2026-07-14):** four strategies have internal AlphaLab field names that differ from what AlphaLive actually reads; `_build_export_json`'s export-mapping layer (`backend/src/api/helpers.py`) renames them automatically - you never need to do this by hand when exporting through the API, but if you hand-craft a config JSON for AlphaLive, use the exported names below, not AlphaLab's internal ones (`short_window`/`long_window`, `volume_surge_pct`/`volume_avg_period`, `bb_period`/`bb_std_dev`, greenblatt's own `trailing_stop_pct`).
+**Export field-name translation (2026-07-14):** four strategies have internal AlphaLab field names that differ from what AlphaLive actually reads; `_build_export_json`'s export-mapping layer (`backend/alphalab/api/helpers.py`) renames them automatically - you never need to do this by hand when exporting through the API, but if you hand-craft a config JSON for AlphaLive, use the exported names below, not AlphaLab's internal ones (`short_window`/`long_window`, `volume_surge_pct`/`volume_avg_period`, `bb_period`/`bb_std_dev`, greenblatt's own `trailing_stop_pct`).
 
 ### 1. MA Crossover (`ma_crossover`)
 
@@ -254,7 +254,7 @@ machine. Registered 2026-07-14 (audit bug 3.8) - previously fully implemented an
 tested but unreachable through the export pipeline. Note: AlphaLive does not currently
 register a matching `rsi_simple` strategy name of its own, so exports of this strategy
 cannot yet be deployed to AlphaLive - see the class docstring
-(`backend/src/strategies/implementations/rsi_simple.py`) for the separate, cross-repo
+(`backend/alphalab/strategies/implementations/rsi_simple.py`) for the separate, cross-repo
 parity question this connects to.
 
 ```json
@@ -674,7 +674,7 @@ To add a new strategy to this schema:
 
 ### 1. Implement in AlphaLab
 
-- Create strategy class in `backend/src/strategies/implementations/`
+- Create strategy class in `backend/alphalab/strategies/implementations/`
 - Add default params to `backend/config.yaml`
 - Write tests in `backend/tests/test_strategies.py`
 - Register in strategy map
