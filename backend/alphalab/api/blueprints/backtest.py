@@ -133,7 +133,11 @@ def run_backtest():
     )
 
     metrics_calc = PerformanceMetrics()
-    metrics = metrics_calc.calculate_all(results.equity_curve, results.trades)
+    metrics = metrics_calc.calculate_all(
+        results.equity_curve,
+        results.trades,
+        results.benchmark.get("equity_curve") if results.benchmark else None,
+    )
     results.metrics = metrics
 
     result_id = str(uuid.uuid4())[:8]
@@ -215,12 +219,31 @@ def parameter_heatmap():
     if err:
         return err
 
-    param1_values = list(
-        np.arange(body.param1_min, body.param1_max + body.param1_step, body.param1_step)
-    )
-    param2_values = list(
-        np.arange(body.param2_min, body.param2_max + body.param2_step, body.param2_step)
-    )
+    # np.arange always yields numpy.float64, even for whole-number ranges.
+    # Strategy params like short_window/long_window get passed straight
+    # into pandas .rolling(window, min_periods=window), which raises
+    # "min_periods must be an integer" for a float64 - every single cell
+    # then fails that check, gets swallowed by generate_heatmap's per-cell
+    # except/logger.debug, and the whole grid renders as blank "-" cells
+    # with no visible error. Cast whole-number values back to int so
+    # integer-typed params (window sizes, periods) work the same way they
+    # already do through the grid_search endpoint, which receives plain
+    # JSON numbers from the frontend rather than np.arange output.
+    def _native(v: float) -> float | int:
+        return int(v) if float(v).is_integer() else float(v)
+
+    param1_values = [
+        _native(v)
+        for v in np.arange(
+            body.param1_min, body.param1_max + body.param1_step, body.param1_step
+        )
+    ]
+    param2_values = [
+        _native(v)
+        for v in np.arange(
+            body.param2_min, body.param2_max + body.param2_step, body.param2_step
+        )
+    ]
 
     if len(param1_values) * len(param2_values) > 400:
         return (
@@ -296,7 +319,11 @@ def compare_strategies():
             start_date=body.start_date,
             end_date=body.end_date,
         )
-        metrics = metrics_calc.calculate_all(results.equity_curve, results.trades)
+        metrics = metrics_calc.calculate_all(
+            results.equity_curve,
+            results.trades,
+            results.benchmark.get("equity_curve") if results.benchmark else None,
+        )
         results.metrics = metrics
         # Bug 3.9: previously only {total_return_pct, metrics} - but
         # OverlayEquityChart.tsx and CorrelationMatrix.tsx (and Compare.tsx
@@ -366,9 +393,18 @@ def batch_backtest():
                 end_date=body.end_date,
                 position_sizing=body.position_sizing,
                 monte_carlo_runs=0,
+                risk_settings=(
+                    body.risk_settings.model_dump() if body.risk_settings else None
+                ),
             )
             metrics = metrics_calc.calculate_all(
-                backtest_result.equity_curve, backtest_result.trades
+                backtest_result.equity_curve,
+                backtest_result.trades,
+                (
+                    backtest_result.benchmark.get("equity_curve")
+                    if backtest_result.benchmark
+                    else None
+                ),
             )
 
             results.append(

@@ -85,8 +85,10 @@ class BacktestEngine:
             monte_carlo_runs: Number of randomized runs (0 = disabled).
             risk_settings: Optional dict matching api.validators.RiskSettings
                 (stop_loss_pct, take_profit_pct, max_position_size_pct,
-                commission_per_trade, ...) - wired into the Portfolio-level
-                risk overlay (audit bug 3.1). max_daily_loss_pct and
+                trailing_stop_enabled, trailing_stop_pct, commission_per_trade,
+                ...) - wired into the Portfolio-level risk overlay (audit bug
+                3.1; trailing stop wired 2026-08-09, see CLAUDE.md "Known
+                Gotchas"). max_daily_loss_pct and
                 max_open_positions are accepted here but not simulated -
                 this engine is single-ticker/single-position, so there is no
                 "multiple positions to cap" or "rest of day" concept to
@@ -141,7 +143,13 @@ class BacktestEngine:
         # Monte Carlo
         if monte_carlo_runs > 0:
             results.monte_carlo = self._monte_carlo(
-                df, strategy, capital, position_sizing, monte_carlo_runs
+                df,
+                strategy,
+                capital,
+                position_sizing,
+                monte_carlo_runs,
+                max_drawdown_pct=max_drawdown_pct,
+                risk_settings=risk_settings,
             )
 
         logger.info(
@@ -189,6 +197,13 @@ class BacktestEngine:
             if risk_settings.get("max_position_size_pct") is not None:
                 portfolio_kwargs["max_position_pct"] = risk_settings[
                     "max_position_size_pct"
+                ]
+            if (
+                risk_settings.get("trailing_stop_enabled")
+                and risk_settings.get("trailing_stop_pct") is not None
+            ):
+                portfolio_kwargs["trailing_stop_pct"] = risk_settings[
+                    "trailing_stop_pct"
                 ]
         portfolio = Portfolio(**portfolio_kwargs)
 
@@ -260,6 +275,18 @@ class BacktestEngine:
                     )
                     pending_signal = (sig_val, reason)
 
+            # Trailing stop (previously tracked/ratcheted by
+            # update_trailing_stops() above but never actually checked
+            # against price anywhere - the whole feature was inert despite
+            # being fully wired in the UI/API). Checked against this bar's
+            # close, queued for the next bar's open like every other exit
+            # here.
+            trailing_exit_reason = portfolio.check_trailing_stop_exit(
+                ticker, row["Close"]
+            )
+            if trailing_exit_reason is not None:
+                pending_signal = (-1, trailing_exit_reason)
+
             # Portfolio-level stop-loss/take-profit overlay (audit bug 3.1):
             # checked against this bar's close, queued for execution on the
             # next bar's open (same no-look-ahead convention as strategy
@@ -319,8 +346,18 @@ class BacktestEngine:
         capital: float,
         sizing: str,
         n_runs: int,
+        max_drawdown_pct: float | None = None,
+        risk_settings: dict | None = None,
     ) -> dict:
-        """Randomize entry timing by ±1-2 days and aggregate results."""
+        """Randomize entry timing by ±1-2 days and aggregate results.
+
+        max_drawdown_pct/risk_settings must match the primary simulation's -
+        previously omitted here entirely, so a Monte Carlo run silently
+        ignored the same stop-loss/take-profit/trailing-stop/drawdown-halt
+        settings applied to the real backtest, making the MC distribution
+        not actually representative of the strategy+risk-settings
+        combination it was supposed to stress-test.
+        """
         final_values = []
 
         for run in range(n_runs):
@@ -332,7 +369,14 @@ class BacktestEngine:
             if "signal" in signals.columns:
                 signals["signal"] = signals["signal"].astype(int)
 
-            portfolio, _ = self._simulate(data, signals, capital, sizing)
+            portfolio, _ = self._simulate(
+                data,
+                signals,
+                capital,
+                sizing,
+                max_drawdown_pct=max_drawdown_pct,
+                risk_settings=risk_settings,
+            )
             # Final value
             last_price = data["Close"].iloc[-1]
             ticker = data.attrs.get("ticker", "UNKNOWN")

@@ -55,7 +55,7 @@ def _translate_params_for_export(strategy_name: str, params: dict) -> dict:
     AlphaLive export-contract names, and inject the strategy_type
     discriminator StrategyExportSchema now requires.
 
-    AlphaLab's internal strategy classes (src/strategies/implementations/)
+    AlphaLab's internal strategy classes (alphalab/strategies/implementations/)
     keep their own field names unchanged - only the exported JSON's field
     names change here, at the export-mapping layer.
     """

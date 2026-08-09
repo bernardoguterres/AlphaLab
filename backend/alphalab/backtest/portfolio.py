@@ -27,6 +27,7 @@ class Portfolio:
         max_drawdown_pct: float = 10.0,
         stop_loss_pct: float | None = None,
         take_profit_pct: float | None = None,
+        trailing_stop_pct: float | None = None,
     ):
         self.initial_capital = initial_capital
         self.cash = initial_capital
@@ -45,6 +46,14 @@ class Portfolio:
         self.stop_loss_pct = stop_loss_pct / 100 if stop_loss_pct is not None else None
         self.take_profit_pct = (
             take_profit_pct / 100 if take_profit_pct is not None else None
+        )
+        # Ratcheting stop from each position's peak price since entry (from
+        # the Risk Settings UI's RiskSettings.trailing_stop_enabled/pct).
+        # None = disabled. Independent of the fixed stop_loss_pct/
+        # take_profit_pct overlay above and of any strategy-internal
+        # trailing stop (e.g. MomentumBreakout's own ATR-based one).
+        self.trailing_stop_pct = (
+            trailing_stop_pct / 100 if trailing_stop_pct is not None else None
         )
 
         self.positions: dict[str, int] = {}  # ticker -> shares
@@ -143,8 +152,13 @@ class Portfolio:
                 self.avg_cost[order.ticker] = (
                     prev_cost + exec_price * order.shares
                 ) / new_shares
-            if order.ticker not in self.trailing_stops:
-                self.trailing_stops[order.ticker] = exec_price * (1 - self.slippage_pct)
+            if (
+                self.trailing_stop_pct is not None
+                and order.ticker not in self.trailing_stops
+            ):
+                self.trailing_stops[order.ticker] = exec_price * (
+                    1 - self.trailing_stop_pct
+                )
 
         else:  # SELL
             held = self.positions.get(order.ticker, 0)
@@ -215,6 +229,32 @@ class Portfolio:
         )
         return max(0, min(shares, max_by_size))
 
+    def check_trailing_stop_exit(self, ticker: str, close_price: float) -> str | None:
+        """Check the ratcheting trailing stop for an open position against
+        this bar's close price.
+
+        Returns a reason string if price has fallen to or through the
+        current trailing stop level, or None if trailing stops are
+        disabled/not yet initialized for this ticker or the level hasn't
+        been breached. Does not execute anything itself - callers queue the
+        exit for the next bar's open, same no-look-ahead convention as
+        check_risk_overlay_exit and strategy signals.
+        """
+        if self.trailing_stop_pct is None:
+            return None
+        held = self.positions.get(ticker, 0)
+        if held <= 0:
+            return None
+        stop_level = self.trailing_stops.get(ticker)
+        if stop_level is None:
+            return None
+        if close_price <= stop_level:
+            return (
+                f"Trailing stop triggered ({self.trailing_stop_pct*100:.1f}% "
+                f"below peak, stop={stop_level:.2f})"
+            )
+        return None
+
     def check_risk_overlay_exit(self, ticker: str, close_price: float) -> str | None:
         """Check the portfolio-level stop-loss/take-profit overlay for an
         open position against this bar's close price.
@@ -246,15 +286,25 @@ class Portfolio:
         return None
 
     def update_trailing_stops(self, current_prices: dict[str, float]):
-        """Update trailing stop prices based on current highs."""
-        for ticker, shares in list(self.positions.items()):
+        """Ratchet each open position's trailing stop up toward the current price.
+
+        No-op unless trailing_stop_pct is configured - previously ratcheted
+        every open position toward a hardcoded 5% (price * 0.95) regardless
+        of whether trailing stops were enabled or what percentage the user
+        configured, while nothing anywhere checked the resulting level
+        against price to actually trigger an exit (audit fix: see
+        check_trailing_stop_exit below, now wired into engine.py).
+        """
+        if self.trailing_stop_pct is None:
+            return
+        for ticker in list(self.positions.keys()):
             price = current_prices.get(ticker)
             if price is None:
                 continue
             if ticker in self.trailing_stops:
-                # Ratchet up the stop
+                # Ratchet up the stop, never down
                 self.trailing_stops[ticker] = max(
-                    self.trailing_stops[ticker], price * 0.95
+                    self.trailing_stops[ticker], price * (1 - self.trailing_stop_pct)
                 )
 
     def record_value(self, timestamp, current_prices: dict[str, float]):

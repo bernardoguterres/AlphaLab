@@ -31,7 +31,7 @@ class MACrossoverParams(BaseModel):
     Field names here are the export contract with AlphaLive, which reads
     fast_period/slow_period (alphalive/strategy/signal_engine.py). AlphaLab's
     own internal MovingAverageCrossover class still uses short_window/
-    long_window (backend/src/strategies/implementations/moving_average_crossover.py)
+    long_window (backend/alphalab/strategies/implementations/moving_average_crossover.py)
     - the rename happens only at the export-mapping layer (helpers.py).
     """
 
@@ -532,7 +532,14 @@ class PerformanceMetrics(BaseModel):
     )
     win_rate_pct: float = Field(ge=0.0, le=100.0, description="% of winning trades")
     profit_factor: float = Field(
-        ge=0.0, le=100.0, description="Gross profit / gross loss"
+        ge=0.0,
+        le=999.0,
+        description=(
+            "Gross profit / gross loss. 999.0 is the finite sentinel "
+            "PerformanceMetrics substitutes for +Infinity (zero gross "
+            "loss, e.g. an all-winning-trade backtest) - see "
+            "backtest/metrics.py's _INF_CAP."
+        ),
     )
     total_trades: int = Field(ge=0, le=100000, description="Total number of trades")
     calmar_ratio: float = Field(ge=-10.0, le=10.0, description="CAGR / max drawdown")
@@ -581,8 +588,17 @@ class StrategyExportSchema(BaseModel):
 
     @model_validator(mode="after")
     def validate_timeframe_compatibility(self):
-        """VWAP strategies require intraday timeframes."""
-        if self.strategy.name == "vwap_reversion" and self.timeframe == "1Day":
+        """VWAP strategies require intraday timeframes.
+
+        Checks against an allow-list (1Hour/15Min), not just excluding
+        1Day - previously only blocked timeframe == "1Day", silently
+        letting "1Week" through even though it's just as non-intraday and
+        the error message below already claims only 1Hour/15Min are valid.
+        """
+        if self.strategy.name == "vwap_reversion" and self.timeframe not in (
+            "1Hour",
+            "15Min",
+        ):
             raise ValueError(
                 "VWAP strategies require intraday timeframe (1Hour or 15Min)"
             )
@@ -680,15 +696,3 @@ def validate_strategy_export(
         data = migrate_schema(data)
 
     return StrategyExportSchema.model_validate(data)
-
-
-def export_strategy_to_json(schema: StrategyExportSchema) -> str:
-    """Export StrategyExportSchema to JSON string.
-
-    Args:
-        schema: Validated schema instance
-
-    Returns:
-        JSON string (indented, sorted keys)
-    """
-    return schema.model_dump_json(indent=2, exclude_none=True)
