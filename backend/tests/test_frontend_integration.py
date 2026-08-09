@@ -142,6 +142,25 @@ class TestFullBacktestFlow:
         assert "trades" in result["metrics"]
         assert "consistency" in result["metrics"]
         assert "vs_benchmark" in result["metrics"]
+        # Regression: calculate_all() was previously called without the
+        # benchmark_curve argument here, so vs_benchmark was always an empty
+        # dict `{}` (the key existed, but every field the frontend's
+        # "vs Benchmark" tab reads - beta, alpha_annual_pct, etc. - was
+        # missing, rendering as "-" for every backtest ever run) even though
+        # result["benchmark"]["equity_curve"] was right there on the same
+        # response. Caught by manually testing the running app rather than
+        # by this test, since `"vs_benchmark" in result["metrics"]` alone
+        # passes on an empty dict.
+        assert result["metrics"]["vs_benchmark"] != {}
+        for key in (
+            "beta",
+            "alpha_annual_pct",
+            "tracking_error_pct",
+            "information_ratio",
+            "up_capture_pct",
+            "down_capture_pct",
+        ):
+            assert key in result["metrics"]["vs_benchmark"]
 
         backtest_id = result["backtest_id"]
 
@@ -290,6 +309,69 @@ class TestComparisonFlow:
             assert "metrics" in data
             assert "returns" in data["metrics"]
             assert "risk" in data["metrics"]
+            # Same benchmark_curve regression as the single-backtest flow -
+            # /api/compare has its own calculate_all() call site.
+            assert data["metrics"]["vs_benchmark"] != {}
+            assert "beta" in data["metrics"]["vs_benchmark"]
+
+
+class TestParameterHeatmapFlow:
+    """Test the Optimize Parameters tab's heatmap generation."""
+
+    def test_heatmap_returns_real_sharpe_values(self, client, mock_yfinance):
+        """Regression: /api/strategies/optimize/heatmap built param1/2_values
+        via np.arange(), which always yields numpy.float64 even for
+        whole-number ranges. Window-style strategy params (short_window,
+        long_window) get passed into pandas .rolling(window,
+        min_periods=window), which raises "min_periods must be an integer"
+        for a float64. Every single heatmap cell failed this way, was
+        swallowed by generate_heatmap's per-cell try/except (logged at
+        debug level, invisible by default), and the whole grid rendered as
+        blank cells with a 200 OK and no visible error anywhere. The
+        ParameterOptimizer.generate_heatmap() unit test in
+        test_parameter_optimizer.py never caught this because it calls the
+        function directly with plain Python ints, bypassing the blueprint's
+        np.arange construction entirely - only a real end-to-end request
+        through the API exercises the actual bug.
+        """
+        fetch_response = client.post(
+            "/api/data/fetch",
+            json={
+                "tickers": ["AAPL"],
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+                "interval": "1d",
+            },
+        )
+        assert fetch_response.status_code == 200
+
+        heatmap_response = client.post(
+            "/api/strategies/optimize/heatmap",
+            json={
+                "ticker": "AAPL",
+                "strategy": "ma_crossover",
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+                "param1_name": "short_window",
+                "param1_min": 20,
+                "param1_max": 50,
+                "param1_step": 10,
+                "param2_name": "long_window",
+                "param2_min": 100,
+                "param2_max": 200,
+                "param2_step": 50,
+            },
+        )
+
+        assert heatmap_response.status_code == 200
+        data = heatmap_response.get_json()["data"]
+
+        assert data["param1_values"] == [20, 30, 40, 50]
+        assert data["param2_values"] == [100, 150, 200]
+
+        flat = [cell for row in data["heatmap_data"] for cell in row]
+        assert not all(cell is None for cell in flat)
+        assert all(isinstance(cell, (int, float)) for cell in flat)
 
 
 class TestPortfolioOptimizeFlow:

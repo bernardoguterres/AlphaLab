@@ -39,6 +39,47 @@ def _mock_fetch_response(ticker):
     }
 
 
+def _mock_crash_fetch_response(ticker):
+    """Deterministic rise-then-decline fixture with small daily noise
+    throughout - used to prove a stop-loss actually changes batch-backtest
+    exit behavior. Long flat (zero-return) segments make DataValidator's
+    IQR outlier check's interquartile range collapse toward zero, flagging
+    any real movement elsewhere as an outlier - small noise throughout
+    avoids that while keeping the trend fully deterministic."""
+    n = 300
+    dates = pd.bdate_range("2020-01-01", periods=n)
+    flat = np.full(60, 100.0)
+    rise = np.linspace(100, 130, 20)
+    decline = np.linspace(130, 90, 25)
+    tail = np.full(n - 60 - 20 - 25, 90.0)
+    trend = np.concatenate([flat, rise, decline, tail])
+    rng = np.random.RandomState(42)
+    noise = rng.normal(0, 0.15, n)  # small, non-cumulative per-bar noise
+    close = trend + noise
+    data = pd.DataFrame(
+        {
+            "Open": close,
+            "High": close * 1.001,
+            "Low": close * 0.999,
+            "Close": close,
+            "Volume": np.full(n, 2_000_000.0),
+        },
+        index=dates,
+    )
+
+    return {
+        "data": data,
+        "from_cache": True,
+        "metadata": {
+            "ticker": ticker,
+            "records": n,
+            "quality_score": 0.95,
+            "start_date": "2020-01-01",
+            "end_date": "2021-03-01",
+        },
+    }
+
+
 class TestBatchBacktest:
     """Tests for POST /api/strategies/batch-backtest endpoint."""
 
@@ -207,3 +248,54 @@ class TestBatchBacktest:
         assert summary["total_tickers"] == 3
         assert summary["successful"] == 2
         assert summary["failed"] == 1
+
+    @patch("alphalab.api.routes.DataFetcher")
+    def test_risk_settings_applied_to_batch_trades(self, mock_fetcher_cls):
+        """batch_backtest() previously validated body.risk_settings but never
+        passed it to engine.run_backtest() - stop-loss/take-profit/trailing-
+        stop/max-position-size were silently ignored for every batch run,
+        even though the frontend's BatchBacktest.tsx sends risk_settings on
+        every request. A tight stop-loss during the fixture's post-peak
+        crash must now visibly cap the max drawdown reported in the
+        batch results, compared to the same run without it."""
+        mock_fetcher = MagicMock()
+        mock_fetcher_cls.return_value = mock_fetcher
+        mock_fetcher.fetch.side_effect = (
+            lambda ticker, *args, **kwargs: _mock_crash_fetch_response(ticker)
+        )
+        client = create_app().test_client()
+
+        base_payload = {
+            "tickers": ["AAPL"],
+            "strategy": "ma_crossover",
+            "start_date": "2020-01-01",
+            "end_date": "2021-03-01",
+            "initial_capital": 100000,
+            "params": {
+                "short_window": 5,
+                "long_window": 50,
+                "volume_confirmation": False,
+            },
+        }
+
+        response_without = client.post(
+            "/api/strategies/batch-backtest",
+            data=json.dumps(base_payload),
+            content_type="application/json",
+        )
+        drawdown_without = json.loads(response_without.data)["data"]["results"][0][
+            "max_drawdown_pct"
+        ]
+
+        response_with = client.post(
+            "/api/strategies/batch-backtest",
+            data=json.dumps({**base_payload, "risk_settings": {"stop_loss_pct": 2.0}}),
+            content_type="application/json",
+        )
+        drawdown_with = json.loads(response_with.data)["data"]["results"][0][
+            "max_drawdown_pct"
+        ]
+
+        # Both are negative numbers - a tight stop-loss must produce a
+        # shallower (less negative / closer to zero) max drawdown.
+        assert drawdown_with > drawdown_without

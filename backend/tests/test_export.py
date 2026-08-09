@@ -321,6 +321,56 @@ class TestStrategyExport:
         assert perf["profit_factor"] == 2.2
         assert perf["total_trades"] == 12
 
+    @pytest.mark.skipif(
+        StrategyExportSchema is None, reason="strategy_schema not importable"
+    )
+    def test_export_accepts_infinite_profit_factor_sentinel(self):
+        """Regression: PerformanceMetrics.calculate_all() substitutes 999.0
+        (backtest/metrics.py's _INF_CAP) for a genuinely infinite
+        profit_factor - an all-winning-trade backtest with zero gross
+        loss, a real and desirable outcome, not an edge case that should
+        be unexportable. StrategyExportSchema's profit_factor field
+        previously capped at le=100.0, so any such backtest failed export
+        validation with "Input should be less than or equal to 100"
+        despite AlphaLab's own metrics layer being the one producing the
+        999.0 value in the first place. Bound raised to le=999.0 to match
+        the sentinel exactly.
+        """
+        config = {"app": {"version": "0.1.0"}}
+
+        export = _build_export_json(
+            backtest_id="test_inf_pf",
+            ticker="AAPL",
+            strategy_name="ma_crossover",
+            params={
+                "short_window": 50,
+                "long_window": 200,
+                "volume_confirmation": True,
+            },
+            start_date="2020-01-01",
+            end_date="2024-12-31",
+            initial_capital=100000,
+            results={
+                "total_return_pct": 12.0,
+                "total_trades": 3,
+                "metrics": {
+                    "risk": {
+                        "sharpe_ratio": 1.2,
+                        "sortino_ratio": 1.5,
+                        "calmar_ratio": 1.1,
+                    },
+                    "drawdown": {"max_drawdown_pct": -5.0},
+                    "trades": {"win_rate": 1.0, "profit_factor": 999.0},
+                },
+            },
+            config=config,
+        )
+
+        assert export["metadata"]["performance"]["profit_factor"] == 999.0
+        # Should not raise - this is the actual validation the export
+        # endpoint runs before returning the download.
+        StrategyExportSchema(**export)
+
 
 class TestExportRegressionGroup1:
     """Regression tests for the 2026-07-13 audit's Group 1 cross-repo
@@ -579,4 +629,39 @@ class TestExportRegressionGroup1:
         del export["strategy"]["parameters"]["strategy_type"]
 
         with pytest.raises(ValidationError):
+            StrategyExportSchema.model_validate(export)
+
+    @pytest.mark.skipif(
+        StrategyExportSchema is None, reason="StrategyExportSchema not available"
+    )
+    def test_vwap_reversion_rejects_1week_timeframe(self):
+        """Regression: validate_timeframe_compatibility only excluded
+        timeframe == "1Day" for vwap_reversion, a leftover from when the
+        Literal only had 3 possible values (1Day/1Hour/15Min). When 1Week
+        was added to support greenblatt_weekly, this check was never
+        updated, so a vwap_reversion + 1Week config silently passed
+        validation despite the error message itself claiming only
+        1Hour/15Min are valid. Now checks an allow-list instead."""
+        config = {"app": {"version": "0.1.0"}}
+        export = _build_export_json(
+            backtest_id="test_vwap_1week",
+            ticker="AAPL",
+            strategy_name="vwap_reversion",
+            params={
+                "vwap_period": 20,
+                "deviation_threshold": 2.0,
+                "rsi_period": 14,
+                "oversold": 30,
+                "overbought": 70,
+            },
+            start_date="2020-01-01",
+            end_date="2024-12-31",
+            initial_capital=100000,
+            results=self._base_results(),
+            config=config,
+            interval="1wk",
+        )
+        assert export["timeframe"] == "1Week"
+
+        with pytest.raises(ValidationError, match="intraday"):
             StrategyExportSchema.model_validate(export)
