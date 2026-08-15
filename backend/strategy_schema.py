@@ -101,13 +101,22 @@ class RSISimpleParams(BaseModel):
     unreachable through the real export pipeline despite its own docstring
     claiming "EXACT PARITY with AlphaLive". Registered 2026-07-14 as its
     own distinct, reachable strategy (not a replacement for
-    rsi_mean_reversion). Note: AlphaLive does not currently have a
-    registered "rsi_simple" strategy name of its own - exporting this to
-    AlphaLive today would be rejected as an unknown strategy. Whether
-    AlphaLive's own rsi_mean_reversion implementation should instead be
-    backed by this class (its params already match what AlphaLive's
-    signal_engine.py actually reads) is a separate, cross-repo parity
-    decision, out of scope for this AlphaLab-only fix.
+    rsi_mean_reversion).
+
+    Deployment status (resolved 2026-08-15, FINAL_ENGINEERING_AUDIT.md
+    remediation item 2): rsi_simple is intentionally research/backtest-only.
+    AlphaLive has no registered "rsi_simple" strategy name of its own, and
+    is not getting one from this decision - this class stays reachable for
+    backtesting in AlphaLab, but `POST /api/strategies/export` now rejects
+    it explicitly (see `blueprints/backtest.py`'s export_strategy(), same
+    pattern as the existing vwap_reversion export block) with a clear
+    "research-only, use rsi_mean_reversion instead" message, rather than
+    letting it produce a JSON export that AlphaLive would only reject later
+    as an unknown strategy type. Whether AlphaLive's own rsi_mean_reversion
+    implementation should eventually be backed by this class's simpler
+    logic (its params already match what AlphaLive's signal_engine.py
+    actually reads) remains a separate, not-yet-scoped architectural
+    decision - not resolved by this fix.
     """
 
     strategy_type: Literal["rsi_simple"] = "rsi_simple"

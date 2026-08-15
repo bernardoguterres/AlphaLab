@@ -27,12 +27,12 @@ class QualityReport:
 
     def to_dict(self) -> dict:
         return {
-            "completeness": round(self.completeness, 4),
-            "outliers_removed": self.outliers_removed,
-            "values_imputed": self.values_imputed,
-            "duplicates_removed": self.duplicates_removed,
-            "confidence": round(self.confidence, 4),
-            "is_acceptable": self.is_acceptable,
+            "completeness": round(float(self.completeness), 4),
+            "outliers_removed": int(self.outliers_removed),
+            "values_imputed": int(self.values_imputed),
+            "duplicates_removed": int(self.duplicates_removed),
+            "confidence": round(float(self.confidence), 4),
+            "is_acceptable": bool(self.is_acceptable),
             "warnings": self.warnings,
         }
 

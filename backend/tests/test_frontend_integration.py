@@ -658,17 +658,23 @@ class TestVWAPReversionExportBlocked:
         assert "vwap_reversion" in body["message"]
 
 
-class TestRSISimpleReachable:
-    """Regression test for audit bug 3.8: rsi_simple was fully implemented
+class TestRSISimpleReachableButExportBlocked:
+    """Regression test for audit bug 3.8 (rsi_simple was fully implemented
     and tested at the class level but not registered in STRATEGY_MAP, the
     Pydantic export union, or docs/STRATEGY_SCHEMA.md - unreachable through
     the real backtest/export API despite its own docstring claiming "EXACT
-    PARITY with AlphaLive". Registered 2026-07-14 as its own distinct
-    strategy. Drives the same real backtest -> export pipeline every other
-    strategy uses (client fixture, mocked yfinance, real Flask routes).
+    PARITY with AlphaLive"; registered 2026-07-14 as its own distinct
+    strategy) AND for FINAL_ENGINEERING_AUDIT.md remediation item 2
+    (2026-08-15): AlphaLab's schema allowed exporting rsi_simple even though
+    AlphaLive has no matching registered strategy name, so an export would
+    silently succeed here and only fail later, confusingly, on the
+    AlphaLive side. rsi_simple is intentionally research/backtest-only -
+    backtesting must stay reachable, but export must now be rejected
+    explicitly and understandably, the same way vwap_reversion's export is
+    blocked above.
     """
 
-    def test_rsi_simple_backtest_and_export_reachable(self, client, mock_yfinance):
+    def test_rsi_simple_backtest_reachable(self, client, mock_yfinance):
         client.post(
             "/api/data/fetch",
             json={
@@ -695,13 +701,40 @@ class TestRSISimpleReachable:
         assert backtest_response.status_code == 200
         backtest_data = backtest_response.get_json()
         assert backtest_data["status"] == "ok"
-        backtest_id = backtest_data["data"]["backtest_id"]
+
+    def test_rsi_simple_export_returns_422(self, client, mock_yfinance):
+        client.post(
+            "/api/data/fetch",
+            json={
+                "tickers": ["AAPL"],
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+                "interval": "1d",
+            },
+        )
+
+        backtest_response = client.post(
+            "/api/strategies/backtest",
+            json={
+                "ticker": "AAPL",
+                "strategy": "rsi_simple",
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+                "initial_capital": 100000,
+                "params": {},
+                "position_sizing": "equal_weight",
+                "monte_carlo_runs": 0,
+            },
+        )
+        assert backtest_response.status_code == 200
+        backtest_id = backtest_response.get_json()["data"]["backtest_id"]
 
         export_response = client.post(
             "/api/strategies/export", json={"backtest_id": backtest_id}
         )
-        assert export_response.status_code == 200
-        export_json = export_response.get_json()
-        assert export_json["strategy"]["name"] == "rsi_simple"
-        assert export_json["strategy"]["parameters"]["strategy_type"] == "rsi_simple"
-        assert "period" in export_json["strategy"]["parameters"]
+
+        assert export_response.status_code == 422
+        body = export_response.get_json()
+        assert body["status"] == "error"
+        assert "rsi_simple" in body["message"]
+        assert "research" in body["message"].lower()

@@ -129,6 +129,7 @@ def run_backtest():
         end_date=body.end_date,
         position_sizing=body.position_sizing,
         monte_carlo_runs=body.monte_carlo_runs,
+        max_drawdown_pct=body.max_drawdown_pct,
         risk_settings=(body.risk_settings.model_dump() if body.risk_settings else None),
     )
 
@@ -154,6 +155,7 @@ def run_backtest():
                 body.risk_settings.model_dump() if body.risk_settings else None
             ),
             "interval": interval,
+            "max_drawdown_pct": body.max_drawdown_pct,
         },
     }
 
@@ -493,6 +495,24 @@ def export_strategy():
                         "fetch 1Day/1Week/1Month bars, so no export could ever satisfy "
                         "AlphaLive's own intraday validation. Backtesting vwap_reversion "
                         "is still supported; exporting it to AlphaLive is not."
+                    ),
+                }
+            ),
+            422,
+        )
+
+    if req["strategy"] == "rsi_simple":
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": (
+                        "rsi_simple cannot be exported: it is a research/testing "
+                        "strategy only. AlphaLive has no 'rsi_simple' entry in its "
+                        "StrategyName schema (alphalive/strategy_schema.py) and "
+                        "would reject the export as an unknown strategy type. "
+                        "Backtesting rsi_simple is still supported; use "
+                        "rsi_mean_reversion if you need a deployable RSI strategy."
                     ),
                 }
             ),
