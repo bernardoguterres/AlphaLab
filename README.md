@@ -1,10 +1,22 @@
 # AlphaLab
 
-Web application for backtesting algorithmic trading strategies with production-grade execution simulation. Deployable to Railway (backend + frontend, two services).
+AlphaLab is the research and validation component of the **Alpha** algorithmic-trading
+ecosystem. It handles historical market-data processing, technical indicators, strategy
+backtesting with realistic execution costs, walk-forward validation, performance analysis, and
+export of compatible strategy configurations to **AlphaLive** for execution. A React frontend
+sits on top of a Flask REST API.
+
+**Status: Portfolio release / validated engineering prototype.** The backtest engine, cost
+modelling, and walk-forward machinery are implemented and tested against real historical data.
+This is not a claim of discovered trading alpha - see [Results](#results) below.
 
 ## Why AlphaLab?
 
-Most backtesting tools either oversimplify execution (ignoring slippage, commissions, and position limits) or require expensive subscriptions. AlphaLab provides institutional-quality backtesting with realistic execution modeling, 30+ performance metrics, and Monte Carlo analysis, using free Yahoo Finance data.
+Many backtesting tools oversimplify execution (ignoring slippage, commissions, position limits)
+or gate realistic modelling behind paid subscriptions. AlphaLab implements next-bar execution,
+configurable slippage/commissions, position limits, and 30+ performance metrics using free
+Yahoo Finance data - built to test *whether* a strategy idea holds up, not to assert that any
+particular strategy is profitable.
 
 ## Architecture
 
@@ -15,128 +27,133 @@ flowchart TD
     C --> D[Data Fetcher<br/>Yahoo Finance]
     D --> E[Data Validator<br/>Quality Scoring]
     E --> F[Feature Engineer<br/>SMA/RSI/ADX/BB/ATR]
-    F --> G[Strategy Engine<br/>8 Built-in Strategies]
+    F --> G[Strategy Engine<br/>9 Built-in Strategies]
     G --> H[Backtest Engine<br/>Next-bar Execution]
     H --> I[Portfolio Manager<br/>Slippage + Commission]
     I --> J[Metrics Calculator<br/>30+ Metrics]
     J --> K[Results Dashboard<br/>Charts + Tables + Screener]
     K --> L{Export Strategy?}
-    L -->|Yes| M[Strategy JSON Export]
-    M --> N[AlphaLive Deployment]
+    L -->|Yes, if deployable| M[Strategy JSON Export]
+    M --> N[AlphaLive]
     L -->|No| O[Compare Strategies]
     O --> B
-    
+
     style M fill:#4ade80
     style N fill:#fbbf24
 ```
 
-## AlphaLab + AlphaLive: The Complete Trading System
+## The Alpha Ecosystem
 
-AlphaLab is your **strategy development platform**. It works together with **AlphaLive** (separate repository) to provide a complete end-to-end algorithmic trading system.
-
-### The Three Repositories
-
-| Repo | Purpose | When to Run |
-|------|---------|-------------|
-| **[AlphaLab](https://github.com/bernardoguterres/AlphaLab)** (this repo) | Strategy development & backtesting | As needed (not 24/7) |
-| **[AlphaLive](https://github.com/bernardoguterres/AlphaLive)** | Live trading execution | 24/7 during trading hours |
-| **[AlphaSignal](https://github.com/bernardoguterres/AlphaSignal)** | Financial RAG - sentiment signals from SEC filings | Optional enrichment layer |
-
-### How They Work Together
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│  AlphaLab (Development) - Run locally as needed              │
-│                                                              │
-│  1. Develop strategy logic                                  │
-│  2. Backtest on 5 years of historical data                  │
-│  3. Optimize parameters (walk-forward validation)           │
-│  4. Export as JSON                                          │
-└──────────────────────────────────────────────────────────────┘
-                          ↓
-                   strategy.json
-                          ↓
-┌──────────────────────────────────────────────────────────────┐
-│  AlphaLive (Execution) - Run 24/7 on Railway or locally     │
-│                                                              │
-│  5. Load strategy JSON                                      │
-│  6. Connect to Alpaca broker (paper or live)                │
-│  7. Generate buy/sell signals in real-time                  │
-│  8. Execute trades automatically                            │
-│  9. Monitor positions (stop loss, take profit)              │
-│  10. Send Telegram alerts                                   │
-└──────────────────────────────────────────────────────────────┘
-                          ↓
-                  Live trading results
-                          ↓
-┌──────────────────────────────────────────────────────────────┐
-│  Back to AlphaLab - Monthly re-backtesting                  │
-│                                                              │
-│  11. Compare live results vs backtest expectations          │
-│  12. If performance degrades: re-optimize                   │
-│  13. Export updated strategy → deploy to AlphaLive          │
-└──────────────────────────────────────────────────────────────┘
-                          │
-                          └─────► (loop back to step 1)
-```
-
-### What You Need
-
-**For strategy development** (this is AlphaLab):
-- Run locally on your computer
-- No cloud deployment needed
-- Use when developing new strategies or re-backtesting
-
-**For live trading** (requires AlphaLive):
-- Clone [AlphaLive repository](https://github.com/bernardoguterres/AlphaLive)
-- Deploy to Railway (~$5-20/month) or run locally 24/7
-- Connect to Alpaca Markets (free paper trading account)
-- Optional: Telegram bot for real-time trade alerts
-
-### Export to AlphaLive
-
-After backtesting a strategy in AlphaLab:
-
-1. Click **"Export to AlphaLive"** button in the UI
-2. Save the JSON file to AlphaLive's `configs/` directory
-3. Deploy AlphaLive with the strategy JSON
-4. Follow AlphaLive's deployment phases:
-   - Week 1: Dry run (no orders, test signal generation)
-   - Weeks 2-5: Paper trading (fake money, test execution)
-   - Week 6+: Live trading (real money, start small)
-
-**Important**: AlphaLab backtests show what *could have* happened. AlphaLive executes real trades. Always test thoroughly with paper trading before risking real money.
-
-## Ecosystem
-
-AlphaLab is the development platform in a three-repo algorithmic trading system:
+AlphaLab is the research component of a three-repository system:
 
 | Repo | Role |
 |------|------|
-| **[AlphaLab](https://github.com/bernardoguterres/AlphaLab)** (this repo) | Backtest strategies, optimise parameters, export to AlphaLive |
-| **[AlphaLive](https://github.com/bernardoguterres/AlphaLive)** | 24/7 execution engine - loads strategy JSON and trades automatically via Alpaca |
-| **[AlphaSignal](https://github.com/bernardoguterres/AlphaSignal)** | Financial RAG layer - ingests SEC EDGAR filings and news, exposes sentiment signals via REST API |
+| **AlphaLab** (this repo) | Research: historical backtesting, walk-forward validation, strategy comparison, export |
+| **AlphaLive** | Execution: loads a compatible strategy export, generates signals, applies risk controls, can connect to Alpaca's paper/live-capable API |
+| **AlphaSignal** | Financial RAG/sentiment service consumed by AlphaLive as an optional pre-execution gate |
 
-**AlphaSignal as a signal source:** AlphaSignal's `/sentiment/{ticker}` endpoint returns sentiment scores derived from SEC 10-K/10-Q filings and financial news. These can be consumed as strategy features during backtesting in AlphaLab - for example, suppressing a buy signal when sentiment is strongly negative, or weighting position size by sentiment confidence. AlphaSignal runs as a separate service; AlphaLab queries it over HTTP and degrades gracefully if it's unavailable.
+AlphaLab does **not** call AlphaSignal directly - that integration lives entirely in AlphaLive.
+
+### How a strategy moves through the ecosystem
+
+```
+AlphaLab: develop → backtest on historical data → walk-forward validate → export JSON
+                                    ↓
+                         AlphaLive: import → generate signals → risk controls
+                                    ↓                → optional AlphaSignal gate
+                                    ↓                → Alpaca paper/live-capable API
+```
+
+Exported strategy configurations were validated to load into AlphaLive without hand-editing,
+and cross-system signal-generation parity between the two engines was measured on multi-year
+historical data - see [Cross-System Parity](#cross-system-parity-with-alphalive) below for the
+exact figures. This is a meaningfully stronger claim than "the two repos share a JSON schema" -
+it means the same historical bars, fed to both engines independently, were shown to produce
+matching trading decisions in the overwhelming majority of cases, with the residual small
+differences root-caused and documented rather than hidden.
+
+**Not every backtestable strategy is deployable to AlphaLive.** `rsi_simple` is a research/testing
+strategy only - `POST /api/strategies/export` rejects it explicitly with a clear message rather
+than producing a config AlphaLive would only reject later. `vwap_reversion` is similarly
+backtestable but export-blocked, because it requires an intraday timeframe AlphaLab's data layer
+cannot fetch. Both remain fully usable for backtesting and research; neither is exportable.
+
+## Results
+
+The strategies implemented here are established, textbook systematic approaches (moving-average
+crossovers, RSI mean reversion, Bollinger Band breakouts, and similar) rather than novel alpha
+models. Walk-forward, out-of-sample validation was run on real historical data for the daily
+technical strategies, and the tested strategies did **not** consistently outperform their passive
+benchmarks - out-of-sample Sharpe ratios were zero or negative in most tested windows. This result
+was retained rather than tuned away by re-running the grid or changing the test period after
+seeing it.
+
+That is the intended value of walk-forward validation: it is designed to reject strategies that
+only look good in-sample, and a well-built research pipeline should be expected to reject most
+naive textbook strategies rather than validate all of them. The point of AlphaLab is the
+infrastructure for researching, testing, and rejecting strategies on their genuine merits - not
+a claim that the specific strategies shipped here have discovered persistent market alpha. No
+such claim is made.
+
+The Greenblatt Magic Formula screener/weekly strategy is not included in this conclusion as clean
+evidence either way: `FundamentalScreener` applies *today's* fundamentals to *historical* prices
+(no point-in-time data source exists for it), and its default universe is a hand-picked,
+present-day list of large caps (survivorship exposure). Any historical return figure for this
+strategy reflects both of those biases and should not be read as a validated result. See
+`CLAUDE.md`'s "Greenblatt ranking-vs-diversification correction" section for the full accounting,
+including a widened-universe re-test where the ranking loses to plain diversification in 4 of 6
+tested windows.
+
+## Cross-System Parity with AlphaLive
+
+End-to-end validation compared AlphaLab's and AlphaLive's trading decisions bar-by-bar on
+multi-year real historical AAPL data, feeding both engines identical bars and parameters. This
+process found and fixed genuine defects: AlphaLive was silently ignoring several `ma_crossover`
+parameters (volume confirmation, minimum MA separation, cooldown), and the two repos computed RSI
+with two different, disagreeing formulas while AlphaLab's own `rsi_period` parameter had no effect
+on its own calculation at all. Both were repaired, with a canonical RSI implementation adopted
+independently in both repos and verified bit-identical on shared golden-value tests.
+
+Final measured parity, after those fixes:
+
+| Strategy | Parity | Detail |
+|---|---|---|
+| `ma_crossover` | 99.92% (1256/1257 bars) | 1 residual, isolated, non-cascading mismatch |
+| `rsi_mean_reversion`, default period | 99.76% (1254/1257 bars) | up from 87.59% before the fix |
+| `rsi_mean_reversion`, non-default period (9) | 99.52% (1251/1257 bars) | proves `rsi_period` genuinely affects both research and execution |
+
+Cross-system strategy parity was validated on multi-year historical data, with small remaining
+numerical differences documented, not eliminated to zero. The residual `rsi_mean_reversion` gaps
+are root-caused to a numerical difference between the two repos' ATR implementations (used by the
+strategy's stop-loss), not to RSI itself. Do not read this as "AlphaLive replicates AlphaLab
+exactly" - it does not, quite, and the exact remaining gap is documented rather than rounded away.
 
 ## Features
 
-- **Market Data Pipeline** - Fetch, validate, and cache stock data from Yahoo Finance with automatic retry and quality scoring
-- **Technical Indicators** - SMA (10/20/50/100/200), RSI, ADX (+DI lines), Bollinger Bands, ATR - the set actually consumed by the built-in strategies
-- **8 Built-in Strategies** - MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, Bollinger RSI Combo, Trend Adaptive RSI, plus **GreenblattWeekly** (value factor, weekly bars via Greenblatt Magic Formula screening)
-- **Fundamental Screener** - Greenblatt Magic Formula ranking (earnings yield + ROE) via free yfinance data, exportable candidate list for weekly strategy backtests
-- **Realistic Backtesting** - Next-bar execution (no look-ahead bias), configurable slippage and commissions, position limits
+- **Market Data Pipeline** - fetch, validate, and cache stock data from Yahoo Finance with retry and quality scoring
+- **Technical Indicators** - SMA (10/20/50/100/200), RSI, ADX (+DI lines), Bollinger Bands, ATR
+- **9 Built-in Strategies** - see [Available Strategies](#available-strategies) below; not all are AlphaLive-deployable
+- **Fundamental Screener** - Greenblatt Magic Formula ranking (earnings yield + ROC) via yfinance, with the point-in-time limitation noted above
+- **Realistic Backtesting** - next-bar execution (verified, not just designed, against real data - see below), configurable slippage/commissions, position limits, configurable `max_drawdown_pct` halt
 - **30+ Performance Metrics** - Sharpe, Sortino, Calmar, max drawdown, VaR, win rate, profit factor, benchmark comparison
-- **Monte Carlo Simulation** - Randomized entry timing to assess outcome distributions
-- **Walk-Forward Validation** - Rolling train/test splits to detect overfitting
-- **Comprehensive Backtesting Tools** - Batch runner, results visualization, strategy comparison across 5 years of data
-- **REST API** - Flask endpoints with Pydantic validation for frontend integration
+- **Walk-Forward Validation** - rolling train/test splits with genuinely train-only parameter selection (verified from code and from window-by-window output, not just claimed)
+- **Monte Carlo Simulation** - randomized entry timing to assess outcome distributions
+- **Strategy Export** - JSON export compatible with AlphaLive's import, for deployable strategies
+
+### No-look-ahead-bias verification
+
+Next-bar execution is enforced architecturally (a signal generated at bar N's close is only
+executed at bar N+1's open) and was additionally verified at runtime: signals were generated on
+data truncated at a fixed timestamp, then again after appending future bars, and the historical
+signal at that timestamp was confirmed unchanged. This is one targeted test, not a proof that no
+leakage exists anywhere in the codebase, but it is real runtime evidence rather than a design
+claim alone.
 
 ## Tech Stack
 
-- **Backend**: Python, Flask, pandas, numpy, scipy, yfinance, stockstats, Pydantic, httpx, alpaca-py
+- **Backend**: Python, Flask, pandas, numpy, scipy, yfinance, Pydantic, httpx
 - **Frontend**: React, TypeScript, Vite, shadcn/ui, Tailwind CSS, Recharts, Zustand
-- **Deployment**: Railway, two services (backend via Docker + gunicorn, frontend via Docker + nginx static serve)
+- **Deployment**: Railway-ready (backend via Docker + gunicorn, frontend via Docker + nginx static serve) - not currently deployed; see [Deployment](#deployment)
 
 ## Quick Start
 
@@ -163,32 +180,80 @@ cd frontend
 npm install
 npm run dev
 ```
+
 The UI starts at `http://localhost:8080`.
 
-### Full Application
-
-Run backend + frontend in separate terminals:
+### Run Both
 
 ```bash
-# Terminal 1 - Backend
+# Terminal 1
 cd backend && source venv/bin/activate && python run.py
 
-# Terminal 2 - Frontend
-cd frontend && npm run dev           # → http://localhost:8080
+# Terminal 2
+cd frontend && npm run dev
 ```
 
 ### Run Tests
 
 ```bash
-# Backend tests (350 tests: 347 passing, 3 skipped), 91% coverage
+# Backend: 423 tests, black-formatted
 cd backend
 source venv/bin/activate
 pytest tests/ -v
 
-# Frontend tests
+# Frontend: 42 tests
 cd frontend
 npm run test
 ```
+
+### Run a Representative Backtest
+
+```bash
+curl -X POST http://127.0.0.1:5050/api/strategies/backtest \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticker": "AAPL",
+    "strategy": "rsi_mean_reversion",
+    "start_date": "2020-01-01",
+    "end_date": "2024-12-31",
+    "initial_capital": 100000,
+    "params": {"rsi_period": 14, "oversold": 30, "overbought": 70}
+  }'
+```
+
+### Run Walk-Forward Validation
+
+```bash
+curl -X POST http://127.0.0.1:5050/api/strategies/optimize \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticker": "AAPL",
+    "strategy": "rsi_mean_reversion",
+    "start_date": "2020-01-01",
+    "end_date": "2024-12-31",
+    "param_grid": {"rsi_period": [9, 14, 20], "oversold": [25, 30]},
+    "walk_forward": true,
+    "n_folds": 3
+  }'
+```
+
+Parameters are selected using only each fold's training data and scored once, out-of-sample, on
+that fold's held-out test window - genuinely train-only selection, not selection followed by
+testing on the same data.
+
+### Export a Deployable Strategy
+
+Run a backtest (above), note the returned `backtest_id`, then:
+
+```bash
+curl -X POST http://127.0.0.1:5050/api/strategies/export \
+  -H "Content-Type: application/json" \
+  -d '{"backtest_id": "<backtest_id from above>"}'
+```
+
+This produces a JSON file AlphaLive's config loader accepts without modification. `rsi_simple`
+and `vwap_reversion` return a `422` with an explanation instead of an export - see
+[The Alpha Ecosystem](#the-alpha-ecosystem) above.
 
 ## API Endpoints
 
@@ -198,385 +263,116 @@ npm run test
 | POST | `/api/data/fetch` | Fetch and cache stock data |
 | GET | `/api/data/available` | List cached tickers |
 | POST | `/api/strategies/backtest` | Run a backtest |
-| POST | `/api/strategies/optimize` | Grid search for best parameters |
+| POST | `/api/strategies/optimize` | Grid search / walk-forward validation |
 | GET | `/api/metrics/<id>` | Retrieve backtest results |
 | POST | `/api/compare` | Compare multiple strategies |
-| POST | `/api/screener/greenblatt` | Greenblatt Magic Formula screen (pass `{"tickers":[...], "top_n":20}`) |
+| POST | `/api/strategies/export` | Export a strategy for AlphaLive |
+| POST | `/api/screener/greenblatt` | Greenblatt Magic Formula screen (`{"tickers":[...], "top_n":20}`) |
 
-For full API documentation, see the [Flask routes source code](backend/src/api/routes.py).
-
-### Example: Run a Backtest
-
-```bash
-curl -X POST http://127.0.0.1:5050/api/strategies/backtest \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticker": "AAPL",
-    "strategy": "ma_crossover",
-    "start_date": "2020-01-01",
-    "end_date": "2024-12-31",
-    "initial_capital": 100000
-  }'
-```
+For the full endpoint list see `backend/alphalab/api/blueprints/`.
 
 ## Available Strategies
 
-### 1. Moving Average Crossover (`ma_crossover`)
-**Trend-following strategy.** Buy when a short-period MA crosses above a long-period MA (Golden Cross), sell on reverse (Death Cross). Best for trending markets with sustained directional moves. Works well on daily/weekly timeframes. **Avg return: +13.8%** (21/30 stocks tested, 2020-2024).
+Nine strategies are implemented and backtestable. Eight are AlphaLive-deployable; `rsi_simple` is
+research-only (see above). Parameter defaults below are AlphaLab's own; AlphaLive may apply its
+own defaults for fields an export omits.
 
-**Key params:** `short_window` (default 50), `long_window` (default 200), `volume_confirmation`, `cooldown_days`
+| # | Strategy | Type | Key params | Deployable |
+|---|---|---|---|---|
+| 1 | `ma_crossover` | Trend-following | `short_window` (50), `long_window` (200), `volume_confirmation`, `cooldown_days` | Yes |
+| 2 | `rsi_mean_reversion` | Mean reversion, stateful (stop-loss, cooldown, BB/ADX confirmation) | `rsi_period` (14), `oversold` (30), `overbought` (70) | Yes |
+| 3 | `momentum_breakout` | Breakout | `lookback` (20), `volume_surge_pct` (150), `rsi_min` (50) | Yes |
+| 4 | `bollinger_breakout` | Volatility breakout | `bb_period` (20), `bb_std_dev` (2.0), `confirmation_bars` (2) | Yes |
+| 5 | `vwap_reversion` | VWAP mean reversion | `vwap_period` (20), `deviation_threshold` (2.0) | **No** - requires an intraday timeframe AlphaLab can't fetch |
+| 6 | `bollinger_rsi_combo` | Dual-confirmation mean reversion | `bb_period` (20), `rsi_oversold` (45), `rsi_overbought` (55) | Yes |
+| 7 | `trend_adaptive_rsi` | Regime-adaptive RSI | `trend_sma` (50), separate up/down/range thresholds | Yes |
+| 8 | `greenblatt_weekly` | Value factor, weekly bars | `fast_sma` (10w), `slow_sma` (50w), `min_hold_bars` (52w), `trailing_stop_pct` (0.20) | Yes - see [Results](#results) for the point-in-time caveat |
+| 9 | `rsi_simple` | Simple RSI mean reversion, no state machine | `rsi_period` (14), `oversold` (40), `overbought` (60) | **No** - research-only |
 
----
+### Greenblatt weekly workflow
 
-### 2. RSI Mean Reversion (`rsi_mean_reversion`)
-**State-aware mean reversion.** Buy when RSI drops below oversold threshold, sell when above overbought threshold. Uses Bollinger Band confirmation and optional ADX trend filter. Includes stop-loss (2.5×ATR) and max 40-day hold. **Avg return: +3.2%**, best for capital preservation in choppy markets.
-
-**Key params:** `rsi_period` (14), `oversold` (30), `overbought` (70), `use_bb_confirmation`, `use_adx_filter`
-
----
-
-### 3. Momentum Breakout (`momentum_breakout`)
-**Breakout strategy with risk management.** Buy when price breaks above N-day high with volume surge (>150% avg) + RSI confirmation. Sell on N-day low. Uses trailing stops (3×ATR). **Avg return: +7.6%** (18/21 profitable). Most active strategy.
-
-**Key params:** `lookback` (20), `volume_surge_pct` (150), `rsi_min` (50), `stop_loss_atr_mult`
-
----
-
-### 4. Bollinger Band Breakout (`bollinger_breakout`)
-**Volatility breakout with confirmation.** Buy when price closes above upper BB for N consecutive bars, sell on lower BB breach. Exits at middle band (SMA). Optional volume filter (1.5× 20-day avg). Best for volatile stocks breaking consolidation.
-
-**Key params:** `bb_period` (20), `bb_std_dev` (2.0), `confirmation_bars` (2), `volume_filter`
-
----
-
-### 5. VWAP Mean Reversion (`vwap_reversion`)
-**Volume-weighted mean reversion.** Buy when price deviates below VWAP by N std devs + RSI oversold. Sell when above VWAP + RSI overbought. Exit at VWAP. Best for liquid stocks with strong volume patterns. Uses rolling VWAP based on typical price × volume.
-
-**Key params:** `vwap_period` (20), `deviation_threshold` (2.0), `oversold` (30), `overbought` (70)
-
----
-
-### 6. Bollinger RSI Combo (`bollinger_rsi_combo`)
-**Dual confirmation mean reversion.** Entry requires BOTH price ≤ BB lower band AND RSI < oversold threshold (default 45). Exit when price ≥ BB middle band OR RSI > overbought threshold (default 55). More selective than pure RSI - catches bounces off dynamic support with momentum confirmation.
-
-**Key params:** `bb_period` (20), `bb_std` (2.0), `rsi_period` (14), `rsi_oversold` (45), `rsi_overbought` (55), `exit_at_middle` (true)
-
-**Recommended timeframe:** 15Min for intraday (1-3 signals/day), Daily for swing trading
-
----
-
-### 7. Trend Adaptive RSI (`trend_adaptive_rsi`)
-**Market regime-aware RSI.** Detects trend using SMA(50) slope and adjusts entry/exit thresholds accordingly:
-- **Uptrend** (price > SMA, SMA rising): Buy RSI 45, Sell 65 - buys dips rather than waiting for extreme oversold
-- **Downtrend** (price < SMA, SMA falling): Buy RSI 35, Sell 55 - fades bounces
-- **Range**: Buy RSI 35, Sell 65 - standard mean reversion
-
-Trades in all market conditions instead of going quiet during trends.
-
-**Key params:** `rsi_period` (14), `trend_sma` (50), `trend_lookback` (5), `uptrend_buy` (45), `uptrend_sell` (65), `downtrend_buy` (35), `downtrend_sell` (55), `range_buy` (35), `range_sell` (65)
-
-**Recommended timeframe:** 1Hour for regime stability, Daily for longer-term trends
-
----
-
-### 8. Greenblatt Weekly (`greenblatt_weekly`) - value factor, weekly bars
-
-**Designed for ~1 year holding periods.** Use after running the Greenblatt screener (`POST /api/screener/greenblatt`) to identify quality candidates. Entry timing on weekly bars only.
-
-**Entry** (either condition):
-- Weekly RSI < 35 (oversold on weekly timeframe = much stronger signal than daily)
-- 10-week SMA crosses above 50-week SMA (weekly golden cross)
-
-**Exit:**
-- **Default (always active):** Price drops 20% below position peak - trailing stop fires immediately, bypasses minimum hold
-- **Opt-in (disabled by default):** Weekly RSI > 65, or 10w/50w SMA death-cross - only fires after minimum hold elapsed
-
-**Key params:** `fast_sma` (10w), `slow_sma` (50w), `rsi_oversold` (35), `rsi_overbought` (65), `min_hold_bars` (52 weeks), `trailing_stop_pct` (0.20)
-
-**Recommended timeframe:** `1wk` (weekly bars via yfinance interval parameter)
-
-**Workflow:**
-1. Run `POST /api/screener/greenblatt` with your target universe
-2. Take top 15–20 candidates by combined rank
-3. Batch backtest with `strategy=greenblatt_weekly`, `interval=1wk`
-4. Export candidates with walk-forward Sharpe > 0.8 → AlphaLive
+1. `POST /api/screener/greenblatt` with a candidate universe
+2. Take the top-ranked candidates by combined rank
+3. Batch backtest with `strategy=greenblatt_weekly`, `interval=1wk`, `max_drawdown_pct=40` (the
+   engine's 10% default halts weekly strategies too early - see CLAUDE.md)
+4. Read the results with the point-in-time-fundamentals caveat above in mind before exporting
 
 ## Project Structure
 
 ```
 AlphaLab/
 ├── backend/                    # Flask REST API (Python)
-│   ├── src/
-│   │   ├── data/              # Fetching, validation, feature engineering
-│   │   ├── strategies/        # BaseStrategy + 8 implementations
-│   │   ├── backtest/          # Engine, portfolio, metrics, orders
-│   │   ├── api/               # Flask routes + Pydantic validators
-│   │   └── utils/             # Logger, config, exceptions
-│   ├── tests/                 # 350 tests (347 passing, 3 skipped), 91% coverage
+│   ├── alphalab/
+│   │   ├── data/               # Fetching, validation, feature engineering
+│   │   ├── strategies/         # BaseStrategy + 9 implementations
+│   │   ├── backtest/           # Engine, portfolio, metrics, walk-forward optimizer
+│   │   ├── api/                # Flask blueprints + Pydantic validators
+│   │   └── utils/              # Logger, config, exceptions
+│   ├── tests/                  # 423 tests
 │   ├── config.yaml
 │   ├── requirements.txt
-│   ├── run.py                 # Local dev entry point (Flask dev server)
+│   ├── run.py                  # Local dev entry point
 │   ├── wsgi.py                 # Production entry point (gunicorn)
-│   └── Dockerfile              # Railway deploy (gunicorn)
-├── scripts/                     # Standalone research tools (run outside the API)
-│   ├── backtest_runner.py     # Batch backtest tool (tests all strategies)
-│   ├── walk_forward_validation.py  # Walk-forward validation for daily strategies
-│   ├── greenblatt_walk_forward.py  # Walk-forward validation for GreenblattWeekly
-│   └── wf_common.py           # Shared helpers for the walk-forward scripts
+│   └── Dockerfile
+├── scripts/                    # Standalone research tools (run outside the API)
+│   ├── walk_forward_validation.py   # Walk-forward validation for daily strategies
+│   ├── greenblatt_walk_forward.py   # Walk-forward validation for GreenblattWeekly
+│   ├── greenblatt_research.py       # Greenblatt/diversification research tool
+│   ├── sector_rotation_research.py  # Sector-rotation research tool
+│   └── wf_common.py                 # Shared helpers
 ├── frontend/                   # React UI (TypeScript + Vite)
 │   ├── src/
-│   │   ├── pages/             # Dashboard, Backtest, Compare, DataManager
-│   │   ├── components/        # UI components (charts, forms, metrics)
-│   │   ├── services/          # API client (axios)
-│   │   ├── stores/            # Zustand state management
-│   │   ├── types/             # TypeScript types
-│   │   └── utils/             # Formatters, validators
+│   │   ├── pages/               # Dashboard, Backtest, Compare, DataManager, Settings
+│   │   ├── components/          # UI components (charts, forms, metrics)
+│   │   ├── services/            # API client (axios)
+│   │   ├── stores/               # Zustand state management
+│   │   ├── types/                # TypeScript types
+│   │   └── utils/                # Formatters, validators
 │   ├── package.json
 │   ├── vite.config.ts
-│   ├── tailwind.config.ts
-│   ├── Dockerfile              # Railway deploy (Node build → nginx static serve)
-│   └── nginx.conf.template     # SPA fallback + Railway's dynamic $PORT
-├── docs/                       # Technical documentation
-│   └── STRATEGY_SCHEMA.md
-├── README.md                   # This file
-├── CLAUDE.md                   # Development guide
+│   ├── Dockerfile
+│   └── nginx.conf.template
+├── docs/
+│   └── STRATEGY_SCHEMA.md       # JSON schema for AlphaLive integration
+├── README.md
+├── CLAUDE.md                    # Development guide (not published)
 └── .gitignore
 ```
 
-## Documentation
-
-**Getting Started:** see the [Quick Start](#quick-start) section above for install/run instructions.
-- [Strategy Export Schema](docs/STRATEGY_SCHEMA.md) - JSON schema for AlphaLive integration
-
-**For Contributors:**
-- [CLAUDE.md](CLAUDE.md) - Development guide for AI assistants (not in public repo)
-
 ## Configuration
 
-All settings are in `backend/config.yaml` - initial capital, slippage, commission rates, strategy defaults, API port, and logging. `PORT`, `HOST`, `DEBUG`, and `ALLOWED_ORIGINS` env vars override the file, for deploying without code changes.
+All settings are in `backend/config.yaml` - initial capital, slippage, commission rates, strategy
+defaults, API port, logging. `PORT`, `HOST`, `DEBUG`, and `ALLOWED_ORIGINS` env vars override the
+file for deployment without code changes.
 
 ## Deployment
 
-Both `backend/` and `frontend/` have a `Dockerfile` for deploying to Railway as two services (backend via gunicorn, frontend as a static Node-build → nginx serve). See `../DEPLOYMENT_READINESS.md` (repo root, one level up) for the full checklist - env vars, build vars, and what's already fixed vs. what's still a manual step.
+Both `backend/` and `frontend/` have a `Dockerfile` for Railway (backend via gunicorn, frontend as
+a static Node-build served by nginx). This has been statically inspected and the config files
+exist and are internally consistent (`$PORT` handling, health check, CORS origins), but this
+environment did not have a running Docker daemon available to perform a local build/start smoke
+test, and the app has not been deployed externally. Treat deployment configuration as **present
+and inspected**, not as **runtime-verified**.
 
-## Roadmap
+## Possible Future Work
 
-- [x] React + TypeScript frontend with interactive charts (Recharts)
-- [x] Dashboard with backtest history and quick stats
-- [x] Strategy comparison page (side-by-side analysis)
-- [x] Bollinger Band Breakout and VWAP Reversion strategies
-- [x] Portfolio optimization (Max Sharpe, Min Variance, Risk Parity, Equal Weight)
-- [x] Batch backtesting (test one strategy across multiple tickers)
-- [x] Strategy export to JSON (AlphaLive integration)
-- [ ] Additional strategies (Pairs Trading, Statistical Arbitrage)
-- [ ] PDF report export
-- [ ] Real-time data via WebSocket
-- [ ] Machine learning strategy framework
+- Point-in-time fundamentals data, to make historical Greenblatt/factor research free of
+  look-ahead and survivorship bias
+- Closing the remaining AlphaLive cross-engine ATR numerical difference (see
+  [Cross-System Parity](#cross-system-parity-with-alphalive))
+- Broader strategy research using the existing walk-forward infrastructure
 
----
+## Documentation
 
-## Contributing
-
-We welcome contributions! Here's how to get started:
-
-### Development Workflow
-
-1. **Fork the repository**
-2. **Clone your fork:**
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/alphalab.git
-   cd alphalab
-   ```
-3. **Set up the development environment:**
-   - Follow the [Quick Start](#quick-start) section above for backend and frontend setup
-
-### Backend Development
-
-```bash
-cd backend
-source venv/bin/activate
-python run.py
-```
-
-**Making changes:**
-1. Create a new branch: `git checkout -b feature/your-feature-name`
-2. Make your changes
-3. Run tests: `pytest tests/ -v`
-4. Ensure all 347 tests pass
-
-**Code style:**
-- Follow PEP 8
-- Use Black formatter (100-char lines)
-- Add Google-style docstrings to public methods
-- Type hints where appropriate
-
-### Frontend Development
-
-```bash
-cd frontend
-npm run dev
-```
-
-**Making changes:**
-1. Create a new branch: `git checkout -b feature/your-feature-name`
-2. Make your changes
-3. Run linter: `npm run lint`
-4. Run tests: `npm run test`
-5. Test in both web and desktop modes
-
-**Code style:**
-- TypeScript strict mode
-- ESLint + Prettier
-- Use functional components and hooks
-- Tailwind for styling (no inline styles)
-
-### Adding a New Strategy
-
-1. **Create strategy file:**
-   ```
-   backend/src/strategies/implementations/your_strategy.py
-   ```
-
-2. **Inherit from BaseStrategy:**
-   ```python
-   from ..base_strategy import BaseStrategy
-
-   class YourStrategy(BaseStrategy):
-       def validate_params(self, params: dict) -> dict:
-           # Validate parameters
-           pass
-
-       def generate_signals(self, data: pd.DataFrame, params: dict) -> pd.DataFrame:
-           # Generate buy/sell signals
-           pass
-
-       def required_columns(self) -> list:
-           # Return required indicator columns
-           pass
-   ```
-
-3. **Register in `implementations/__init__.py`**
-4. **Add to `STRATEGY_MAP` in `api/routes.py`**
-5. **Add tests in `tests/test_strategies.py`**
-6. **Document in `docs/STRATEGIES.md`**
-
-### Pull Request Process
-
-1. **Update documentation** - Update relevant markdown files
-2. **Add tests** - New features need test coverage
-3. **Run all tests** - Ensure nothing breaks
-4. **Commit with clear messages:**
-   ```
-   feat: add Bollinger Band breakout strategy
-   fix: correct slippage calculation in portfolio
-   docs: update API documentation for new endpoint
-   ```
-
-5. **Push to your fork:**
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-6. **Create Pull Request** - Provide clear description of changes
-
-### Commit Message Guidelines
-
-Conventional-commits-style prefix, lowercase and imperative after the colon
-(matches this repo's actual history - `git log --oneline -15` before writing
-one, don't assume the style is static):
-
-- `feat:` New feature
-- `fix:` Bug fix
-- `docs:` Documentation changes
-- `test:` Adding or updating tests
-- `refactor:` Code refactoring
-- `style:` Formatting only, no behavior change
-- `perf:` Performance improvements
-- `chore:` Maintenance tasks
-
-Scoped forms (`fix(deps):`, `refactor(logging):`) are fine. Body is optional -
-short prose explaining *why* or the mechanism, not a bullet-list restatement
-of the diff; omit for small/obvious changes.
-
-**Examples:**
-```
-feat: add walk-forward validation to backtest engine
-fix: handle missing data in RSI calculation
-docs: add examples to METRICS_GUIDE.md
-test: add unit tests for DataValidator
-```
-
-### Code Review Checklist
-
-Before submitting, ensure:
-
-- [ ] Code follows project style guidelines
-- [ ] All tests pass
-- [ ] New tests added for new features
-- [ ] Documentation updated
-- [ ] No sensitive data (API keys, credentials)
-- [ ] Changes work in both web and desktop modes (if frontend)
-- [ ] Performance impact considered (if applicable)
-
-### Reporting Issues
-
-**Bug reports should include:**
-- Clear description of the issue
-- Steps to reproduce
-- Expected vs actual behavior
-- Environment (OS, Python/Node version)
-- Relevant logs or error messages
-
-**Feature requests should include:**
-- Use case / motivation
-- Proposed solution
-- Any alternatives considered
-
----
-
-## Project Status
-
-**Current Version:** 0.1.0
-**Status:** Production Ready
-
-### What's Included
-
-#### Backend
-- Flask REST API (127.0.0.1:5050)
-- 350 tests (347 passing, 3 skipped), 91% coverage
-- 14 API endpoints with Pydantic validation
-- 8 trading strategies (MA Crossover, RSI Mean Reversion, Momentum Breakout, Bollinger Breakout, VWAP Reversion, Bollinger RSI Combo, Trend Adaptive RSI, GreenblattWeekly)
-- Technical indicators: SMA, RSI, ADX, Bollinger Bands, ATR
-- 30+ performance metrics
-- Data caching with parquet
-- Python virtual environment configured
-
-#### Frontend
-- React + TypeScript + Vite
-- 6 pages: Dashboard, Backtest (Single + Batch), Compare, DataManager, Portfolio, Settings
-- shadcn/ui components
-- Recharts visualizations (equity curves, drawdowns, monthly returns heatmap)
-- Zustand state management
-- React Query for API calls
-- Tailwind CSS styling
-
-### Project Stats
-
-- **Backend Code:** Python, Flask
-- **Frontend Code:** TypeScript, React
-- **Total Tests:** 350 (347 passing, 3 skipped), 91% coverage
-- **API Endpoints:** 14
-- **Strategies:** 8
-- **Indicators:** SMA, RSI, ADX, Bollinger Bands, ATR
-- **Metrics:** 30+
-- **Desktop Installer:** 5.5MB
-
----
+- [Strategy Export Schema](docs/STRATEGY_SCHEMA.md) - JSON schema for AlphaLive integration
+- `CLAUDE.md` - development guide (not part of the published documentation set)
+- Repository root `FINAL_ENGINEERING_AUDIT.md` and `END_TO_END_VALIDATION.md` - full audit and
+  runtime-evidence reports this README's claims are drawn from
 
 ## Troubleshooting
 
-### Backend won't start: "ModuleNotFoundError: No module named 'src'"
-**Solution:** You're running from the wrong directory or virtualenv isn't activated.
+### Backend won't start: "ModuleNotFoundError"
+Confirm you're in `backend/` with the virtualenv activated:
 ```bash
 cd backend
 source venv/bin/activate
@@ -584,59 +380,71 @@ python run.py
 ```
 
 ### yfinance download fails or returns empty data
-**Causes:**
-- Invalid ticker symbol (check it exists on Yahoo Finance)
-- Network connectivity issue
-- Rate limit hit (~2000 requests/hour max)
-- Date range too old (before stock's IPO)
+Usually an invalid ticker, a network issue, a Yahoo Finance rate limit (~2000 requests/hour), or
+a date range before the ticker's IPO. `DataFetcher` retries automatically; if it keeps failing,
+verify the ticker manually at `finance.yahoo.com`.
 
-**Solution:** DataFetcher retries 3 times automatically. If still failing, verify the ticker manually at `finance.yahoo.com`.
-
-### Feature engineering produces all NaN values
-**Cause:** Not enough data for indicator lookback periods. A 200-day SMA needs 200+ data points.
-
-**Solution:** Fetch at least 1 year of daily data (252+ rows). For all indicators to be populated, fetch 2+ years.
+### Feature engineering produces all-NaN values
+Not enough data for the longest indicator lookback (a 200-day SMA needs 200+ rows). Fetch at
+least 1-2 years of daily data.
 
 ### Backtest returns 0 trades
-**Possible causes:**
-- Insufficient capital for position sizing
-- Data doesn't meet strategy requirements (missing indicators)
-- Date range too short for strategy parameters (e.g., 50/200 SMA crossover needs 200+ days)
+Check for insufficient capital for position sizing, a date range too short for the strategy's
+parameters (a 50/200 SMA crossover needs 200+ days), or missing indicator columns. See
+`backend/logs/alphalab.log`.
 
-**Debug:** Check `backend/logs/alphalab.log` for rejected orders or missing columns.
-
-### Data quality score too low (< 0.9)
-**Cause:** DataValidator detected issues:
-- Many missing trading days (stock halted/delisted)
-- Extreme price movements flagged as outliers (could be legitimate for biotech/penny stocks)
-- Corrupt data from Yahoo Finance
-
-**Solution:** Try a different date range or check if the stock had unusual events (splits, halts) during that period.
-
----
+### Data quality score too low (< 0.90)
+`DataValidator` flags many missing trading days, extreme price-return/volume outliers, or corrupt
+source data. This can be a genuine market event (e.g. a large real single-day move) rather than
+bad data - try a different date range or ticker if the rejection seems wrong for the underlying
+security.
 
 ## FAQ
 
-**Q: Can I use this for real trading?**
-A: AlphaLab is designed for backtesting and research. For live trading, use **AlphaLive** (separate repository) which connects to Alpaca Markets and handles real-time execution. Always start with paper trading before risking real money.
+**Can I use this for real trading?**
+AlphaLab is a research and backtesting tool. Live or paper execution is AlphaLive's job. Always
+validate with paper trading before considering real capital, and treat backtest results as
+historical evidence, not a forecast.
 
-**Q: Why is TA-Lib not used?**
-A: The Python `ta-lib` package requires a system-level C library that's difficult to install on some platforms. AlphaLab uses manual implementations and `stockstats` instead, which produce equivalent results for the indicators implemented.
+**Why not TA-Lib?**
+The `ta-lib` Python package needs a system-level C library that's awkward to install on some
+platforms. AlphaLab uses direct pandas/numpy implementations instead.
 
-**Q: Can I add crypto/forex data?**
-A: yfinance supports some crypto (e.g., `BTC-USD`) and forex pairs. The system hasn't been tested extensively with these, but the data pipeline should work. Feature engineering may need adjustment for 24/7 markets.
+**Can I add crypto/forex data?**
+yfinance supports some crypto (`BTC-USD`) and forex pairs. This hasn't been tested extensively
+here; feature engineering may need adjustment for 24/7 markets.
 
-**Q: How do I add a custom strategy?**
-A: See "Adding a New Strategy" section above. Create a file in `backend/src/strategies/implementations/`, inherit from `BaseStrategy`, implement the required methods, and register it in the API.
+**How do I add a custom strategy?**
+Create a file in `backend/alphalab/strategies/implementations/`, inherit from `BaseStrategy`,
+implement `validate_params()`/`generate_signals()`/`required_columns()`, register it in
+`implementations/__init__.py` and `STRATEGY_MAP`, and add a matching Pydantic params model to
+`strategy_schema.py` if it should be exportable.
 
-**Q: Why does my strategy show negative Sharpe ratio?**
-A: Negative Sharpe means the strategy lost money on a risk-adjusted basis (returns below risk-free rate). This isn't a bug - it means the strategy isn't profitable. Try different parameters, a different stock, or a different strategy.
+**Why does my strategy show a negative Sharpe ratio?**
+It lost money on a risk-adjusted basis. That's a real result, not a bug - see
+[Results](#results) above.
 
-**Q: How accurate are the backtest results?**
-A: AlphaLab uses next-bar execution (no look-ahead bias), realistic slippage (0.05%), and configurable commissions to model real-world conditions. However, backtests can't predict future market conditions. Always validate strategies with walk-forward testing and paper trading before going live.
+**How accurate are the backtest results?**
+Next-bar execution, configurable slippage/commissions, and position limits are implemented and
+were verified against real historical data (see [Results](#results) and
+[Cross-System Parity](#cross-system-parity-with-alphalive)). Backtests reflect what already
+happened, not what will happen - always validate with walk-forward testing and paper trading
+before considering live use.
 
----
+## Risk Disclaimer
+
+The strategies here are experimental research examples, not investment advice. All performance
+figures referenced are historical backtest results, which do not predict future performance.
+Paper trading (via AlphaLive) is the recommended way to evaluate any strategy before considering
+real capital.
+
+## Contributing
+
+This is a personal portfolio project and not currently accepting external contributions. If
+you're evaluating the code: `backend/tests/` and `frontend/src/**/*.test.ts(x)` are the best
+starting point, followed by `CLAUDE.md` for implementation details.
 
 ## License
 
-All rights reserved. This is proprietary, original work - no license is granted for use, copying, or redistribution.
+All rights reserved. This is proprietary, original work - no license is granted for use, copying,
+or redistribution.

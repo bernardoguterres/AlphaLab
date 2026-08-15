@@ -117,6 +117,25 @@ class BacktestRequest(BaseModel):
     monte_carlo_runs: int = 0
     risk_settings: Optional[RiskSettings] = None
     interval: Optional[str] = None
+    max_drawdown_pct: Optional[float] = None
+    """Drawdown-halt threshold (percent, e.g. 40.0 = 40%), passed straight
+    to BacktestEngine.run_backtest(). Previously accepted nowhere on this
+    endpoint despite CLAUDE.md documenting it as required for weekly
+    strategies (max_drawdown_pct=40 - the engine's 10% default halts them
+    too early) - fixed 2026-08-15, Prompt 2.5 issue 3 (see
+    FINAL_ENGINEERING_AUDIT.md / END_TO_END_VALIDATION.md). None (the
+    default, matching an omitted field) leaves the engine's own 10% default
+    unchanged.
+    """
+
+    @field_validator("max_drawdown_pct")
+    @classmethod
+    def validate_max_drawdown_pct(cls, v):
+        if v is None:
+            return v
+        if not 1.0 <= v <= 100.0:
+            raise ValueError("max_drawdown_pct must be between 1.0 and 100.0")
+        return v
 
     @field_validator("strategy")
     @classmethod

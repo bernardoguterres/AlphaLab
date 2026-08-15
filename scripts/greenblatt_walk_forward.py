@@ -12,7 +12,7 @@ Phase 2 - Validation: runs two rolling walk-forward windows on each candidate
 Verdict: CONSISTENT if out-of-sample Sharpe ≥ 0.8 AND CAGR ≥ 13% in BOTH windows.
 
 Usage:
-    cd /Users/bernardoguterrres/Desktop/Alpha/AlphaLab/backend
+    cd AlphaLab/backend
     source venv/bin/activate
     cd ..
     python scripts/greenblatt_walk_forward.py
@@ -172,11 +172,7 @@ def run_one_backtest(
     )
 
     calculator = PerformanceMetrics(risk_free_rate=0.04)
-    bm_curve = (
-        results.benchmark.get("equity_curve")
-        if results.benchmark
-        else None
-    )
+    bm_curve = results.benchmark.get("equity_curve") if results.benchmark else None
     metrics = calculator.calculate_all(
         equity_curve=results.equity_curve,
         trades=results.trades,

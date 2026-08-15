@@ -10,7 +10,7 @@ prints a formatted table comparing in-sample vs out-of-sample results and
 issues a final CONSISTENT / UNSTABLE verdict per strategy.
 
 Usage:
-    cd /Users/bernardoguterrres/Desktop/Alpha/AlphaLab/backend
+    cd AlphaLab/backend
     source venv/bin/activate
     cd ..
     python scripts/walk_forward_validation.py
@@ -177,11 +177,7 @@ def run_one_backtest(
 
     # Calculate performance metrics
     calculator = PerformanceMetrics(risk_free_rate=0.04)
-    bm_curve = (
-        results.benchmark.get("equity_curve")
-        if results.benchmark
-        else None
-    )
+    bm_curve = results.benchmark.get("equity_curve") if results.benchmark else None
     metrics = calculator.calculate_all(
         equity_curve=results.equity_curve,
         trades=results.trades,

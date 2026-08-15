@@ -18,7 +18,7 @@
 
 ## Overview
 
-This schema defines the JSON contract for exporting battle-tested strategies from AlphaLab to AlphaLive for live execution. It ensures:
+This schema defines the JSON contract for exporting backtested strategy configurations from AlphaLab to AlphaLive for live execution. It ensures:
 
 1. **Type safety** - Pydantic (backend) and TypeScript (frontend) enforce validation
 2. **Traceability** - Metadata links live strategies to backtest results
@@ -36,6 +36,11 @@ Version changes:
 ---
 
 ## Full Schema
+
+The `performance` block below uses illustrative example values to show the field shapes -
+they are not measured results from a real backtest. See the repository root's
+`END_TO_END_VALIDATION.md` for actual, evidence-backed performance and cross-system parity
+figures.
 
 ```json
 {
@@ -185,7 +190,7 @@ All required fields in `metadata.performance`:
 
 ## Per-Strategy Parameters
 
-All 9 strategies below are implemented and tested in AlphaLab (backtesting). 8 of the 9 are also verified for signal parity with AlphaLive (live signal generation) - `rsi_simple` is the exception, registered 2026-07-14 (audit bug 3.8) as a reachable AlphaLab strategy, but AlphaLive does not currently register a matching `rsi_simple` strategy name, so it cannot yet be deployed end-to-end. AlphaLab's internal strategy classes take their own untyped params dict (see note in [Adding New Strategies](#adding-new-strategies)), with defaults applied via `setdefault()` in each strategy's `validate_params()`. **The JSON shown in this section is the exported/wire format** - what actually appears in `strategy.parameters` after `POST /api/strategies/export`, which is not always identical to AlphaLab's internal field names. Every `parameters` block also carries a `strategy_type` field matching `strategy.name` (a discriminator added 2026-07-14 - see [Versioning Policy](#versioning-policy)); omitted from the examples below for brevity but present in every real export.
+All 9 strategies below are implemented and tested in AlphaLab (backtesting). 8 of the 9 are deployable to AlphaLive; `rsi_simple` is deliberately research/backtest-only - `POST /api/strategies/export` rejects it outright (422, with a clear "use rsi_mean_reversion if you need a deployable RSI strategy" message) rather than producing an export AlphaLive would only reject later as an unknown strategy. This is a resolved, intentional decision (2026-08-15), not an open gap. AlphaLab's internal strategy classes take their own untyped params dict (see note in [Adding New Strategies](#adding-new-strategies)), with defaults applied via `setdefault()` in each strategy's `validate_params()`. **The JSON shown in this section is the exported/wire format** - what actually appears in `strategy.parameters` after `POST /api/strategies/export`, which is not always identical to AlphaLab's internal field names. Every `parameters` block also carries a `strategy_type` field matching `strategy.name` (a discriminator added 2026-07-14 - see [Versioning Policy](#versioning-policy)); omitted from the examples below for brevity but present in every real export.
 
 **Export field-name translation (2026-07-14):** four strategies have internal AlphaLab field names that differ from what AlphaLive actually reads; `_build_export_json`'s export-mapping layer (`backend/alphalab/api/helpers.py`) renames them automatically - you never need to do this by hand when exporting through the API, but if you hand-craft a config JSON for AlphaLive, use the exported names below, not AlphaLab's internal ones (`short_window`/`long_window`, `volume_surge_pct`/`volume_avg_period`, `bb_period`/`bb_std_dev`, greenblatt's own `trailing_stop_pct`).
 
@@ -251,11 +256,17 @@ State-aware mean reversion with optional Bollinger Band/ADX confirmation and ATR
 
 Ultra-simple RSI mean reversion for frequent trading - no BB/ADX confirmation, no state
 machine. Registered 2026-07-14 (audit bug 3.8) - previously fully implemented and
-tested but unreachable through the export pipeline. Note: AlphaLive does not currently
-register a matching `rsi_simple` strategy name of its own, so exports of this strategy
-cannot yet be deployed to AlphaLive - see the class docstring
-(`backend/alphalab/strategies/implementations/rsi_simple.py`) for the separate, cross-repo
-parity question this connects to.
+tested but unreachable through the export pipeline.
+
+**Research/backtest-only, by design (resolved 2026-08-15).** AlphaLive does not
+register a matching `rsi_simple` strategy name of its own. Rather than let an export
+silently produce a JSON file AlphaLive would only reject later as an unknown strategy,
+`POST /api/strategies/export` now rejects `rsi_simple` directly with a clear
+"research-only, use rsi_mean_reversion instead" error - it stays fully backtestable in
+AlphaLab, just not exportable. See the class docstring
+(`backend/alphalab/strategies/implementations/rsi_simple.py`) for the separate,
+not-yet-scoped question of whether AlphaLive's `rsi_mean_reversion` should eventually be
+rebuilt on this simpler logic.
 
 ```json
 {
