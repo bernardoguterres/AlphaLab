@@ -49,7 +49,7 @@ export function EquityChart({ data, benchmarkData, height = 350 }: EquityChartPr
             fontSize: 12,
           }}
           labelFormatter={(v) => new Date(v).toLocaleDateString()}
-          formatter={(value: number, name: string) => [formatCurrency(value), name === "portfolio" ? "Portfolio" : "Benchmark"]}
+          formatter={(value: number, name: string) => [formatCurrency(value), name === "portfolio" ? "Portfolio" : "Buy & Hold"]}
         />
         <Legend
           wrapperStyle={{ fontSize: 12, color: "hsl(215 20% 55%)" }}
@@ -57,7 +57,7 @@ export function EquityChart({ data, benchmarkData, height = 350 }: EquityChartPr
         <Line
           type="monotone"
           dataKey="portfolio"
-          stroke="hsl(217 91% 60%)"
+          stroke="hsl(var(--primary))"
           strokeWidth={2}
           dot={false}
           name="Portfolio"
@@ -66,11 +66,11 @@ export function EquityChart({ data, benchmarkData, height = 350 }: EquityChartPr
           <Line
             type="monotone"
             dataKey="benchmark"
-            stroke="hsl(215 20% 55%)"
+            stroke="hsl(var(--lab-secondary))"
             strokeWidth={1.5}
             strokeDasharray="5 5"
             dot={false}
-            name="Benchmark"
+            name="Buy & Hold"
           />
         )}
       </LineChart>

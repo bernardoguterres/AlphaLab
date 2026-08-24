@@ -29,6 +29,19 @@ export function formatDate(dateStr: string | undefined | null): string {
   });
 }
 
+export function formatDateTime(dateStr: string | undefined | null): string {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "-";
+  return date.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export function strategyDisplayName(strategy: string): string {
   const map: Record<string, string> = {
     ma_crossover: "MA Crossover",

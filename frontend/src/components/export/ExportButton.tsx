@@ -62,6 +62,8 @@ export function ExportButton({
     }
   };
 
+  const accessibleLabel = isExporting ? `Exporting ${ticker} ${strategyName} to AlphaLive...` : `Export ${ticker} ${strategyName} to AlphaLive`;
+
   return (
     <Button
       onClick={handleExport}
@@ -69,6 +71,8 @@ export function ExportButton({
       variant={variant}
       size={size}
       className="gap-2"
+      aria-label={showLabel ? undefined : accessibleLabel}
+      title={showLabel ? undefined : accessibleLabel}
     >
       {isExporting ? (
         <Loader2 className="h-4 w-4 animate-spin" />

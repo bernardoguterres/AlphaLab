@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Header } from "@/components/layout/Header";
+import { Sidebar } from "@/components/layout/Sidebar";
 import { useBacktestStore } from "@/stores/backtestStore";
 import { checkHealth, getAvailableData } from "@/services/api";
 import Dashboard from "./pages/Dashboard";
@@ -37,16 +37,18 @@ function MainApp() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/backtest" element={<Backtest />} />
-        <Route path="/compare" element={<Compare />} />
-        <Route path="/data" element={<DataManager />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+    <div className="min-h-screen bg-background flex">
+      <Sidebar />
+      <main className="flex-1 min-w-0">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/backtest" element={<Backtest />} />
+          <Route path="/compare" element={<Compare />} />
+          <Route path="/data" element={<DataManager />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
     </div>
   );
 }

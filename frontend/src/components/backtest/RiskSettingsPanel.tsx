@@ -21,10 +21,13 @@ export function RiskSettingsPanel({ settings, onChange }: RiskSettingsPanelProps
     <Accordion type="single" collapsible className="w-full">
       <AccordionItem value="risk-settings" className="rounded-xl border border-border/70 bg-card/60 px-3.5">
         <AccordionTrigger className="hover:no-underline py-3 [&>svg]:text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-sm font-semibold">Risk Settings</span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Optional</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="text-sm font-semibold shrink-0">Risk Settings</span>
+            <span className="text-[10px] text-muted-foreground/80 font-mono-numbers truncate hidden sm:inline">
+              Position {settings.max_position_size_pct}% - Stop Loss {settings.stop_loss_pct}% - Take Profit {settings.take_profit_pct}%
+              {settings.trailing_stop_enabled ? ` - Trailing ${settings.trailing_stop_pct}%` : " - Trailing Off"}
+            </span>
           </div>
         </AccordionTrigger>
         <AccordionContent className="pt-1 pb-3.5">

@@ -271,9 +271,10 @@ For the full endpoint list see `backend/alphalab/api/blueprints/`.
 
 ## Available Strategies
 
-Nine strategies are implemented and backtestable. Eight are AlphaLive-deployable; `rsi_simple` is
-research-only (see above). Parameter defaults below are AlphaLab's own; AlphaLive may apply its
-own defaults for fields an export omits.
+Nine strategies are implemented and backtestable. Seven are currently directly exportable to
+AlphaLive. `rsi_simple` is research-only (see above); `vwap_reversion` is not currently exportable
+because it requires an intraday timeframe AlphaLab's data layer can't fetch. Parameter defaults
+below are AlphaLab's own; AlphaLive may apply its own defaults for fields an export omits.
 
 | # | Strategy | Type | Key params | Deployable |
 |---|---|---|---|---|
