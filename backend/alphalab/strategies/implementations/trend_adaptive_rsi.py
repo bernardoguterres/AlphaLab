@@ -59,6 +59,20 @@ class TrendAdaptiveRSI(BaseStrategy):
         p.setdefault("range_buy", 35)
         p.setdefault("range_sell", 65)
 
+        self._reject_unknown_params(
+            {
+                "rsi_period",
+                "trend_sma",
+                "trend_lookback",
+                "uptrend_buy",
+                "uptrend_sell",
+                "downtrend_buy",
+                "downtrend_sell",
+                "range_buy",
+                "range_sell",
+            }
+        )
+
     def required_columns(self) -> list[str]:
         return ["Close", "RSI", f"SMA_{self.params.get('trend_sma', 50)}"]
 

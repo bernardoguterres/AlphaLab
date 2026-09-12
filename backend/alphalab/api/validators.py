@@ -45,7 +45,22 @@ class FetchDataRequest(BaseModel):
 
 
 class RiskSettings(BaseModel):
-    """Risk management parameters for backtest."""
+    """Risk management parameters for backtest.
+
+    Not every field is simulated by AlphaLab's own backtest engine - all are
+    validated here and, where relevant, exported unchanged to AlphaLive
+    (see backend/alphalab/api/helpers.py's _build_export_json). Simulated
+    by BacktestEngine/Portfolio: stop_loss_pct, take_profit_pct,
+    max_position_size_pct, trailing_stop_enabled/trailing_stop_pct.
+    Export-only, NOT simulated by AlphaLab (accepted, validated, and passed
+    through export unchanged; no effect on AlphaLab's own
+    returns/trades/metrics): max_daily_loss_pct (no "rest of day" concept in
+    a bar-by-bar single-ticker backtest), max_open_positions (the engine is
+    single-ticker/single-position), commission_per_trade (a flat USD fee -
+    Portfolio only models a percentage-of-notional commission rate, a
+    different, non-interchangeable cost model; see
+    backend/config.yaml's backtest.commission).
+    """
 
     stop_loss_pct: float = 2.0
     take_profit_pct: float = 5.0

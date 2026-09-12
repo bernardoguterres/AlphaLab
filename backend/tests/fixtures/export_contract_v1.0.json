@@ -1,0 +1,157 @@
+{
+  "_comment": "Local, versioned snapshot of the AlphaLive-facing export contract (StrategyExportSchema, schema_version 1.0), maintained entirely on the AlphaLab side - no AlphaLive code or schemas are copied here. This exists so tests/test_local_export_contract.py has an always-running local safeguard against export-contract drift, independent of whether AlphaLive is checked out as a sibling repo (test_schema_contract.py skips when it isn't - see that file's module docstring). This is deliberately narrower than the live cross-repo test: it only checks that AlphaLab's own StrategyExportSchema still produces the shape recorded here, not that AlphaLive still agrees with it.",
+  "provenance": "Authoritative reference this fixture is CROSS-CHECKED against (not copied from): AlphaLive's alphalive/strategy_schema.py (StrategySchema, schema_version Literal['1.0']), read directly from the sibling checkout at /Alpha/AlphaLive during this pass. Verified 2026-09-12: AlphaLive's Risk/Execution/SafetyLimits/Metadata/BacktestPeriod field sets and schema_version literal match this fixture's top_level_required_fields/risk_fields/execution_fields/safety_limits_fields/metadata_fields exactly; for all 7 exportable strategies, AlphaLab's real final export field set (post StrategyExportSchema.model_validate()+model_dump(), not the pre-validation dict) is a strict subset of what AlphaLive's own extra='forbid' per-strategy Params models declare, confirmed by direct comparison - so nothing AlphaLab currently exports would be rejected as an unrecognized field by AlphaLive. AlphaLive declares a few AlphaLive-only optional fields with defaults that AlphaLab never populates (rsi_mean_reversion's `period`, momentum_breakout's `atr_period`, bollinger_breakout's `volume_ma_period`) - documented, non-breaking, and already covered by backend/tests/test_schema_contract.py's per-strategy live_only exceptions. Updating this fixture without re-reading AlphaLive's current strategy_schema.py first is not a real refresh, it's just editing a number.",
+  "scope_boundary": "This fixture (and test_local_export_contract.py) protects STRUCTURE ONLY: field names, nesting, types, aliases, strategy identifiers, schema_version. It proves nothing about whether AlphaLive's signal_engine.py would compute the same trading signals from an accepted export, and nothing about future AlphaLive schema changes made after the provenance date above - see the cross-repo tests (backend/tests/test_schema_contract.py, AlphaLive/tests/test_multi_ticker_parity.py) for the narrower and different claims those make.",
+  "contract_version": "1.0",
+  "refresh_policy": "Bump contract_version (and this file's name/backup) only alongside a deliberate schema_version change in backend/strategy_schema.py, or when a strategy's exported parameter field set changes on purpose (e.g. a new export-mapping alias in _translate_params_for_export). Any other diff here is a real, unintended drift and the test should fail, not be updated to match. Any refresh must re-read AlphaLive's current alphalive/strategy_schema.py (when available as a sibling checkout) and update the provenance note above with the date and what was re-verified - never bump contract_version off AlphaLab's own output alone.",
+  "schema_version": "1.0",
+  "top_level_required_fields": [
+    "schema_version",
+    "strategy",
+    "ticker",
+    "timeframe",
+    "risk",
+    "execution",
+    "safety_limits",
+    "metadata"
+  ],
+  "risk_fields": [
+    "stop_loss_pct",
+    "take_profit_pct",
+    "max_position_size_pct",
+    "max_daily_loss_pct",
+    "max_open_positions",
+    "portfolio_max_positions",
+    "trailing_stop_enabled",
+    "trailing_stop_pct",
+    "commission_per_trade"
+  ],
+  "execution_fields": ["order_type", "limit_offset_pct", "cooldown_bars"],
+  "safety_limits_fields": [
+    "max_trades_per_day",
+    "max_api_calls_per_hour",
+    "signal_generation_timeout_seconds",
+    "broker_degraded_mode_threshold_failures"
+  ],
+  "metadata_fields": [
+    "exported_from",
+    "exported_at",
+    "alphalab_version",
+    "backtest_id",
+    "backtest_period",
+    "performance"
+  ],
+  "exportable_strategies": {
+    "ma_crossover": {
+      "parameter_fields": [
+        "strategy_type",
+        "fast_period",
+        "slow_period",
+        "volume_confirmation",
+        "volume_avg_period",
+        "min_separation_pct",
+        "cooldown_days"
+      ],
+      "internal_to_export_aliases": {
+        "short_window": "fast_period",
+        "long_window": "slow_period"
+      }
+    },
+    "rsi_mean_reversion": {
+      "parameter_fields": [
+        "strategy_type",
+        "rsi_period",
+        "oversold",
+        "overbought",
+        "use_bb_confirmation",
+        "bb_period",
+        "bb_std",
+        "use_adx_filter",
+        "adx_threshold",
+        "stop_loss_atr_mult",
+        "max_holding_days"
+      ],
+      "_note": "cooldown_days is NOT in the final exported strategy.parameters block - AlphaLab's own RSIMeanReversionParams export model (strategy_schema.py) never declared that field, so Pydantic's model_validate()+model_dump() step drops it (default extra='ignore'). The backtested value isn't lost: it already flows into the top-level execution.cooldown_bars field via _build_export_json, independent of this per-strategy parameters block. bb_period/bb_std (20, 2.0) appear instead - schema defaults, not real tunable params RSIMeanReversion accepts (FeatureEngineer's Bollinger Bands are fixed at 20/2.0 for every strategy, not configurable per-instance) - they're coincidentally correct, not backtested. Confirmed 2026-09-12 by diffing _build_export_json's raw dict against StrategyExportSchema.model_validate(...).model_dump(...)'s actual output - this fixture now records the real, final export, not the pre-validation intermediate.",
+      "internal_to_export_aliases": {}
+    },
+    "momentum_breakout": {
+      "parameter_fields": [
+        "strategy_type",
+        "lookback",
+        "surge_pct",
+        "volume_ma_period",
+        "rsi_min",
+        "stop_loss_atr_mult",
+        "trailing_stop_atr_mult",
+        "cooldown_days"
+      ],
+      "internal_to_export_aliases": {
+        "volume_surge_pct": "surge_pct",
+        "volume_avg_period": "volume_ma_period"
+      }
+    },
+    "bollinger_breakout": {
+      "parameter_fields": [
+        "strategy_type",
+        "period",
+        "std_dev",
+        "confirmation_bars",
+        "volume_filter",
+        "volume_threshold",
+        "cooldown_days"
+      ],
+      "internal_to_export_aliases": {
+        "bb_period": "period",
+        "bb_std_dev": "std_dev"
+      }
+    },
+    "bollinger_rsi_combo": {
+      "parameter_fields": [
+        "strategy_type",
+        "bb_period",
+        "bb_std",
+        "rsi_period",
+        "rsi_oversold",
+        "rsi_overbought",
+        "exit_at_middle"
+      ],
+      "internal_to_export_aliases": {}
+    },
+    "trend_adaptive_rsi": {
+      "parameter_fields": [
+        "strategy_type",
+        "rsi_period",
+        "trend_sma",
+        "trend_lookback",
+        "uptrend_buy",
+        "uptrend_sell",
+        "downtrend_buy",
+        "downtrend_sell",
+        "range_buy",
+        "range_sell"
+      ],
+      "internal_to_export_aliases": {}
+    },
+    "greenblatt_weekly": {
+      "parameter_fields": [
+        "strategy_type",
+        "fast_sma",
+        "slow_sma",
+        "rsi_period",
+        "rsi_oversold",
+        "rsi_overbought",
+        "min_hold_bars",
+        "trailing_stop_fraction",
+        "exit_rsi_overbought",
+        "exit_sma_cross"
+      ],
+      "internal_to_export_aliases": {
+        "trailing_stop_pct": "trailing_stop_fraction"
+      }
+    }
+  },
+  "rejected_strategies": {
+    "rsi_simple": "research/backtest-only - not in AlphaLive's deployable strategy set",
+    "vwap_reversion": "requires an intraday timeframe AlphaLab cannot fetch (1Day/1Week/1Month only)"
+  }
+}

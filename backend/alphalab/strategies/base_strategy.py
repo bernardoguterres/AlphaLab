@@ -66,6 +66,23 @@ class BaseStrategy(ABC):
                     last_signal_idx = i
         return signals
 
+    def _reject_unknown_params(self, known: set[str]):
+        """Raise ValueError if ``self.params`` has any key outside ``known``.
+
+        Call at the end of ``validate_params()``, after every
+        ``setdefault()`` call, so a caller-supplied param name this strategy
+        doesn't recognize (a typo, a retired field, a param meant for a
+        different strategy) fails loudly at construction time instead of
+        being silently accepted into ``self.params`` and then just never
+        read by ``generate_signals()``.
+        """
+        unknown = set(self.params) - known
+        if unknown:
+            raise ValueError(
+                f"{self.name}: unknown parameter(s) {sorted(unknown)} - "
+                f"valid parameters are {sorted(known)}"
+            )
+
     def backtest_ready_check(self, data: pd.DataFrame) -> bool:
         """Verify *data* has the columns this strategy requires."""
         missing = set(self.required_columns()) - set(data.columns)

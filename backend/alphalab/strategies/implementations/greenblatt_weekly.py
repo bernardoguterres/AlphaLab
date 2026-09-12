@@ -54,6 +54,20 @@ class GreenblattWeekly(BaseStrategy):
         if not 0.05 <= p["trailing_stop_pct"] <= 0.50:
             raise ValueError("trailing_stop_pct must be between 0.05 and 0.50")
 
+        self._reject_unknown_params(
+            {
+                "fast_sma",
+                "slow_sma",
+                "rsi_period",
+                "rsi_oversold",
+                "rsi_overbought",
+                "min_hold_bars",
+                "trailing_stop_pct",
+                "exit_rsi_overbought",
+                "exit_sma_cross",
+            }
+        )
+
     def required_columns(self) -> list[str]:
         fast = self.params.get("fast_sma", 10)
         slow = self.params.get("slow_sma", 50)

@@ -1,5 +1,6 @@
 """Portfolio management with realistic order execution and risk controls."""
 
+import math
 from datetime import datetime
 
 
@@ -24,7 +25,7 @@ class Portfolio:
         max_position_pct: float = 20.0,
         cash_reserve_pct: float = 5.0,
         max_loss_per_trade_pct: float = 2.0,
-        max_drawdown_pct: float = 10.0,
+        max_drawdown_pct: float | None = 10.0,
         stop_loss_pct: float | None = None,
         take_profit_pct: float | None = None,
         trailing_stop_pct: float | None = None,
@@ -36,7 +37,12 @@ class Portfolio:
         self.max_position_pct = max_position_pct / 100
         self.cash_reserve_pct = cash_reserve_pct / 100
         self.max_loss_per_trade_pct = max_loss_per_trade_pct / 100
-        self.max_drawdown_pct = max_drawdown_pct / 100
+        # None disables the drawdown-halt control entirely (true no-op - see
+        # _check_drawdown_halt). Any finite value is a percent-of-peak
+        # threshold; >= threshold triggers (see _check_drawdown_halt).
+        self.max_drawdown_pct = (
+            max_drawdown_pct / 100 if max_drawdown_pct is not None else None
+        )
         # Portfolio-level risk overlay (from the Risk Settings UI's
         # RiskSettings.stop_loss_pct/take_profit_pct) - independent of any
         # stop-loss a strategy implements internally (e.g. RSIMeanReversion's
@@ -64,6 +70,10 @@ class Portfolio:
         self.value_history: list[dict] = []
         self.peak_value = initial_capital
         self.halted = False
+        # First-breach record (deterministic - set once, never overwritten
+        # by a later, possibly deeper drawdown). None until halted.
+        self.halted_at = None
+        self.halted_drawdown_pct: float | None = None
 
     # ------------------------------------------------------------------
     # Core execution
@@ -186,9 +196,16 @@ class Portfolio:
 
         self._log_trade(order, timestamp)
 
-        # Check portfolio-level stop
-        portfolio_val = self.get_portfolio_value(current_prices)
-        self._check_drawdown_halt(portfolio_val)
+        # Drawdown-halt detection is no longer done here. Checking only on a
+        # fill meant a price-only crash with no order in between went
+        # undetected until whenever the next order happened to occur -
+        # sometimes bars later, sometimes never. record_value() now runs the
+        # same check on every bar's mark-to-market equity update instead
+        # (causal, one evaluation per bar, no look-ahead) - see
+        # _check_drawdown_halt's docstring. Every call site in this module
+        # and portfolio_constructor.py already calls record_value() exactly
+        # once per bar after any same-bar order execution, so this is a
+        # strict improvement in detection latency, not a behavior removal.
 
         return order
 
@@ -308,10 +325,18 @@ class Portfolio:
                 )
 
     def record_value(self, timestamp, current_prices: dict[str, float]):
-        """Snapshot portfolio value for equity curve."""
+        """Snapshot portfolio value for equity curve and evaluate the
+        drawdown halt causally against this bar's mark-to-market equity.
+
+        This is the single per-bar mark-to-market point every simulation
+        loop (BacktestEngine._simulate, PortfolioConstructor's static and
+        dynamic modes) calls exactly once per bar, so it is also the single
+        place drawdown is evaluated - see _check_drawdown_halt.
+        """
         val = self.get_portfolio_value(current_prices)
         self.value_history.append({"date": timestamp, "value": round(val, 2)})
         self.peak_value = max(self.peak_value, val)
+        self._check_drawdown_halt(val, timestamp)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -324,12 +349,41 @@ class Portfolio:
     def _get_execution_price(self, order: Order, market_price: float) -> float | None:
         return market_price
 
-    def _check_drawdown_halt(self, current_value: float):
+    def _check_drawdown_halt(self, current_value: float, timestamp=None):
+        """Evaluate the max-drawdown halt against one mark-to-market value.
+
+        Threshold semantics: dd >= max_drawdown_pct triggers - equality
+        halts (a drawdown exactly at the configured limit is treated as a
+        breach, not "not yet").
+
+        Disabled (true no-op): max_drawdown_pct=None on the Portfolio skips
+        this check entirely - halted can never become True.
+
+        First-breach-only: once self.halted is True, this returns
+        immediately without re-evaluating or overwriting halted_at /
+        halted_drawdown_pct - the first breach is recorded deterministically
+        and a later, possibly deeper drawdown (or calling this twice for the
+        same bar) does not change what was recorded. This also makes
+        multiple evaluations of the same bar's value idempotent.
+
+        Invalid/zero/negative equity: peak_value <= 0 (never a legitimate
+        state past __init__ with positive initial_capital, but guarded) or a
+        non-finite current_value (NaN/inf from bad price data) skip the
+        check rather than raising or halting on a meaningless ratio. A
+        genuinely negative or zero current_value against a positive peak is
+        a real, valid breach (dd >= 1.0) and is allowed to trigger normally.
+        """
+        if self.max_drawdown_pct is None or self.halted:
+            return
         if self.peak_value <= 0:
+            return
+        if current_value is None or not math.isfinite(current_value):
             return
         dd = (self.peak_value - current_value) / self.peak_value
         if dd >= self.max_drawdown_pct:
             self.halted = True
+            self.halted_at = timestamp
+            self.halted_drawdown_pct = round(dd * 100, 4)
             logger.warning(
                 "Trading HALTED: drawdown %.1f%% exceeds limit %.1f%%",
                 dd * 100,

@@ -356,6 +356,15 @@ class ParameterOptimizer:
                 "total_return_pct": final_result.total_return_pct,
                 "sharpe_ratio": final_metrics["risk"]["sharpe_ratio"],
                 "max_drawdown_pct": final_metrics["drawdown"]["max_drawdown_pct"],
+                # Explicit, machine-readable label (not just a docstring
+                # note) - this is a train-only selection scored on the full
+                # dataset it was chosen from, not an additional out-of-sample
+                # result on top of the fold scores above. There is
+                # deliberately no results_store/backtest_id here, so it
+                # cannot be exported directly - see optimize_strategy() in
+                # alphalab/api/blueprints/backtest.py and
+                # test_optimizer_export_separation.py.
+                "is_in_sample": True,
             },
         }
 

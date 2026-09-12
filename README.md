@@ -8,7 +8,7 @@ and returns schema-validated JSON compatible with a separate downstream executio
 ## Status and evidence boundary
 
 **Portfolio release / engineering prototype.** The backtest engine, cost modelling, and
-walk-forward machinery are implemented and exercised by an automated test suite (423 backend
+walk-forward machinery are implemented and exercised by an automated test suite (532 backend
 tests) and real-data research scripts run outside CI. This README makes no claim of discovered
 trading alpha: the daily-strategy walk-forward script covers three of nine strategies with
 uncommitted output, and the Greenblatt screener has a committed result for one of six regime
@@ -22,7 +22,8 @@ honest evidence about the validation machinery, not a broad, already-proven perf
 - **Leakage-safe walk-forward optimization** - each fold picks parameters from training data only,
   then that frozen choice is scored once on the untouched test window.
 - **Realistic costs** - percentage-of-notional slippage and commission (default `0.0`),
-  position-size limits, and a max-drawdown halt, applied through the portfolio layer - see
+  position-size limits, and a max-drawdown halt evaluated on every bar's mark-to-market equity
+  (not only after a fill), applied through the portfolio layer - see
   [Causality-safe backtesting and costs](#causality-safe-backtesting-and-costs) for what isn't
   simulated.
 - **Schema-validated export** - Pydantic validates export structure and each strategy's parameter
@@ -81,8 +82,12 @@ is different: a flat USD fee, accepted and exported but deliberately not wired i
 portfolio has no flat-fee model. It, `max_daily_loss_pct`, and `max_open_positions` flow through to
 the AlphaLive export but aren't simulated here - the engine is single-ticker/single-position, with
 no multi-position cap, "rest of day" concept, or flat-fee model to enforce; they take effect once
-running in AlphaLive. The `max_drawdown_pct` halt is likewise only re-checked after an order fill,
-not on every mark-to-market update - see [Known limitations](#known-limitations).
+running in AlphaLive. The `max_drawdown_pct` halt is evaluated on every bar's mark-to-market
+equity update (the portfolio's single per-bar `record_value()` call, used by every simulation
+loop), not only after an order fill - a price-only drawdown with no order on the breach bar is
+detected the bar it happens, not whenever the next order happens to occur. `>=` the configured
+threshold triggers the halt (equality counts as a breach); the halt itself is a first-breach
+latch, not a rolling check - price recovering afterward doesn't clear it.
 
 ## Leakage-safe walk-forward optimization
 
@@ -140,10 +145,16 @@ Not every backtestable strategy is deployable. `POST /api/strategies/export` rej
 and explanation, rather than a config AlphaLive would only reject later. Both remain backtestable;
 neither is exportable, leaving **seven of the nine** strategies directly exportable.
 
-Contract and cross-engine evidence exist at three levels, which shouldn't be conflated:
+Contract and cross-engine evidence exist at four levels, which shouldn't be conflated:
 
 - **Export-time validation.** Pydantic validates the export structure and each strategy's
   parameter model before returning JSON.
+- **Local contract fixture (always runs).** `backend/tests/test_local_export_contract.py`
+  validates every exportable strategy's real export output against a small, versioned,
+  AlphaLab-only snapshot (`backend/tests/fixtures/export_contract_v1.0.json`) - field names,
+  nested block shapes, alias translations, and rejection of `rsi_simple`/`vwap_reversion`. It
+  requires no AlphaLive checkout, so unlike the next item it can't silently skip - it catches
+  AlphaLab's own export shape drifting, not whether AlphaLive would still accept it.
 - **Conditional schema-field parity.** `backend/tests/test_schema_contract.py` compares AlphaLab's
   and AlphaLive's Pydantic field sets when AlphaLive is checked out as a sibling directory. CI
   attempts that checkout with `continue-on-error: true`, skipping the module (not failing the
@@ -242,7 +253,7 @@ curl -X POST http://127.0.0.1:5050/api/strategies/export \
 Run from the repository root, using subshells so each command's `cd` doesn't leak into the next:
 
 ```bash
-(cd backend && source venv/bin/activate && pytest tests/ -v)   # 423 tests
+(cd backend && source venv/bin/activate && pytest tests/ -v)   # 532 tests
 (cd frontend && npm run test)                                   # 42 tests (Vitest)
 (cd frontend && npm run lint)                                    # ESLint (convention, not CI-enforced)
 ```
@@ -271,8 +282,6 @@ not as a runtime-verified service.
   [export contract and parity evidence](#alphalive-export-contract-and-parity-evidence).
 - **`max_daily_loss_pct`, `max_open_positions`, and `commission_per_trade` aren't simulated here** -
   accepted and exported, taking effect only once running in AlphaLive.
-- **The drawdown halt isn't a continuous, per-bar circuit breaker** - it runs only inside
-  `execute_order()`, after a fill, so a price-driven drawdown can go undetected until the next order.
 - **Only one of six Greenblatt regime windows has a committed result.**
 - **Only three daily strategies have a walk-forward script (two SPY windows), and its output isn't
   committed**; `ma_crossover`, `momentum_breakout`, `bollinger_breakout` have none. No strategy here
@@ -281,13 +290,15 @@ not as a runtime-verified service.
 
 ## Documentation, license and disclaimer
 
-- [`docs/STRATEGY_SCHEMA.md`](docs/STRATEGY_SCHEMA.md) - export-contract schema. Its "8 of the 9
-  are deployable" line is stale: the export route rejects both `rsi_simple` and `vwap_reversion`
-  (seven exportable, not eight); the export route and its strategy checks are authoritative for
-  that count.
-- `docs/MATH_EXPLAINER.md` repeats the broader Greenblatt claim (4 of 6 windows lost to
-  diversification) as narrative, not backed by a committed six-window result - only the 2022 Bear
-  window is committed (see [Results](#results)), so this README doesn't restate it as verified.
+- [`docs/STRATEGY_SCHEMA.md`](docs/STRATEGY_SCHEMA.md) - export-contract schema, including a
+  per-strategy field reference and a locally-run contract-fixture safeguard
+  (`backend/tests/test_local_export_contract.py`) that doesn't depend on AlphaLive being checked
+  out. The export route and its strategy checks remain authoritative for which strategies are
+  actually deployable (seven of nine - see
+  [AlphaLive export contract and parity evidence](#alphalive-export-contract-and-parity-evidence)).
+- `docs/MATH_EXPLAINER.md` covers the same math as this README with more derivation detail; its
+  Greenblatt section is scoped to the one committed 2022 Bear window (see [Results](#results)),
+  not a broader multi-window claim.
 
 **Risk disclaimer:** these strategies are experimental research examples, not investment advice.
 Performance figures are historical backtest results, not a forecast. Paper trading (via AlphaLive)

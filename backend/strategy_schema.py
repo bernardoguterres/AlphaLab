@@ -428,10 +428,25 @@ class RiskConfig(BaseModel):
         ge=1.0, le=100.0, description="Max % of portfolio per position"
     )
     max_daily_loss_pct: float = Field(
-        ge=0.1, le=50.0, description="Max portfolio loss per day (%)"
+        ge=0.1,
+        le=50.0,
+        description=(
+            "Max portfolio loss per day (%). AlphaLive-only: accepted, "
+            "validated, and passed through export unchanged; AlphaLab's "
+            "backtest engine does not simulate it (no 'rest of day' concept "
+            "in a bar-by-bar backtest) and it never affects AlphaLab's "
+            "returns/trades/metrics."
+        ),
     )
     max_open_positions: int = Field(
-        ge=1, le=50, description="Max concurrent positions per ticker"
+        ge=1,
+        le=50,
+        description=(
+            "Max concurrent positions per ticker. AlphaLive-only: accepted, "
+            "validated, and passed through export unchanged; AlphaLab's "
+            "backtest engine is single-ticker/single-position and does not "
+            "simulate this cap."
+        ),
     )
     portfolio_max_positions: int = Field(
         ge=1, le=100, description="Max total concurrent positions"
@@ -448,7 +463,17 @@ class RiskConfig(BaseModel):
         ),
     )
     commission_per_trade: float = Field(
-        ge=0.0, le=100.0, description="Broker commission per trade (USD)"
+        ge=0.0,
+        le=100.0,
+        description=(
+            "Flat broker commission per trade (USD). AlphaLive-only: "
+            "accepted, validated, and passed through export unchanged; "
+            "AlphaLab's Portfolio has no flat-fee commission model, only a "
+            "percentage-of-notional rate (backend/config.yaml's "
+            "backtest.commission, wired into every fill's cost) - the two "
+            "are conceptually distinct and not interchangeable. This field "
+            "never affects AlphaLab's simulated returns/trades/metrics."
+        ),
     )
 
     @model_validator(mode="after")

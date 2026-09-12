@@ -49,6 +49,17 @@ class BollingerRSICombo(BaseStrategy):
         if not (0 < p["rsi_oversold"] < p["rsi_overbought"] < 100):
             raise ValueError("Need 0 < rsi_oversold < rsi_overbought < 100")
 
+        self._reject_unknown_params(
+            {
+                "bb_period",
+                "bb_std",
+                "rsi_period",
+                "rsi_oversold",
+                "rsi_overbought",
+                "exit_at_middle",
+            }
+        )
+
     def required_columns(self) -> list[str]:
         return ["Close", "BB_Lower", "BB_Middle", "BB_Upper", "RSI"]
 

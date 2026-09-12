@@ -40,6 +40,17 @@ class BollingerBreakout(BaseStrategy):
         if p["cooldown_days"] < 0:
             raise ValueError("cooldown_days must be >= 0")
 
+        self._reject_unknown_params(
+            {
+                "bb_period",
+                "bb_std_dev",
+                "confirmation_bars",
+                "volume_filter",
+                "volume_threshold",
+                "cooldown_days",
+            }
+        )
+
     def required_columns(self) -> list[str]:
         cols = ["Close"]
         if self.params.get("volume_filter"):

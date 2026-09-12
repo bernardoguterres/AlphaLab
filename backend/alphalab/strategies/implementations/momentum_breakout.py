@@ -33,6 +33,18 @@ class MomentumBreakout(BaseStrategy):
         if p["volume_surge_pct"] < 100:
             raise ValueError("volume_surge_pct must be >= 100")
 
+        self._reject_unknown_params(
+            {
+                "lookback",
+                "volume_surge_pct",
+                "volume_avg_period",
+                "rsi_min",
+                "stop_loss_atr_mult",
+                "trailing_stop_atr_mult",
+                "cooldown_days",
+            }
+        )
+
     def required_columns(self) -> list[str]:
         return ["Close", "High", "Low", "Volume", "ATR", "RSI"]
 
