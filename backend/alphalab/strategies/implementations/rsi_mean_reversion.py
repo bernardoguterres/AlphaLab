@@ -107,6 +107,20 @@ class RSIMeanReversion(BaseStrategy):
         if p["rsi_period"] < 2:
             raise ValueError("rsi_period must be >= 2")
 
+        self._reject_unknown_params(
+            {
+                "rsi_period",
+                "oversold",
+                "overbought",
+                "use_bb_confirmation",
+                "use_adx_filter",
+                "adx_threshold",
+                "cooldown_days",
+                "stop_loss_atr_mult",
+                "max_holding_days",
+            }
+        )
+
     def required_columns(self) -> list[str]:
         # RSI is no longer read from the precomputed feature set - this
         # strategy computes its own RSI(rsi_period) locally (see rsi_wilder

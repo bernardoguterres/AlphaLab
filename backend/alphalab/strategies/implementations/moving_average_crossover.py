@@ -31,6 +31,17 @@ class MovingAverageCrossover(BaseStrategy):
         if p["short_window"] < 2:
             raise ValueError("short_window must be >= 2")
 
+        self._reject_unknown_params(
+            {
+                "short_window",
+                "long_window",
+                "volume_confirmation",
+                "volume_avg_period",
+                "min_separation_pct",
+                "cooldown_days",
+            }
+        )
+
     def required_columns(self) -> list[str]:
         cols = ["Close"]
         if self.params.get("volume_confirmation"):

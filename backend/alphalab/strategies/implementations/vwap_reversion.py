@@ -44,6 +44,17 @@ class VWAPReversion(BaseStrategy):
         if p["cooldown_days"] < 0:
             raise ValueError("cooldown_days must be >= 0")
 
+        self._reject_unknown_params(
+            {
+                "vwap_period",
+                "deviation_threshold",
+                "rsi_period",
+                "oversold",
+                "overbought",
+                "cooldown_days",
+            }
+        )
+
     def required_columns(self) -> list[str]:
         return ["Close", "High", "Low", "Volume", "RSI"]
 

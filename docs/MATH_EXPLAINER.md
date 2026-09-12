@@ -53,7 +53,15 @@ Every strategy follows the same shape: a set of pre-computed indicator columns, 
 | **RSI Simple** | RSI < 30 | RSI > 70 (textbook thresholds, no other filters — the "control group" strategy) |
 | **Greenblatt Weekly** | Weekly RSI < 35 **or** 10-week SMA crosses above 50-week SMA — *only for stocks that already passed the Greenblatt fundamental screen* | 20% trailing stop from the position's peak price, always active. Minimum hold: 52 weeks. Optional RSI/SMA exits exist but are off by default |
 
-**The project's own finding, worth internalizing**: all eight daily/intraday strategies backtest to negative or near-zero Sharpe ratio against buy-and-hold SPY, consistently, across every real dataset tested. That's not a bug — it's the actual, honestly-measured result of naive technical-indicator trading on liquid large caps, and it's *why* the project pivoted toward Greenblatt.
+**The project's own finding, worth internalizing**: on the datasets actually tested (see
+[README.md's Results section](../README.md#results) for exactly what that covers - a
+walk-forward script over three of the eight daily/intraday strategies, two SPY windows,
+uncommitted output), the daily/intraday strategies backtest to negative or near-zero Sharpe
+ratio against buy-and-hold SPY. That's not a bug — it's the actual, honestly-measured result of
+naive technical-indicator trading on liquid large caps as far as this repository's evidence
+goes, and it's *why* the project pivoted toward Greenblatt. It is not a claim that this holds
+for every strategy on every dataset; only three strategies have a committed walk-forward path
+at all, and its output isn't committed.
 
 ---
 
@@ -75,7 +83,27 @@ Lower combined rank = better. Buy the top N, hold roughly a year, rebalance. The
 
 Financials and utilities are excluded — EBIT-based ratios aren't meaningful for regulated, balance-sheet-driven businesses (a bank's "capital" is deposits, not fixed assets).
 
-**The honest caveat, already documented in this repo and worth repeating to any employer who asks**: a rigorous re-test found this specific ranking beats plain equal-weight diversification of the same qualified universe in only 2 of 6 historical windows tested, and loses in the other 4 — sometimes badly (an 11-point wrong-direction gap in the 2022 bear market). The formula is real and academically grounded; this implementation's edge over just diversifying is *not* validated by the evidence gathered so far. That distinction — knowing the difference between "backtests well" and "beats a naive baseline" — is the actual point of doing this rigorously.
+**The honest caveat, already documented in this repo and worth repeating to any employer who asks**: the committed evidence for this specific question is narrower than a full regime study.
+[`scripts/greenblatt_research_result.json`](../scripts/greenblatt_research_result.json) - the
+one window actually committed to this repository - covers the 2022 bear market only, and there
+the ranked strategy did *not* beat plain equal-weight diversification of the same qualified
+universe (Sharpe -1.16 vs. -0.39). `scripts/greenblatt_research.py` supports evaluating five
+more regime windows, but their output isn't committed, so this repository doesn't let a reader
+reproduce a "4 of 6 windows" figure - only the one window above. The formula is real and
+academically grounded; this implementation's edge over just diversifying is *not* validated by
+the committed evidence. That distinction — knowing the difference between "backtests well" and
+"beats a naive baseline," and between "narrative" and "something this repo lets you check" — is
+the actual point of doing this rigorously.
+
+The committed `2022 Bear` figures above were produced before `Portfolio`'s max-drawdown halt
+became a per-bar check (it now evaluates every mark-to-market update, not only after an order
+fill). This does not change the committed result: `PortfolioConstructor` rebalances annually
+(`rebalance_period_bars=52`) and the window is exactly 52 weekly observations, so the only order
+execution in the whole run happens at the first bar, before any drawdown exists to detect -
+there is no later order in-window for a halt, old or new, to gate. The committed figures were
+not regenerated to confirm this empirically; the conclusion follows from reading
+`PortfolioConstructor._run_static()`'s and `Portfolio.record_value()`'s current control flow, not
+from re-running the backtest.
 
 ---
 
@@ -132,7 +160,13 @@ $$SR_0 = \hat\sigma(SR)\Big[(1-\gamma)\,\Phi^{-1}\!\Big(1-\tfrac{1}{N}\Big) + \g
 $$DSR = \Phi\!\left(\frac{SR - SR_0}{\hat\sigma(SR)}\right)$$
 Where $\gamma_3$/$\gamma_4$ are the return distribution's skewness and (Pearson, not excess) kurtosis, $N$ is the number of strategies/trials tried (the multiple-testing correction), $T$ the number of return observations, $\gamma \approx 0.5772$ (Euler-Mascheroni constant), and $\Phi$ the standard normal CDF. $SR_0$ is "the best Sharpe ratio you'd expect from N *unskilled* trials by pure luck" — DSR is the probability your actual Sharpe genuinely exceeds that luck baseline. Conventional bar: DSR > 0.95.
 
-**The finding**: the faithful Greenblatt portfolio beat both SPY buy-and-hold and the Faber overlay descriptively, but its DSR (0.55 in one test window, 0.65 in another) never cleared 0.95. Verdict: **not statistically validated**, despite looking good on the surface — exactly the trap DSR exists to catch.
+**The finding, on the one window actually committed to this repository (2022 Bear -
+[`scripts/greenblatt_research_result.json`](../scripts/greenblatt_research_result.json))**: the
+ranked strategy underperformed both SPY buy-and-hold and the equal-weight-diversification
+benchmark there, and its DSR was `0.0083` — nowhere near the 0.95 bar. Verdict on the committed
+evidence: **not statistically validated**. Other regime windows aren't committed, so this repo
+doesn't support a broader claim across multiple windows — exactly the discipline DSR is meant
+to enforce in the first place: don't report a number you can't reproduce.
 
 ### Faber Overlay (2007/2013 tactical timing benchmark)
 A mandatory second benchmark alongside plain buy-and-hold, because buy-and-hold isn't actually the hardest bar to clear:
@@ -140,7 +174,7 @@ $$\text{Invested}(t) = \begin{cases}\text{True} & \text{if } \text{Close}(t) > S
 Decided once a month using a 10-month simple moving average on monthly closes. If a strategy claims a "timing" or "trend" edge, it should beat this — a genuinely simple, well-documented timing rule — not just an uninvested buy-and-hold baseline.
 
 ### Equal-Weight Diversification Benchmark
-The check that actually caught Greenblatt's real weakness: compare the ranked strategy's return not just to SPY, but to **plain equal-weighting of the same qualified universe**, with zero ranking logic at all. If the ranked strategy can't beat "hold everything that passed the filter, weighted equally," the ranking itself isn't adding value — only the *filter* is (and diversification is doing the rest). This is exactly what happened in 4 of 6 windows.
+The check that actually caught Greenblatt's real weakness: compare the ranked strategy's return not just to SPY, but to **plain equal-weighting of the same qualified universe**, with zero ranking logic at all. If the ranked strategy can't beat "hold everything that passed the filter, weighted equally," the ranking itself isn't adding value — only the *filter* is (and diversification is doing the rest). In the one window this repository has committed evidence for (2022 Bear), that's exactly what happened: the ranked strategy lost to the equal-weight basket of the same universe.
 
 ### Walk-Forward Validation
 Split history into non-overlapping train/test windows; parameters are only ever chosen using the train window, then applied unmodified to the following, previously-unseen test window. Protects against the single most common backtest failure mode: tuning parameters on the same data you're using to "prove" the strategy works, which will always look great and mean nothing.
@@ -149,4 +183,4 @@ Split history into non-overlapping train/test windows; parameters are only ever 
 
 ## The one-paragraph version, for an interview
 
-*"I built a backtesting engine with realistic execution (next-bar fills, slippage, commissions, no look-ahead bias), implemented both standard technical-indicator strategies and Joel Greenblatt's Magic Formula, and — critically — didn't stop at 'does this backtest look good.' I applied walk-forward validation, a Deflated Sharpe Ratio correction for multiple-testing and non-normal returns, and an equal-weight diversification benchmark. The honest result: none of the eight technical strategies beat buy-and-hold, and even the academically-grounded Greenblatt ranking didn't clear the statistical significance bar or reliably beat simply diversifying across the same filtered universe. That's not a failed project — that's what rigorous quantitative validation is supposed to produce most of the time, and knowing how to tell the difference between 'looks good' and 'is real' is the actual skill."*
+*"I built a backtesting engine with realistic execution (next-bar fills, slippage, commissions, no look-ahead bias), implemented both standard technical-indicator strategies and Joel Greenblatt's Magic Formula, and — critically — didn't stop at 'does this backtest look good.' I applied walk-forward validation, a Deflated Sharpe Ratio correction for multiple-testing and non-normal returns, and an equal-weight diversification benchmark. The honest result, on the evidence this repository actually lets you reproduce: the technical strategies tested this way didn't beat buy-and-hold, and even the academically-grounded Greenblatt ranking, on the one committed regime window, didn't clear the statistical significance bar or beat simply diversifying across the same filtered universe. That's not a failed project — that's what rigorous quantitative validation is supposed to produce most of the time, and knowing how to tell the difference between 'looks good,' 'is real,' and 'is something I can actually show you the receipts for' is the actual skill."*

@@ -38,9 +38,19 @@ Version changes:
 ## Full Schema
 
 The `performance` block below uses illustrative example values to show the field shapes -
-they are not measured results from a real backtest. See the repository root's
-`END_TO_END_VALIDATION.md` for actual, evidence-backed performance and cross-system parity
-figures.
+they are not measured results from a real backtest. The schema itself is defined in
+[`backend/strategy_schema.py`](../backend/strategy_schema.py) (`StrategyExportSchema` and its
+per-strategy parameter models); `POST /api/strategies/export`
+(`backend/alphalab/api/blueprints/backtest.py`) is what actually validates and returns it, and
+is authoritative over this document for current behavior. Contract-drift protection at the
+AlphaLab level lives in [`backend/tests/test_local_export_contract.py`](../backend/tests/test_local_export_contract.py)
+(an always-running check against a versioned local fixture,
+[`backend/tests/fixtures/export_contract_v1.0.json`](../backend/tests/fixtures/export_contract_v1.0.json))
+and, when AlphaLive is checked out as a sibling repository,
+[`backend/tests/test_schema_contract.py`](../backend/tests/test_schema_contract.py) (optional,
+field-level parity against AlphaLive's own live schema). Neither test proves signal-level
+parity, only structural compatibility - there is no repository-wide AlphaLab/AlphaLive parity
+percentage anywhere in this repository.
 
 ```json
 {
@@ -190,7 +200,14 @@ All required fields in `metadata.performance`:
 
 ## Per-Strategy Parameters
 
-All 9 strategies below are implemented and tested in AlphaLab (backtesting). 8 of the 9 are deployable to AlphaLive; `rsi_simple` is deliberately research/backtest-only - `POST /api/strategies/export` rejects it outright (422, with a clear "use rsi_mean_reversion if you need a deployable RSI strategy" message) rather than producing an export AlphaLive would only reject later as an unknown strategy. This is a resolved, intentional decision (2026-08-15), not an open gap. AlphaLab's internal strategy classes take their own untyped params dict (see note in [Adding New Strategies](#adding-new-strategies)), with defaults applied via `setdefault()` in each strategy's `validate_params()`. **The JSON shown in this section is the exported/wire format** - what actually appears in `strategy.parameters` after `POST /api/strategies/export`, which is not always identical to AlphaLab's internal field names. Every `parameters` block also carries a `strategy_type` field matching `strategy.name` (a discriminator added 2026-07-14 - see [Versioning Policy](#versioning-policy)); omitted from the examples below for brevity but present in every real export.
+All 9 strategies below are implemented and tested in AlphaLab (backtesting). **Seven of the 9
+are deployable to AlphaLive.** `POST /api/strategies/export` rejects two of them outright with a
+422 and an explanation, rather than producing an export AlphaLive would only reject later:
+`rsi_simple` (deliberately research/backtest-only - AlphaLive has no matching strategy name of
+its own) and `vwap_reversion` (needs an intraday timeframe, 1Hour/15Min, that AlphaLab's data
+layer can't fetch - it only pulls 1Day/1Week/1Month bars). Both remain fully backtestable in
+AlphaLab; neither is exportable. This is a resolved, intentional decision (2026-08-15), not an
+open gap. AlphaLab's internal strategy classes take their own untyped params dict (see note in [Adding New Strategies](#adding-new-strategies)), with defaults applied via `setdefault()` in each strategy's `validate_params()`. **The JSON shown in this section is the exported/wire format** - what actually appears in `strategy.parameters` after `POST /api/strategies/export`, which is not always identical to AlphaLab's internal field names. Every `parameters` block also carries a `strategy_type` field matching `strategy.name` (a discriminator added 2026-07-14 - see [Versioning Policy](#versioning-policy)); omitted from the examples below for brevity but present in every real export.
 
 **Export field-name translation (2026-07-14):** four strategies have internal AlphaLab field names that differ from what AlphaLive actually reads; `_build_export_json`'s export-mapping layer (`backend/alphalab/api/helpers.py`) renames them automatically - you never need to do this by hand when exporting through the API, but if you hand-craft a config JSON for AlphaLive, use the exported names below, not AlphaLab's internal ones (`short_window`/`long_window`, `volume_surge_pct`/`volume_avg_period`, `bb_period`/`bb_std_dev`, greenblatt's own `trailing_stop_pct`).
 
@@ -341,6 +358,12 @@ Trades N-consecutive-close breakouts above/below Bollinger Bands with optional v
 ### 6. VWAP Reversion (`vwap_reversion`)
 
 Mean reversion from a rolling VWAP with RSI confirmation.
+
+**Not exportable.** `POST /api/strategies/export` rejects `vwap_reversion` with a 422: it
+requires an intraday timeframe (1Hour/15Min), but AlphaLab's data layer can only fetch
+1Day/1Week/1Month bars, so no export could ever satisfy AlphaLive's own intraday validation
+(`StrategyExportSchema.validate_timeframe_compatibility`). Backtesting it in AlphaLab is still
+fully supported.
 
 ```json
 {
@@ -658,6 +681,18 @@ The `safety_limits` block provides **per-strategy customization** of stopping co
 ---
 
 ## Versioning Policy
+
+### Local contract safeguard
+
+`backend/tests/fixtures/export_contract_v1.0.json` is a small, versioned snapshot of this
+export contract, maintained entirely on the AlphaLab side (no AlphaLive code is copied into
+it). `backend/tests/test_local_export_contract.py` validates every exportable strategy's real
+export output against it on every ordinary test run - unlike `test_schema_contract.py`
+(the cross-repo field-parity check), this doesn't require AlphaLive checked out as a sibling
+directory, so it can't silently skip. It only catches AlphaLab's own export shape drifting from
+what this document describes; it cannot prove AlphaLive would still accept a given export. See
+the fixture's own `refresh_policy` field for when to update it (a deliberate schema or
+export-mapping change) versus treating a diff as a real regression.
 
 ### Schema Version Format
 

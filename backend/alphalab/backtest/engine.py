@@ -27,6 +27,7 @@ class BacktestResults:
     metrics: dict | None = None
     monte_carlo: dict | None = None
     benchmark: dict | None = None
+    drawdown_halt: dict | None = None
 
     @property
     def total_return_pct(self) -> float:
@@ -46,6 +47,7 @@ class BacktestResults:
             "metrics": self.metrics,
             "monte_carlo": self.monte_carlo,
             "benchmark": self.benchmark,
+            "drawdown_halt": self.drawdown_halt,
         }
 
 
@@ -135,6 +137,15 @@ class BacktestEngine:
             equity_curve=portfolio.value_history,
             trades=portfolio.ledger,
             signals=signals,
+            drawdown_halt={
+                "halted": portfolio.halted,
+                "halted_at": (
+                    str(portfolio.halted_at)
+                    if portfolio.halted_at is not None
+                    else None
+                ),
+                "halted_drawdown_pct": portfolio.halted_drawdown_pct,
+            },
         )
 
         # Buy-and-hold benchmark

@@ -41,6 +41,8 @@ class RSISimple(BaseStrategy):
         if not (0 < p["oversold"] < p["overbought"] < 100):
             raise ValueError("Need 0 < oversold < overbought < 100")
 
+        self._reject_unknown_params({"period", "oversold", "overbought"})
+
     def required_columns(self) -> list[str]:
         return ["Close", "RSI"]
 
