@@ -20,6 +20,11 @@ class QualityReport:
     duplicates_removed: int = 0
     confidence: float = 1.0
     warnings: list[str] = field(default_factory=list)
+    # Informational flags (extreme-but-plausible returns/volumes, dropped
+    # long gaps). Genuine market moves are KEPT and do not lower confidence.
+    notes: list[str] = field(default_factory=list)
+    outliers_flagged: int = 0
+    rows_dropped_for_gaps: int = 0
 
     @property
     def is_acceptable(self) -> bool:
@@ -34,6 +39,9 @@ class QualityReport:
             "confidence": round(float(self.confidence), 4),
             "is_acceptable": bool(self.is_acceptable),
             "warnings": self.warnings,
+            "notes": self.notes,
+            "outliers_flagged": int(self.outliers_flagged),
+            "rows_dropped_for_gaps": int(self.rows_dropped_for_gaps),
         }
 
 
@@ -86,9 +94,12 @@ class DataValidator:
         # Step 3: OHLC consistency
         df = self._fix_ohlc_consistency(df, report)
 
-        # Step 4: Outlier detection and removal
-        df, removed = self._remove_outliers(df, report)
-        report.outliers_removed = removed
+        # Step 4: Outlier detection - FLAG only. Rows are never removed and
+        # values never capped: the largest moves (crash days, earnings gaps)
+        # are real and are exactly what a backtest must see, and capping
+        # with full-sample statistics leaked future information into past
+        # bars (2026-10 audit: e.g. 2020-03-12/16 silently dropped).
+        self._flag_outliers(df, report)
 
         # Step 5: Volume validation
         self._validate_volume(df, report)
@@ -118,37 +129,43 @@ class DataValidator:
     def _handle_missing_data(
         self, df: pd.DataFrame, report: QualityReport
     ) -> tuple[pd.DataFrame, int]:
-        """Fill small gaps with ffill, interpolate larger ones, flag for review."""
+        """Causal gap handling only.
+
+        Gaps of <= max_ffill_gap bars are forward-filled (past information
+        only). Longer gaps are DROPPED - the previous linear interpolation
+        drew the line to the post-gap price, so bars inside the gap were
+        built from future information. Volume is forward-filled only (it
+        was also back-filled). Leading values with no history are dropped.
+        """
         price_cols = [c for c in ["Open", "High", "Low", "Close"] if c in df.columns]
         total_imputed = 0
+        drop_mask = pd.Series(False, index=df.index)
 
         for col in price_cols:
             nans = df[col].isna()
             if not nans.any():
                 continue
+            run_id = (~nans).cumsum()
+            run_len = nans.groupby(run_id).transform("sum")
+            long_gap = nans & (run_len > self.max_ffill_gap)
+            leading = nans & (run_id == 0)
+            drop_mask |= long_gap | leading
+            total_imputed += int((nans & ~long_gap & ~leading).sum())
+            df[col] = df[col].ffill(limit=self.max_ffill_gap)
 
-            # Identify runs of NaN
-            groups = (~nans).cumsum()
-            nan_groups = nans.groupby(groups)
+        if drop_mask.any():
+            n = int(drop_mask.sum())
+            report.rows_dropped_for_gaps = n
+            report.notes.append(
+                f"Dropped {n} rows inside gaps longer than {self.max_ffill_gap} bars "
+                f"(not interpolated - that would use post-gap prices)"
+            )
+            df = df[~drop_mask]
 
-            for _, group in nan_groups:
-                if not group.any():
-                    continue
-                gap_len = group.sum()
-                if gap_len <= self.max_ffill_gap:
-                    df[col] = df[col].ffill(limit=self.max_ffill_gap)
-                else:
-                    df[col] = df[col].interpolate(method="linear")
-                    report.warnings.append(
-                        f"Interpolated {gap_len}-day gap in {col} (review recommended)"
-                    )
-                total_imputed += gap_len
-
-        # Forward-fill volume gaps
         if "Volume" in df.columns:
-            vol_nans = df["Volume"].isna().sum()
+            vol_nans = int(df["Volume"].isna().sum())
             if vol_nans:
-                df["Volume"] = df["Volume"].ffill().bfill()
+                df["Volume"] = df["Volume"].ffill().fillna(0.0)
                 total_imputed += vol_nans
 
         return df, total_imputed
@@ -187,46 +204,36 @@ class DataValidator:
     # Outlier detection
     # ------------------------------------------------------------------
 
-    def _remove_outliers(
-        self, df: pd.DataFrame, report: QualityReport
-    ) -> tuple[pd.DataFrame, int]:
-        """Use IQR on returns and Z-score on volume to detect outliers."""
-        removed = 0
-        mask = pd.Series(True, index=df.index)
-
-        # Price outliers via IQR on daily returns
+    def _flag_outliers(self, df: pd.DataFrame, report: QualityReport) -> None:
+        """Flag (never remove/cap) extreme daily returns (IQR) and volumes
+        (Z-score) as informational notes for review."""
+        flagged = 0
         if "Close" in df.columns and len(df) > 20:
             returns = df["Close"].pct_change(fill_method=None).dropna()
-            q1 = returns.quantile(0.25)
-            q3 = returns.quantile(0.75)
+            q1, q3 = returns.quantile(0.25), returns.quantile(0.75)
             iqr = q3 - q1
-            lower = q1 - self.iqr_factor * iqr
-            upper = q3 + self.iqr_factor * iqr
-            outlier_returns = (returns < lower) | (returns > upper)
-            if outlier_returns.any():
-                count = outlier_returns.sum()
-                mask.loc[outlier_returns[outlier_returns].index] = False
-                report.warnings.append(f"Flagged {count} price return outliers (IQR)")
-
-        # Volume outliers via Z-score
+            extreme = returns[
+                (returns < q1 - self.iqr_factor * iqr)
+                | (returns > q3 + self.iqr_factor * iqr)
+            ]
+            if len(extreme):
+                flagged += len(extreme)
+                dates = ", ".join(
+                    str(pd.Timestamp(d).date()) for d in extreme.index[:5]
+                )
+                report.notes.append(
+                    f"{len(extreme)} extreme daily return(s) kept (e.g. {dates}) - "
+                    f"verify against corporate actions if unexpected"
+                )
         if "Volume" in df.columns and len(df) > 20:
-            df["Volume"] = df["Volume"].astype(float)
-            vol = df["Volume"].replace(0, np.nan)
+            vol = df["Volume"].astype(float).replace(0, np.nan)
             if vol.std() > 0:
                 z = (vol - vol.mean()) / vol.std()
-                vol_outlier = z.abs() > self.zscore_threshold
-                if vol_outlier.any():
-                    count = vol_outlier.sum()
-                    report.warnings.append(
-                        f"Flagged {count} volume anomalies (Z-score)"
-                    )
-                    # Cap rather than remove volume outliers
-                    upper_cap = vol.mean() + self.zscore_threshold * vol.std()
-                    df.loc[vol_outlier, "Volume"] = upper_cap
-
-        removed = (~mask).sum()
-        df = df[mask]
-        return df, removed
+                n = int((z.abs() > self.zscore_threshold).sum())
+                if n:
+                    flagged += n
+                    report.notes.append(f"{n} extreme volume bar(s) kept unmodified")
+        report.outliers_flagged = flagged
 
     # ------------------------------------------------------------------
     # Volume validation
@@ -291,7 +298,8 @@ class DataValidator:
         """Aggregate quality signals into a 0-1 confidence score."""
         score = 1.0
         # Penalize for issues
-        score -= min(0.2, report.outliers_removed * 0.01)
+        # outliers_removed stays 0 (nothing is removed); flagged genuine
+        # moves are informational notes and do not reduce confidence.
         score -= min(0.2, report.values_imputed * 0.005)
         score -= min(0.1, report.duplicates_removed * 0.02)
         score -= min(0.3, len(report.warnings) * 0.03)

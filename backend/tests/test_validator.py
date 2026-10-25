@@ -79,7 +79,26 @@ class TestDataValidator:
         df.iloc[100, df.columns.get_loc("Close")] = df.iloc[99]["Close"] * 5
         v = DataValidator(iqr_factor=2.0)
         cleaned, report = v.validate_and_clean(df, "OUTLIER")
-        assert report.outliers_removed >= 1
+        # Flagged, never removed: extreme moves are kept (2026-10)
+        assert report.outliers_flagged >= 1
+        assert report.outliers_removed == 0
+        assert len(cleaned) == len(df)
+        assert cleaned["Close"].iloc[100] == df["Close"].iloc[100]
+
+    def test_long_gap_is_dropped_not_interpolated_from_future_prices(self):
+        df = _make_ohlcv(100)
+        df.iloc[30:36, df.columns.get_loc("Close")] = np.nan  # 6-bar gap > 3
+        v = DataValidator(max_ffill_gap=3)
+        cleaned, report = v.validate_and_clean(df, "GAP")
+        assert report.rows_dropped_for_gaps == 6
+        assert len(cleaned) == 94
+        assert not cleaned.index.isin(df.index[30:36]).any()
+
+    def test_volume_is_not_capped_with_full_sample_statistics(self):
+        df = _make_ohlcv(200)
+        df.iloc[150, df.columns.get_loc("Volume")] = df["Volume"].mean() * 50
+        cleaned, _ = DataValidator().validate_and_clean(df, "VOL")
+        assert cleaned["Volume"].iloc[150] == df["Volume"].iloc[150]
 
     def test_missing_data_imputation(self):
         df = _make_ohlcv(100)
