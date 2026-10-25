@@ -146,7 +146,7 @@ Contract and cross-engine evidence exist at four levels, which shouldn't be conf
   parameter model before returning JSON.
 - **Local contract fixture (always runs).** `backend/tests/test_local_export_contract.py` validates
   every exportable strategy's real, final export JSON against a small, versioned, AlphaLab-only
-  snapshot (`backend/tests/fixtures/export_contract_v1.0.json`) - field names, nested block shapes,
+  snapshot (`backend/tests/fixtures/export_contract_v1.2.json`) - field names, nested block shapes,
   alias translations, and rejection of `rsi_simple`/`vwap_reversion`. It needs no AlphaLive checkout
   and can't silently skip, but it only catches AlphaLab's own export drift, not whether a future
   AlphaLive version would still accept it, and it doesn't prove signal parity.
@@ -248,7 +248,7 @@ curl -X POST http://127.0.0.1:5050/api/strategies/export \
 Run from the repository root, using subshells so each command's `cd` doesn't leak into the next:
 
 ```bash
-(cd backend && source venv/bin/activate && pytest tests/ -v)   # 532 tests
+(cd backend && source venv/bin/activate && pytest tests/ -v)   # 560 tests
 (cd frontend && npm run test)                                   # 42 tests (Vitest)
 (cd frontend && npm run lint)                                    # ESLint (convention, not CI-enforced)
 ```
