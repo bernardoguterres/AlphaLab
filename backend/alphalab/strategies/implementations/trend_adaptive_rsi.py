@@ -14,6 +14,7 @@ Target: 10-20 trades/month on daily bars, 2-4/day on 15Min bars.
 import pandas as pd
 
 from ..base_strategy import BaseStrategy
+from ..indicators import rsi_ewm
 from ...utils.logger import setup_logger
 
 logger = setup_logger("alphalab.strategy.trend_adaptive")
@@ -82,7 +83,7 @@ class TrendAdaptiveRSI(BaseStrategy):
         signals = self._init_signals_frame(data)
 
         close = data["Close"]
-        rsi = data["RSI"]
+        rsi = rsi_ewm(data["Close"], p["rsi_period"])
         sma_col = f"SMA_{p['trend_sma']}"
 
         if sma_col not in data.columns:

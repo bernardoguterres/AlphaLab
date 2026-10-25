@@ -3,6 +3,7 @@
 import pandas as pd
 
 from ..base_strategy import BaseStrategy
+from ..indicators import rsi_ewm
 from ...utils.logger import setup_logger
 
 logger = setup_logger("alphalab.strategy.vwap_reversion")
@@ -84,7 +85,7 @@ class VWAPReversion(BaseStrategy):
         lower_band = vwap - (deviation * vwap_std)
 
         # Get RSI
-        rsi = data["RSI"]
+        rsi = rsi_ewm(data["Close"], p["rsi_period"])
 
         # Track position state: 0 = no position, 1 = long, -1 = short
         position = 0

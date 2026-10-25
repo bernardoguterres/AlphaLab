@@ -12,6 +12,7 @@ Target: 10-20 trades/month on daily bars, 2-5/day on 15Min bars.
 import pandas as pd
 
 from ..base_strategy import BaseStrategy
+from ..indicators import bollinger, rsi_ewm
 from ...utils.logger import setup_logger
 
 logger = setup_logger("alphalab.strategy.bollinger_rsi")
@@ -74,9 +75,10 @@ class BollingerRSICombo(BaseStrategy):
         signals = self._init_signals_frame(data)
 
         close = data["Close"]
-        bb_lower = data["BB_Lower"]
-        bb_middle = data["BB_Middle"]
-        rsi = data["RSI"]
+        # From this strategy's own parameters (the fixed BB_*/RSI feature
+        # columns ignored non-default bb_period/bb_std/rsi_period).
+        bb_lower, bb_middle, _ = bollinger(close, p["bb_period"], p["bb_std"])
+        rsi = rsi_ewm(close, p["rsi_period"])
 
         # State machine
         in_position = False

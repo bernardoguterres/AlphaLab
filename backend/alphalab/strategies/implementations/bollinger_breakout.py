@@ -9,13 +9,22 @@ logger = setup_logger("alphalab.strategy.bb_breakout")
 
 
 class BollingerBreakout(BaseStrategy):
-    """Generate signals on consecutive closes outside Bollinger Bands.
+    """Long-only Bollinger Band breakout with confirmation and volume filter.
 
-    BUY: Price closes above upper BB for confirmation_bars consecutive bars
-    SELL: Price closes below lower BB for confirmation_bars consecutive bars
-    EXIT: Price returns to middle band (SMA)
+    BUY (flat): price closes above the upper band for `confirmation_bars`
+        consecutive bars, and (if volume_filter) volume >= 20-bar average x
+        volume_threshold. Entries are subject to `cooldown_days` bars since
+        the previous signal.
+    SELL (long): price returns to the middle band - close <= SMA x 1.01
+        (i.e. within 1% above the SMA, or anywhere below it).
 
-    Includes optional volume filter and uses next-bar execution.
+    Corrected 2026-10: the previous version also modelled a SHORT leg (a
+    lower-band breakdown set position -1 and a later return to the middle
+    emitted +1 to "cover"). Every consumer is long-only, so that +1 was
+    executed as a LONG ENTRY and could stack onto an existing long. The
+    exit window was also symmetric (|close/SMA - 1| <= 1%), so a long that
+    gapped straight through the middle band never exited. Exits are no
+    longer subject to cooldown (see BaseStrategy._apply_cooldown).
     """
 
     name = "Bollinger_Breakout"
@@ -62,78 +71,53 @@ class BollingerBreakout(BaseStrategy):
         period = p["bb_period"]
         std_dev = p["bb_std_dev"]
         confirmation = p["confirmation_bars"]
+        cooldown = p["cooldown_days"]
         close = data["Close"]
 
-        # Calculate Bollinger Bands
+        # Bollinger Bands (sample std, ddof=1 - pandas default)
         sma = close.rolling(period, min_periods=period).mean()
         rolling_std = close.rolling(period, min_periods=period).std()
         upper_band = sma + (rolling_std * std_dev)
-        lower_band = sma - (rolling_std * std_dev)
 
         signals = self._init_signals_frame(data)
 
-        # Check for consecutive closes above/below bands
-        above_upper = close > upper_band
-        below_lower = close < lower_band
-        at_middle = (close >= sma * 0.99) & (close <= sma * 1.01)  # Within 1% of SMA
+        above_upper = (close > upper_band).astype(int)
+        consecutive_above = (
+            above_upper.rolling(confirmation).sum() >= confirmation
+        ).to_numpy()
+        exit_zone = (close <= sma * 1.01).to_numpy()
 
-        # Vectorized consecutive-bar check (replaces O(n·m) slice loop)
-        consecutive_above = above_upper.rolling(confirmation).sum() >= confirmation
-        consecutive_below = below_lower.rolling(confirmation).sum() >= confirmation
-
-        # Volume filter (optional)
         vol_ok = pd.Series(True, index=data.index)
         if p["volume_filter"] and "Volume" in data.columns:
             vol_avg = data["Volume"].rolling(20).mean()
             vol_ok = data["Volume"] >= (vol_avg * p["volume_threshold"])
+        vol_ok = vol_ok.to_numpy()
 
-        # State machine for position tracking (scalar avoids SettingWithCopyWarning)
-        current_position = 0
+        close_arr = close.to_numpy()
+        upper_arr = upper_band.to_numpy()
+        sig_col = signals.columns.get_loc("signal")
+        conf_col = signals.columns.get_loc("confidence")
+        reason_col = signals.columns.get_loc("reason")
+
+        in_position = False
+        last_signal_bar = -cooldown - 1
         for i in range(len(data)):
-            # Entry signals (only if no position)
-            if current_position == 0:
-                # BUY signal: consecutive closes above upper band + volume
-                if consecutive_above.iloc[i] and vol_ok.iloc[i]:
-                    signals.iloc[i, signals.columns.get_loc("signal")] = 1
-                    signals.iloc[i, signals.columns.get_loc("reason")] = (
-                        f"{confirmation} closes above upper BB"
-                    )
-                    distance_pct = (
-                        (close.iloc[i] - upper_band.iloc[i]) / upper_band.iloc[i]
-                    ) * 100
-                    signals.iloc[i, signals.columns.get_loc("confidence")] = min(
-                        distance_pct / 2, 1.0
-                    )
-                    current_position = 1
-
-                # SELL signal: consecutive closes below lower band + volume
-                elif consecutive_below.iloc[i] and vol_ok.iloc[i]:
-                    signals.iloc[i, signals.columns.get_loc("signal")] = -1
-                    signals.iloc[i, signals.columns.get_loc("reason")] = (
-                        f"{confirmation} closes below lower BB"
-                    )
-                    distance_pct = (
-                        (lower_band.iloc[i] - close.iloc[i]) / lower_band.iloc[i]
-                    ) * 100
-                    signals.iloc[i, signals.columns.get_loc("confidence")] = min(
-                        distance_pct / 2, 1.0
-                    )
-                    current_position = -1
-
-            # Exit signals (if in position)
-            elif current_position != 0:
-                if at_middle.iloc[i]:
-                    signals.iloc[i, signals.columns.get_loc("signal")] = (
-                        -current_position
-                    )
-                    signals.iloc[i, signals.columns.get_loc("reason")] = (
-                        "Price returned to middle band"
-                    )
-                    signals.iloc[i, signals.columns.get_loc("confidence")] = 0.5
-                    current_position = 0
-
-        # Apply cooldown
-        signals = self._apply_cooldown(signals, p["cooldown_days"])
+            if not in_position:
+                if i - last_signal_bar <= cooldown:
+                    continue
+                if consecutive_above[i] and vol_ok[i]:
+                    signals.iat[i, sig_col] = 1
+                    signals.iat[i, reason_col] = f"{confirmation} closes above upper BB"
+                    distance_pct = (close_arr[i] - upper_arr[i]) / upper_arr[i] * 100
+                    signals.iat[i, conf_col] = min(distance_pct / 2, 1.0)
+                    in_position = True
+                    last_signal_bar = i
+            elif exit_zone[i]:
+                signals.iat[i, sig_col] = -1
+                signals.iat[i, reason_col] = "Price returned to middle band"
+                signals.iat[i, conf_col] = 0.5
+                in_position = False
+                last_signal_bar = i
 
         logger.info(
             "%s generated %d signals on %d bars",
