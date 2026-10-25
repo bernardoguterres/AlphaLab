@@ -9,7 +9,7 @@ All models use Pydantic v2 with strict validation.
 from datetime import datetime
 from typing import Annotated, Literal, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import ConfigDict, BaseModel, Field, field_validator, model_validator
 
 # Import migration utilities (if migrations package exists)
 try:
@@ -35,6 +35,8 @@ class MACrossoverParams(BaseModel):
     - the rename happens only at the export-mapping layer (helpers.py).
     """
 
+    model_config = ConfigDict(extra="forbid")  # never silently drop a param
+
     strategy_type: Literal["ma_crossover"] = "ma_crossover"
     fast_period: int = Field(ge=2, le=500, description="Short MA period")
     slow_period: int = Field(ge=3, le=500, description="Long MA period")
@@ -59,6 +61,8 @@ class MACrossoverParams(BaseModel):
 class RSIMeanReversionParams(BaseModel):
     """RSI Mean Reversion strategy parameters."""
 
+    model_config = ConfigDict(extra="forbid")  # never silently drop a param
+
     strategy_type: Literal["rsi_mean_reversion"] = "rsi_mean_reversion"
     rsi_period: int = Field(ge=2, le=100, description="RSI calculation period")
     oversold: int = Field(ge=1, le=49, description="RSI buy threshold")
@@ -79,6 +83,12 @@ class RSIMeanReversionParams(BaseModel):
     )
     max_holding_days: int = Field(
         ge=1, le=365, description="Max position holding period"
+    )
+    # Was missing until 2026-10: pydantic silently dropped AlphaLab's
+    # cooldown_days from every rsi_mean_reversion export, so AlphaLive ran
+    # its own default whatever the backtest used.
+    cooldown_days: int = Field(
+        default=3, ge=0, le=100, description="Min bars between signals"
     )
 
     @model_validator(mode="after")
@@ -119,6 +129,8 @@ class RSISimpleParams(BaseModel):
     decision - not resolved by this fix.
     """
 
+    model_config = ConfigDict(extra="forbid")  # never silently drop a param
+
     strategy_type: Literal["rsi_simple"] = "rsi_simple"
     period: int = Field(default=14, ge=2, le=100, description="RSI calculation period")
     oversold: int = Field(default=40, ge=1, le=49, description="RSI buy threshold")
@@ -141,6 +153,8 @@ class MomentumBreakoutParams(BaseModel):
     layer (helpers.py) converts volume_surge_pct/100 -> surge_pct (a ratio,
     e.g. 1.5x) and renames volume_avg_period -> volume_ma_period.
     """
+
+    model_config = ConfigDict(extra="forbid")  # never silently drop a param
 
     strategy_type: Literal["momentum_breakout"] = "momentum_breakout"
     lookback: int = Field(ge=5, le=200, description="Breakout lookback period")
@@ -171,6 +185,8 @@ class BollingerBreakoutParams(BaseModel):
     export-mapping layer (helpers.py) renames them.
     """
 
+    model_config = ConfigDict(extra="forbid")  # never silently drop a param
+
     strategy_type: Literal["bollinger_breakout"] = "bollinger_breakout"
     period: int = Field(ge=5, le=100, description="Bollinger Band period")
     std_dev: float = Field(ge=0.5, le=4.0, description="BB standard deviations")
@@ -188,6 +204,8 @@ class BollingerBreakoutParams(BaseModel):
 
 class VWAPReversionParams(BaseModel):
     """VWAP Reversion strategy parameters."""
+
+    model_config = ConfigDict(extra="forbid")  # never silently drop a param
 
     strategy_type: Literal["vwap_reversion"] = "vwap_reversion"
     vwap_period: int = Field(ge=5, le=50, description="Rolling VWAP period")
@@ -227,6 +245,8 @@ class GreenblattWeeklyParams(BaseModel):
     execution/risk_manager.py (percentage, /100) vs strategy/signal_engine.py
     (fraction, used raw) for the two consumers this was disambiguating.
     """
+
+    model_config = ConfigDict(extra="forbid")  # never silently drop a param
 
     strategy_type: Literal["greenblatt_weekly"] = "greenblatt_weekly"
     fast_sma: int = Field(
@@ -278,6 +298,8 @@ class GreenblattWeeklyParams(BaseModel):
 class BollingerRSIComboParams(BaseModel):
     """Bollinger Bands + RSI combination strategy parameters."""
 
+    model_config = ConfigDict(extra="forbid")  # never silently drop a param
+
     strategy_type: Literal["bollinger_rsi_combo"] = "bollinger_rsi_combo"
     bb_period: int = Field(
         default=20, ge=5, le=100, description="Bollinger Bands period"
@@ -314,6 +336,8 @@ class BollingerRSIComboParams(BaseModel):
 
 class TrendAdaptiveRSIParams(BaseModel):
     """Trend-adaptive RSI strategy parameters. Adjusts thresholds by market regime."""
+
+    model_config = ConfigDict(extra="forbid")  # never silently drop a param
 
     strategy_type: Literal["trend_adaptive_rsi"] = "trend_adaptive_rsi"
     rsi_period: int = Field(default=14, ge=2, le=50, description="RSI period")
@@ -466,15 +490,31 @@ class RiskConfig(BaseModel):
         ge=0.0,
         le=100.0,
         description=(
-            "Flat broker commission per trade (USD). AlphaLive-only: "
-            "accepted, validated, and passed through export unchanged; "
-            "AlphaLab's Portfolio has no flat-fee commission model, only a "
-            "percentage-of-notional rate (backend/config.yaml's "
-            "backtest.commission, wired into every fill's cost) - the two "
-            "are conceptually distinct and not interchangeable. This field "
-            "never affects AlphaLab's simulated returns/trades/metrics."
+            "Flat broker commission per filled order (USD). Simulated by "
+            "AlphaLab's Portfolio as a flat fee on every fill, separately "
+            "from the percentage-of-notional rate (backend/config.yaml's "
+            "backtest.commission); the two are not interchangeable."
         ),
     )
+
+    drawdown_halt_enabled: bool = Field(
+        default=False,
+        description=(
+            "Whether the backtest simulated AlphaLab's portfolio drawdown "
+            "halt. AlphaLive has no equivalent control, so only False is "
+            "exportable; AlphaLive refuses True. Absent in exports made "
+            "before 2026-10-19 (those backtests always simulated the halt)."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def validate_drawdown_halt(self):
+        if self.drawdown_halt_enabled:
+            raise ValueError(
+                "drawdown_halt_enabled=True cannot be exported: AlphaLive has "
+                "no equivalent of AlphaLab's portfolio drawdown halt"
+            )
+        return self
 
     @model_validator(mode="after")
     def validate_trailing_stop(self):
@@ -554,9 +594,14 @@ class BacktestPeriod(BaseModel):
 class PerformanceMetrics(BaseModel):
     """Backtest performance metrics."""
 
-    sharpe_ratio: float = Field(ge=-10.0, le=10.0, description="Risk-adjusted return")
+    # Ratios are REPORTED results, not configuration: bounded only by the
+    # metrics module's +/-999 cap for non-finite values (_INF_CAP). The old
+    # +/-10 bound rejected the export of legitimate results - e.g. Sharpe
+    # -42 for a mostly-in-cash strategy charged a 4% hurdle (found
+    # 2026-10 by exporting a real UI backtest).
+    sharpe_ratio: float = Field(ge=-999.0, le=999.0, description="Risk-adjusted return")
     sortino_ratio: float = Field(
-        ge=-10.0, le=10.0, description="Downside risk-adjusted return"
+        ge=-999.0, le=999.0, description="Downside risk-adjusted return"
     )
     total_return_pct: float = Field(
         ge=-100.0, le=10000.0, description="Total backtest return (%)"
@@ -576,7 +621,7 @@ class PerformanceMetrics(BaseModel):
         ),
     )
     total_trades: int = Field(ge=0, le=100000, description="Total number of trades")
-    calmar_ratio: float = Field(ge=-10.0, le=10.0, description="CAGR / max drawdown")
+    calmar_ratio: float = Field(ge=-999.0, le=999.0, description="CAGR / max drawdown")
 
 
 class MetadataConfig(BaseModel):

@@ -8,7 +8,7 @@ degrades to the same skip there too. That leaves no protection at all in an
 environment where AlphaLive simply isn't present.
 
 This file is the local, self-contained replacement for that gap: a small,
-explicitly versioned JSON fixture (tests/fixtures/export_contract_v1.0.json)
+explicitly versioned JSON fixture (tests/fixtures/export_contract_v1.2.json)
 records what AlphaLab's OWN StrategyExportSchema currently produces for each
 exportable strategy - required/optional fields, nested block shapes, alias
 translations, strategy identifiers, schema_version - and every test below
@@ -42,7 +42,7 @@ from alphalab.strategies.implementations import (
     TrendAdaptiveRSI,
 )
 
-_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "export_contract_v1.0.json"
+_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "export_contract_v1.2.json"
 
 with open(_FIXTURE_PATH) as f:
     CONTRACT = json.load(f)
@@ -252,7 +252,12 @@ class TestRejectedStrategiesStayRejected:
         instance = _STRATEGY_INSTANCES.get(strategy_name)
         params = dict(instance.params) if instance is not None else {}
         results_store["contract_test_reject"] = {
-            "results": {"total_return_pct": 0, "total_trades": 0, "metrics": {}},
+            "results": {
+                "total_return_pct": 0,
+                "total_trades": 0,
+                "metrics": {},
+                "drawdown_halt": {"threshold_pct": None},
+            },
             "request": {
                 "ticker": "AAPL",
                 "strategy": strategy_name,
@@ -260,7 +265,16 @@ class TestRejectedStrategiesStayRejected:
                 "end_date": "2024-12-31",
                 "initial_capital": 100_000,
                 "params": params,
-                "risk_settings": None,
+                "risk_settings": {
+                    "stop_loss_pct": 2.0,
+                    "take_profit_pct": 5.0,
+                    "max_position_size_pct": 10.0,
+                    "max_daily_loss_pct": 3.0,
+                    "max_open_positions": 5,
+                    "trailing_stop_enabled": False,
+                    "trailing_stop_pct": 3.0,
+                    "commission_per_trade": 0.0,
+                },
                 "interval": "1d",
             },
         }

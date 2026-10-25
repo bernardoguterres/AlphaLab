@@ -665,3 +665,21 @@ class TestExportRegressionGroup1:
 
         with pytest.raises(ValidationError, match="intraday"):
             StrategyExportSchema.model_validate(export)
+
+
+def test_extreme_but_valid_ratios_do_not_block_export():
+    """Regression (2026-10): a real UI backtest (mostly in cash, 4% hurdle)
+    reported Sharpe -42.15 / Sortino -15.05 and the export was rejected by
+    a +/-10 schema bound on informational metrics."""
+    from strategy_schema import PerformanceMetrics as ExportPerformance
+
+    ExportPerformance(
+        sharpe_ratio=-42.15,
+        sortino_ratio=-15.05,
+        total_return_pct=-0.03,
+        max_drawdown_pct=-0.18,
+        win_rate_pct=0.0,
+        profit_factor=0.0,
+        total_trades=1,
+        calmar_ratio=-0.06,
+    )

@@ -43,11 +43,14 @@ class TestExportOnlyFieldsDoNotAffectAlphaLabResults:
             risk_settings=risk_settings,
         )
 
-    def test_commission_per_trade_is_a_no_op(self):
+    def test_commission_per_trade_is_simulated(self):
+        """2026-10: the exported flat fee is now a simulated cost (it used to
+        be export-only, so the backtest never paid what AlphaLive would)."""
         base = self._run({"stop_loss_pct": 2.0, "commission_per_trade": 0.0})
         varied = self._run({"stop_loss_pct": 2.0, "commission_per_trade": 25.0})
-        assert base.final_value == varied.final_value
-        assert base.trades == varied.trades
+        filled = [t for t in varied.trades if t["status"] == "filled"]
+        assert filled and all(t["commission"] >= 25.0 for t in filled)
+        assert varied.final_value < base.final_value
 
     def test_max_daily_loss_pct_is_a_no_op(self):
         base = self._run({"stop_loss_pct": 2.0, "max_daily_loss_pct": 3.0})
@@ -102,14 +105,20 @@ class TestPercentageCommissionStillAffectsResults:
 
 
 class TestUnsupportedSettingsFailClearly:
-    def test_portfolio_has_no_flat_fee_commission_parameter(self):
-        """Portfolio's only commission knob is commission_rate, a
-        percentage-of-notional fraction - there is deliberately no separate
-        flat-fee kwarg a caller could pass commission_per_trade into. Passing
-        one must fail loudly (TypeError), not be silently accepted and
-        ignored."""
-        with pytest.raises(TypeError):
-            Portfolio(initial_capital=10_000, commission_per_trade=5.0)
+    def test_flat_fee_is_charged_once_per_filled_order(self):
+        """Hand-checked: buy 10 @ 100 with 0 slippage, $5 flat fee ->
+        cash 10_000 - 1_000 - 5 = 8_995."""
+        p = Portfolio(
+            initial_capital=10_000,
+            slippage_pct=0,
+            commission_per_trade=5.0,
+            cash_reserve_pct=0,
+        )
+        r = p.execute_order(
+            Order(ticker="AAPL", side=OrderSide.BUY, shares=10), {"AAPL": 100.0}
+        )
+        assert r.status.value == "filled"
+        assert p.cash == pytest.approx(8_995.0)
 
     def test_a_commission_rate_large_enough_to_exceed_cash_is_rejected(self):
         """commission_rate is unambiguously a percentage-of-notional

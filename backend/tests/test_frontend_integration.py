@@ -95,6 +95,7 @@ class TestFullBacktestFlow:
                 },
                 "position_sizing": "equal_weight",
                 "monte_carlo_runs": 0,
+                "drawdown_halt_enabled": False,
                 "risk_settings": {
                     "stop_loss_pct": 2.0,
                     "take_profit_pct": 5.0,
@@ -738,3 +739,119 @@ class TestRSISimpleReachableButExportBlocked:
         assert body["status"] == "error"
         assert "rsi_simple" in body["message"]
         assert "research" in body["message"].lower()
+
+
+def test_volatility_weighted_backtest_export_is_refused(client, mock_yfinance):
+    """Regression (2026-10 review): a volatility-weighted backtest exported
+    silently, but AlphaLive sizes at max_position_size_pct of equity, so the
+    live strategy would trade a different size from the backtest."""
+    client.post(
+        "/api/data/fetch",
+        json={
+            "tickers": ["AAPL"],
+            "start_date": "2020-01-01",
+            "end_date": "2024-12-31",
+            "interval": "1d",
+        },
+    )
+    bt = client.post(
+        "/api/strategies/backtest",
+        json={
+            "ticker": "AAPL",
+            "strategy": "ma_crossover",
+            "start_date": "2020-01-01",
+            "end_date": "2024-12-31",
+            "initial_capital": 100000,
+            "params": {},
+            "position_sizing": "volatility_weighted",
+            "monte_carlo_runs": 0,
+            "risk_settings": {"stop_loss_pct": 2.0, "take_profit_pct": 5.0},
+        },
+    )
+    assert bt.status_code == 200, bt.get_json()
+    r = client.post(
+        "/api/strategies/export",
+        json={"backtest_id": bt.get_json()["data"]["backtest_id"]},
+    )
+    assert r.status_code == 422
+    assert "equal_weight" in r.get_json()["message"]
+
+
+def _fetch_and_backtest(client, **overrides):
+    client.post(
+        "/api/data/fetch",
+        json={
+            "tickers": ["AAPL"],
+            "start_date": "2020-01-01",
+            "end_date": "2024-12-31",
+            "interval": "1d",
+        },
+    )
+    body = {
+        "ticker": "AAPL",
+        "strategy": "ma_crossover",
+        "start_date": "2020-01-01",
+        "end_date": "2024-12-31",
+        "initial_capital": 100000,
+        "params": {},
+        "position_sizing": "equal_weight",
+        "monte_carlo_runs": 0,
+        "risk_settings": {"stop_loss_pct": 2.0, "take_profit_pct": 5.0},
+    }
+    body.update(overrides)
+    return client.post("/api/strategies/backtest", json=body)
+
+
+class TestDrawdownHaltExport:
+    """Regression (2026-10-19): every backtest simulated a portfolio
+    drawdown halt (10% default) that the export silently dropped -
+    AlphaLive has no equivalent, so such a backtest must not export."""
+
+    @pytest.mark.parametrize("overrides", [{}, {"max_drawdown_pct": 25.0}])
+    def test_backtest_with_halt_is_refused(self, client, mock_yfinance, overrides):
+        bt = _fetch_and_backtest(client, **overrides)
+        assert bt.status_code == 200, bt.get_json()
+        halt = bt.get_json()["data"]["drawdown_halt"]
+        assert halt["threshold_pct"] == overrides.get("max_drawdown_pct", 10.0)
+        r = client.post(
+            "/api/strategies/export",
+            json={"backtest_id": bt.get_json()["data"]["backtest_id"]},
+        )
+        assert r.status_code == 422
+        msg = r.get_json()["message"]
+        assert "drawdown halt" in msg and "AlphaLive has no equivalent" in msg
+
+    def test_halt_free_backtest_exports_and_declares_it(self, client, mock_yfinance):
+        bt = _fetch_and_backtest(client, drawdown_halt_enabled=False)
+        assert bt.status_code == 200, bt.get_json()
+        assert bt.get_json()["data"]["drawdown_halt"]["threshold_pct"] is None
+        r = client.post(
+            "/api/strategies/export",
+            json={"backtest_id": bt.get_json()["data"]["backtest_id"]},
+        )
+        assert r.status_code == 200, r.get_json()
+        assert json.loads(r.data)["risk"]["drawdown_halt_enabled"] is False
+
+    def test_stored_result_without_halt_record_is_refused(self, client):
+        client.application.extensions["results_store"]["legacy"] = {
+            "results": {"total_return_pct": 0, "total_trades": 0, "metrics": {}},
+            "request": {
+                "ticker": "AAPL",
+                "strategy": "ma_crossover",
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+                "initial_capital": 100_000,
+                "params": {},
+                "risk_settings": {"stop_loss_pct": 2.0},
+                "interval": "1d",
+            },
+        }
+        r = client.post("/api/strategies/export", json={"backtest_id": "legacy"})
+        assert r.status_code == 422
+        assert "unknown% drawdown halt" in r.get_json()["message"]
+
+    def test_disabled_halt_with_threshold_is_rejected(self, client, mock_yfinance):
+        bt = _fetch_and_backtest(
+            client, drawdown_halt_enabled=False, max_drawdown_pct=20.0
+        )
+        assert bt.status_code in (400, 422)

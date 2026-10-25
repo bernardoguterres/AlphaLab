@@ -1,9 +1,9 @@
 """Pydantic request/response models for API validation."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class FetchDataRequest(BaseModel):
@@ -51,15 +51,13 @@ class RiskSettings(BaseModel):
     validated here and, where relevant, exported unchanged to AlphaLive
     (see backend/alphalab/api/helpers.py's _build_export_json). Simulated
     by BacktestEngine/Portfolio: stop_loss_pct, take_profit_pct,
-    max_position_size_pct, trailing_stop_enabled/trailing_stop_pct.
-    Export-only, NOT simulated by AlphaLab (accepted, validated, and passed
-    through export unchanged; no effect on AlphaLab's own
-    returns/trades/metrics): max_daily_loss_pct (no "rest of day" concept in
-    a bar-by-bar single-ticker backtest), max_open_positions (the engine is
-    single-ticker/single-position), commission_per_trade (a flat USD fee -
-    Portfolio only models a percentage-of-notional commission rate, a
-    different, non-interchangeable cost model; see
-    backend/config.yaml's backtest.commission).
+    max_position_size_pct (a cumulative cap), trailing_stop_enabled/
+    trailing_stop_pct, and commission_per_trade (a flat USD fee charged on
+    every filled order). Export-only, NOT simulated by AlphaLab (accepted,
+    validated, and passed through export unchanged; no effect on AlphaLab's
+    own returns/trades/metrics): max_daily_loss_pct (no "rest of day"
+    concept in a bar-by-bar single-ticker backtest) and max_open_positions
+    (the engine is single-ticker/single-position).
     """
 
     stop_loss_pct: float = 2.0
@@ -128,8 +126,10 @@ class BacktestRequest(BaseModel):
     end_date: str
     initial_capital: float = 100_000
     params: Optional[dict] = None
-    position_sizing: str = "equal_weight"
+    position_sizing: Literal["equal_weight", "volatility_weighted"] = "equal_weight"
     monte_carlo_runs: int = 0
+    monte_carlo_seed: Optional[int] = None
+    monte_carlo_block_length: Optional[int] = Field(default=None, ge=1, le=250)
     risk_settings: Optional[RiskSettings] = None
     interval: Optional[str] = None
     max_drawdown_pct: Optional[float] = None
@@ -142,6 +142,21 @@ class BacktestRequest(BaseModel):
     default, matching an omitted field) leaves the engine's own 10% default
     unchanged.
     """
+    drawdown_halt_enabled: bool = True
+    """False runs the backtest with no drawdown halt. Only such a backtest
+    can be exported: AlphaLive has no equivalent of this portfolio-level
+    halt (it is evaluated on the simulated strategy's own equity curve and
+    blocks entries for the rest of the run), so exporting a halted backtest
+    would deploy behaviour that was never simulated.
+    """
+
+    @model_validator(mode="after")
+    def validate_drawdown_halt(self):
+        if not self.drawdown_halt_enabled and self.max_drawdown_pct is not None:
+            raise ValueError(
+                "max_drawdown_pct cannot be set when drawdown_halt_enabled is false"
+            )
+        return self
 
     @field_validator("max_drawdown_pct")
     @classmethod
@@ -306,7 +321,7 @@ class BatchBacktestRequest(BaseModel):
     end_date: str
     initial_capital: float = 100_000
     params: Optional[dict] = None
-    position_sizing: str = "equal_weight"
+    position_sizing: Literal["equal_weight", "volatility_weighted"] = "equal_weight"
     risk_settings: Optional[RiskSettings] = None
     interval: Optional[str] = None
 

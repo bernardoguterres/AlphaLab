@@ -45,7 +45,7 @@ per-strategy parameter models); `POST /api/strategies/export`
 is authoritative over this document for current behavior. Contract-drift protection at the
 AlphaLab level lives in [`backend/tests/test_local_export_contract.py`](../backend/tests/test_local_export_contract.py)
 (an always-running check against a versioned local fixture,
-[`backend/tests/fixtures/export_contract_v1.0.json`](../backend/tests/fixtures/export_contract_v1.0.json))
+[`backend/tests/fixtures/export_contract_v1.2.json`](../backend/tests/fixtures/export_contract_v1.2.json))
 and, when AlphaLive is checked out as a sibling repository,
 [`backend/tests/test_schema_contract.py`](../backend/tests/test_schema_contract.py) (optional,
 field-level parity against AlphaLive's own live schema). Neither test proves signal-level
@@ -147,6 +147,7 @@ All percentages are in **absolute percent** (e.g., 2.0 = 2%, not 0.02).
 | `trailing_stop_enabled` | `bool` | Yes | true/false | - | Enable trailing stop-loss |
 | `trailing_stop_pct` | `float` | Conditional | 0.5 - 20.0 | - | Trailing stop distance (required if enabled=true) |
 | `commission_per_trade` | `float` | Yes | 0.0 - 50.0 | - | Broker commission per trade (USD) |
+| `drawdown_halt_enabled` | `bool` | No | `false` only | absent | Whether the backtest simulated AlphaLab's portfolio drawdown halt. AlphaLab exports `false` and refuses halted backtests; AlphaLive refuses `true` and warns when the field is absent (exports made before 2026-10-19, whose backtests always simulated the halt) |
 
 ### Execution Block
 
@@ -684,7 +685,7 @@ The `safety_limits` block provides **per-strategy customization** of stopping co
 
 ### Local contract safeguard
 
-`backend/tests/fixtures/export_contract_v1.0.json` is a small, versioned snapshot of this
+`backend/tests/fixtures/export_contract_v1.2.json` is a small, versioned snapshot of this
 export contract, maintained entirely on the AlphaLab side (no AlphaLive code is copied into
 it). `backend/tests/test_local_export_contract.py` validates every exportable strategy's real
 export output against it on every ordinary test run - unlike `test_schema_contract.py`

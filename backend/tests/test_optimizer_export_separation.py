@@ -103,6 +103,7 @@ class TestStoredOrdinaryBacktestCanBeExported:
                     "drawdown": {"max_drawdown_pct": -5.0},
                     "trades": {"win_rate": 0.6, "profit_factor": 1.4},
                 },
+                "drawdown_halt": {"threshold_pct": None},
             },
             "request": {
                 "ticker": "AAPL",
@@ -111,7 +112,16 @@ class TestStoredOrdinaryBacktestCanBeExported:
                 "end_date": "2024-12-31",
                 "initial_capital": 100_000,
                 "params": strategy.params,
-                "risk_settings": None,
+                "risk_settings": {
+                    "stop_loss_pct": 2.0,
+                    "take_profit_pct": 5.0,
+                    "max_position_size_pct": 10.0,
+                    "max_daily_loss_pct": 3.0,
+                    "max_open_positions": 5,
+                    "trailing_stop_enabled": False,
+                    "trailing_stop_pct": 3.0,
+                    "commission_per_trade": 0.0,
+                },
                 "interval": "1d",
             },
         }
@@ -212,3 +222,27 @@ class TestFoldResultsStayDistinctFromInSampleFinalSelection:
             assert forbidden not in str(performance).lower().replace(
                 " ", "_"
             ), f"export performance block unexpectedly mentions {forbidden!r}"
+
+
+class TestExportRefusesUnsimulatedRiskSettings:
+    def test_backtest_without_risk_settings_cannot_be_exported(self, client):
+        """Regression (2026-10): exporting a backtest that ran with no risk
+        overlay used to write 2% SL / 5% TP / 10% cap into the AlphaLive
+        config - parameters that were never simulated."""
+        results_store = client.application.extensions["results_store"]
+        results_store["no_rs"] = {
+            "results": {"total_return_pct": 1.0, "total_trades": 1, "metrics": {}},
+            "request": {
+                "ticker": "AAPL",
+                "strategy": "ma_crossover",
+                "start_date": "2020-01-01",
+                "end_date": "2024-12-31",
+                "initial_capital": 100_000,
+                "params": MovingAverageCrossover().params,
+                "risk_settings": None,
+                "interval": "1d",
+            },
+        }
+        resp = client.post("/api/strategies/export", json={"backtest_id": "no_rs"})
+        assert resp.status_code == 422
+        assert "never backtested" in resp.get_json()["message"]
