@@ -504,3 +504,135 @@ class TestCausalDrawdownHalt:
         assert d["drawdown_halt"]["halted"] is False
         assert d["drawdown_halt"]["halted_at"] is None
         assert d["drawdown_halt"]["halted_drawdown_pct"] is None
+
+
+class _OneEntry:
+    """Emits a single BUY at bar 30."""
+
+    name = "one_entry"
+
+    def backtest_ready_check(self, df):
+        return True
+
+    def generate_signals(self, df):
+        s = pd.DataFrame(index=df.index)
+        s["signal"] = 0
+        s.iloc[30, 0] = 1
+        s["reason"] = ""
+        return s
+
+
+def _flat_frame(px, atr):
+    idx = pd.bdate_range("2022-01-03", periods=80)
+    c = np.full(80, px)
+    df = pd.DataFrame(
+        {
+            "Open": c,
+            "High": c * 1.01,
+            "Low": c * 0.99,
+            "Close": c,
+            "Volume": 1e6,
+            "ATR": atr,
+        },
+        index=idx,
+    )
+    df.attrs["ticker"] = "T"
+    return df
+
+
+@pytest.mark.parametrize("px", [10.0, 400.0])
+def test_volatility_weighted_cap_bound_entry_fills_within_cap(px):
+    """Regression (2026-10 review): headroom was sized at the raw open, so a
+    cap-bound order exceeded the 20% cap by the slippage and was REJECTED -
+    volatility-weighted backtests silently took no entry."""
+    df = _flat_frame(px, px * 0.015)
+    r = BacktestEngine().run_backtest(
+        _OneEntry(), df, initial_capital=100_000, position_sizing="volatility_weighted"
+    )
+    filled = [t for t in r.trades if t.get("status") == "filled"]
+    assert len(filled) == 1 and not [
+        t for t in r.trades if t.get("status") == "rejected"
+    ]
+    eff = px * (1 + 0.0005)
+    assert filled[0]["shares"] * eff <= 100_000 * 0.20 + 1e-6
+
+
+def test_volatility_weighted_uses_atr_known_before_the_open():
+    """The entry fills at bar i's open; ATR[i] uses bar i's range. A huge
+    ATR only on the execution bar must not shrink the order."""
+    df = _flat_frame(100.0, 1.0)
+    calm = BacktestEngine().run_backtest(
+        _OneEntry(), df, initial_capital=100_000, position_sizing="volatility_weighted"
+    )
+    df2 = df.copy()
+    df2.attrs["ticker"] = "T"
+    df2.iloc[31, df2.columns.get_loc("ATR")] = 40.0  # execution bar only
+    shocked = BacktestEngine().run_backtest(
+        _OneEntry(), df2, initial_capital=100_000, position_sizing="volatility_weighted"
+    )
+    shares = lambda r: [t["shares"] for t in r.trades if t.get("status") == "filled"]
+    assert shares(calm) == shares(shocked) and shares(calm)
+
+
+class TestDrawdownHaltSwitch:
+    """drawdown_halt_enabled=False (2026-10-19): the only exportable
+    configuration, since AlphaLive has no equivalent of the halt."""
+
+    @staticmethod
+    def _crash_then_rebuy():
+        # 100 -> 60 (40% price crash; ~20% equity drawdown at a 50%
+        # position), sell, then a fresh BUY signal after the crash.
+        n = 24
+        dates = pd.bdate_range("2021-01-01", periods=n)
+        close = np.concatenate(
+            [np.full(5, 100.0), np.linspace(100, 60, 5), np.full(n - 10, 60.0)]
+        )
+        data = pd.DataFrame(
+            {
+                "Open": close,
+                "High": close * 1.001,
+                "Low": close * 0.999,
+                "Close": close,
+                "Volume": np.full(n, 1_000_000),
+            },
+            index=dates,
+        )
+        data.attrs["ticker"] = "TEST"
+        signals = pd.DataFrame(index=data.index)
+        signals["signal"] = 0
+        signals["reason"] = ""
+        signals.loc[dates[1], ["signal", "reason"]] = [1, "entry"]
+        signals.loc[dates[12], ["signal", "reason"]] = [-1, "exit"]
+        signals.loc[dates[16], ["signal", "reason"]] = [1, "re-entry"]
+        return data, signals
+
+    def _run(self, **kwargs):
+        data, signals = self._crash_then_rebuy()
+        return BacktestEngine().run_backtest(
+            _FixedSignalStrategy(signals),
+            data,
+            initial_capital=10_000,
+            risk_settings={"max_position_size_pct": 50.0},
+            **kwargs,
+        )
+
+    def test_halt_blocks_reentry_but_not_exit(self):
+        res = self._run(max_drawdown_pct=10.0)
+        assert res.drawdown_halt["threshold_pct"] == 10.0
+        assert res.drawdown_halt["halted"]
+        sides = [(t["side"], t["status"]) for t in res.trades]
+        assert sides == [("buy", "filled"), ("sell", "filled"), ("buy", "rejected")]
+
+    def test_disabled_halt_never_trips_and_reentry_fills(self):
+        res = self._run(drawdown_halt_enabled=False)
+        assert res.drawdown_halt["threshold_pct"] is None
+        assert not res.drawdown_halt["halted"]
+        sides = [(t["side"], t["status"]) for t in res.trades]
+        assert sides == [("buy", "filled"), ("sell", "filled"), ("buy", "filled")]
+
+    def test_default_reports_engine_default_threshold(self):
+        assert self._run().drawdown_halt["threshold_pct"] == 10.0
+
+    def test_threshold_with_disabled_halt_is_rejected(self):
+        with pytest.raises(ValueError):
+            self._run(drawdown_halt_enabled=False, max_drawdown_pct=20.0)

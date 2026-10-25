@@ -128,7 +128,9 @@ class TestPerformanceMetrics:
         trades = _make_trades()
         result = m.calculate_all(_make_equity_curve(), trades)
         t = result["trades"]
-        assert t["total_trades"] == 4
+        # total_trades = completed round trips (4 filled orders, 2 trips)
+        assert t["total_trades"] == 2
+        assert t["filled_orders"] == 4
         assert t["round_trips"] == 2
         assert t["win_rate"] == 0.5  # 1 win, 1 loss
 

@@ -29,10 +29,15 @@ class Portfolio:
         stop_loss_pct: float | None = None,
         take_profit_pct: float | None = None,
         trailing_stop_pct: float | None = None,
+        commission_per_trade: float = 0.0,
     ):
         self.initial_capital = initial_capital
         self.cash = initial_capital
         self.commission_rate = commission_rate
+        # Flat USD fee per filled order (RiskSettings.commission_per_trade -
+        # the same field the AlphaLive export carries). Added 2026-10: the
+        # field used to be exported but never simulated.
+        self.commission_per_trade = float(commission_per_trade or 0.0)
         self.slippage_pct = slippage_pct / 100
         self.max_position_pct = max_position_pct / 100
         self.cash_reserve_pct = cash_reserve_pct / 100
@@ -129,7 +134,10 @@ class Portfolio:
             slippage = exec_price * self.slippage_pct
             exec_price -= slippage
 
-        commission = abs(exec_price * order.shares * self.commission_rate)
+        commission = (
+            abs(exec_price * order.shares * self.commission_rate)
+            + self.commission_per_trade
+        )
 
         # Risk checks
         if order.side == OrderSide.BUY:
@@ -140,11 +148,16 @@ class Portfolio:
                 self._log_trade(order, timestamp)
                 return order
 
-            # Position size check
+            # Position size check - CUMULATIVE: the position after this
+            # order (existing shares at the current price + new shares) must
+            # stay within max_position_pct. Previously only the new order was
+            # checked, so repeated BUY signals stacked a position to 80-95%
+            # of equity under a 20% cap (2026-10 audit).
             portfolio_val = self.get_portfolio_value(current_prices)
             if portfolio_val > 0:
-                position_val = exec_price * order.shares
-                if position_val / portfolio_val > self.max_position_pct:
+                held_val = self.positions.get(order.ticker, 0) * price
+                position_val = held_val + exec_price * order.shares
+                if position_val / portfolio_val > self.max_position_pct + 1e-12:
                     order.status = OrderStatus.REJECTED
                     order.reason = (
                         f"Position exceeds {self.max_position_pct*100:.0f}% limit"

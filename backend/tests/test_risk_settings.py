@@ -427,23 +427,25 @@ class TestRiskSettingsWiredIntoEngine:
         )
         engine = BacktestEngine()
 
-        np.random.seed(7)
+        # The bootstrap resamples the COMPLETED run's returns (2026-10), so it
+        # inherits whatever risk overlay that run applied; seeds make the
+        # comparison deterministic.
         with_stop = engine.run_backtest(
             strategy=strategy,
             data=data,
             initial_capital=100_000,
             position_sizing="equal_weight",
-            monte_carlo_runs=5,
+            monte_carlo_runs=200,
+            monte_carlo_seed=7,
             risk_settings={"stop_loss_pct": 2.0},
         )
-
-        np.random.seed(7)
         without_stop = engine.run_backtest(
             strategy=strategy,
             data=data,
             initial_capital=100_000,
             position_sizing="equal_weight",
-            monte_carlo_runs=5,
+            monte_carlo_runs=200,
+            monte_carlo_seed=7,
         )
 
         assert with_stop.monte_carlo is not None
