@@ -37,7 +37,20 @@ export function MetricsTabs({ metrics }: MetricsTabsProps) {
 
       <TabsContent value="risk" className="mt-3">
         <MetricRow label="Volatility" value={formatPercent(metrics.risk.volatility_annual_pct)} />
-        <MetricRow label="Sharpe Ratio" value={formatNumber(metrics.risk.sharpe_ratio)} />
+        <MetricRow label={`Sharpe Ratio (vs ${metrics.assumptions?.risk_free_rate_pct ?? 4}% risk-free)`} value={formatNumber(metrics.risk.sharpe_ratio)} />
+        {metrics.risk.sharpe_ratio_zero_rf !== undefined && (
+          <MetricRow label="Sharpe Ratio (0% hurdle)" value={formatNumber(metrics.risk.sharpe_ratio_zero_rf)} />
+        )}
+        {metrics.assumptions?.average_exposure_pct !== undefined && (
+          <MetricRow label="Average Exposure" value={formatPercent(metrics.assumptions.average_exposure_pct)} />
+        )}
+        {metrics.assumptions && (
+          <p className="text-[10px] text-muted-foreground leading-relaxed mt-2">
+            Uninvested cash earns {metrics.assumptions.cash_return_pct}%. The risk-free Sharpe charges the
+            hurdle on all capital, including cash never invested; the 0% hurdle figure is a separate modelling
+            choice, not a correction.
+          </p>
+        )}
         <MetricRow label="Sortino Ratio" value={formatNumber(metrics.risk.sortino_ratio)} />
         <MetricRow label="Calmar Ratio" value={formatNumber(metrics.risk.calmar_ratio)} />
         <MetricRow label="VaR (95%)" value={formatPercent(metrics.risk.var_95_pct)} />
@@ -71,7 +84,7 @@ export function MetricsTabs({ metrics }: MetricsTabsProps) {
       <TabsContent value="benchmark" className="mt-3">
         <MetricRow label="Beta" value={formatNumber(metrics.vs_benchmark.beta)} />
         <MetricRow label="Alpha" value={formatPercent(metrics.vs_benchmark.alpha_annual_pct)} />
-        <MetricRow label="Alpha p-value" value={formatNumber(metrics.vs_benchmark.alpha_p_value, 4)} />
+        <MetricRow label="Active-return p-value" value={formatNumber(metrics.vs_benchmark.active_return_p_value, 4)} />
         <MetricRow label="Tracking Error" value={formatPercent(metrics.vs_benchmark.tracking_error_pct)} />
         <MetricRow label="Information Ratio" value={formatNumber(metrics.vs_benchmark.information_ratio)} />
         <MetricRow label="Up Capture" value={formatPercent(metrics.vs_benchmark.up_capture_pct)} />

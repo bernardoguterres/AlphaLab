@@ -58,9 +58,9 @@ const SAMPLE_METRICS: BacktestMetrics = {
   vs_benchmark: {
     beta: 0.85,
     alpha_annual_pct: 4.2,
-    alpha_t_stat: 2.1,
-    alpha_p_value: 0.03,
-    alpha_significant: true,
+    active_return_t_stat: 2.1,
+    active_return_p_value: 0.03,
+    active_return_significant: true,
     tracking_error_pct: 6.5,
     information_ratio: 0.65,
     up_capture_pct: 105.0,

@@ -52,6 +52,7 @@ export interface BacktestMetrics {
   risk: {
     volatility_annual_pct: number;
     sharpe_ratio: number;
+    sharpe_ratio_zero_rf?: number;
     sortino_ratio: number;
     calmar_ratio: number;
     var_95_pct: number;
@@ -78,12 +79,19 @@ export interface BacktestMetrics {
     longest_loss_streak: number;
     ulcer_index: number;
   };
+  assumptions?: {
+    cash_return_pct: number;
+    risk_free_rate_pct: number;
+    periods_per_year: number;
+    average_exposure_pct?: number;
+    note?: string;
+  };
   vs_benchmark: {
     beta: number;
     alpha_annual_pct: number;
-    alpha_t_stat: number;
-    alpha_p_value: number;
-    alpha_significant: boolean;
+    active_return_t_stat: number;
+    active_return_p_value: number;
+    active_return_significant: boolean;
     tracking_error_pct: number;
     information_ratio: number;
     up_capture_pct: number;
@@ -100,6 +108,10 @@ export interface BacktestMetrics {
 // of final dollar values); this type and its renderer (Backtest.tsx) now
 // match what engine.py's _monte_carlo() actually returns.
 export interface MonteCarloResult {
+  method?: string; // "circular_moving_block_bootstrap"
+  question?: string;
+  seed?: number;
+  block_length?: number;
   runs: number;
   mean_final_value: number;
   median_final_value: number;
@@ -127,6 +139,13 @@ export interface BacktestResult {
     total_return_pct: number;
   };
   monte_carlo: MonteCarloResult | null;
+  // threshold_pct is the halt actually simulated (null = disabled)
+  drawdown_halt?: {
+    threshold_pct: number | null;
+    halted: boolean;
+    halted_at: string | null;
+    halted_drawdown_pct: number | null;
+  } | null;
 }
 
 export interface BacktestHistoryItem {
@@ -269,9 +288,10 @@ export interface BacktestRequest {
   end_date: string;
   initial_capital: number;
   params: StrategyParams;
-  position_sizing: "equal_weight" | "risk_parity" | "volatility_weighted";
+  position_sizing: "equal_weight" | "volatility_weighted";
   monte_carlo_runs: number;
   risk_settings?: RiskSettings;
+  drawdown_halt_enabled?: boolean;
 }
 
 export interface CompareRequest {
@@ -289,7 +309,7 @@ export interface BatchBacktestRequest {
   end_date: string;
   initial_capital: number;
   params: StrategyParams;
-  position_sizing: "equal_weight" | "risk_parity" | "volatility_weighted";
+  position_sizing: "equal_weight" | "volatility_weighted";
   risk_settings?: RiskSettings;
 }
 

@@ -126,8 +126,9 @@ export default function Backtest() {
   const [strategy, setStrategy] = useState<StrategyType>("ma_crossover");
   const [params, setParams] = useState<Record<StrategyType, StrategyParams>>({ ...DEFAULT_PARAMS });
   const [initialCapital, setInitialCapital] = useState(100000);
-  const [positionSizing, setPositionSizing] = useState<"equal_weight" | "risk_parity" | "volatility_weighted">("equal_weight");
+  const [positionSizing, setPositionSizing] = useState<"equal_weight" | "volatility_weighted">("equal_weight");
   const [monteCarloRuns, setMonteCarloRuns] = useState(0);
+  const [drawdownHaltEnabled, setDrawdownHaltEnabled] = useState(true);
   const [riskSettings, setRiskSettings] = useState<RiskSettings>(DEFAULT_RISK_SETTINGS);
 
   // UI state
@@ -194,6 +195,7 @@ export default function Backtest() {
         position_sizing: positionSizing,
         monte_carlo_runs: monteCarloRuns,
         risk_settings: riskSettings,
+        drawdown_halt_enabled: drawdownHaltEnabled,
       });
       setCurrentResult(result);
       setSubmittedConfig({
@@ -242,6 +244,15 @@ export default function Backtest() {
   // echoes it back in a different casing, "RSI_Simple" vs the StrategyType
   // union's "rsi_simple").
   const exportBlockReason = submittedConfig ? EXPORT_BLOCKED[submittedConfig.strategy] : undefined;
+  // Mirrors the server's drawdown-halt refusal: AlphaLive has no equivalent
+  // of the simulated halt, so only a halt-free run is exportable.
+  const halt = currentResult?.drawdown_halt;
+  const haltBlockReason =
+    currentResult && halt?.threshold_pct !== null
+      ? `This run simulated a ${halt?.threshold_pct ?? "default"}% drawdown halt` +
+        (halt?.halted && halt.halted_at ? ` (triggered ${formatDate(halt.halted_at)})` : "") +
+        ": after that drawdown from peak, new entries were blocked for the rest of the run. AlphaLive has no equivalent control, so the export would not behave as backtested. Re-run with the drawdown halt off to export."
+      : undefined;
 
   // A fetched quality score only describes the completed run if it was
   // fetched for the exact same ticker/window that was actually submitted -
@@ -372,11 +383,10 @@ export default function Backtest() {
 
                 <ConfigField label="Allocation & Simulation" className="min-w-[220px] flex-1">
                   <div className="flex items-center gap-1.5">
-                    <Select value={positionSizing} onValueChange={(v: "equal_weight" | "risk_parity" | "volatility_weighted") => setPositionSizing(v)}>
+                    <Select value={positionSizing} onValueChange={(v: "equal_weight" | "volatility_weighted") => setPositionSizing(v)}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="equal_weight">Equal Weight</SelectItem>
-                        <SelectItem value="risk_parity">Risk Parity</SelectItem>
                         <SelectItem value="volatility_weighted">Volatility Weighted</SelectItem>
                       </SelectContent>
                     </Select>
@@ -393,6 +403,16 @@ export default function Backtest() {
                   <span className="text-[10px] text-muted-foreground/85 mt-1 block truncate">
                     Position sizing method - Monte Carlo runs: {monteCarloRuns || "off"}
                   </span>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <Checkbox
+                      checked={drawdownHaltEnabled}
+                      onCheckedChange={(v) => setDrawdownHaltEnabled(!!v)}
+                      id="drawdown-halt"
+                    />
+                    <Label htmlFor="drawdown-halt" className="text-[11px]" title="Blocks new entries for the rest of the run once equity falls 10% from its peak. AlphaLive has no equivalent, so runs with the halt on cannot be exported.">
+                      10% drawdown halt (on = not exportable)
+                    </Label>
+                  </div>
                 </ConfigField>
               </div>
             </div>
@@ -611,7 +631,10 @@ export default function Backtest() {
                       <div className="card-elevated p-4">
                         <h3 className="text-sm font-semibold mb-3">Monte Carlo Simulation</h3>
                         <p className="text-xs text-muted-foreground mb-3">
-                          Distribution of final portfolio value across {currentResult.monte_carlo.runs} randomized runs.
+                          Block-bootstrap resampling of this backtest's realised per-bar returns ({currentResult.monte_carlo.runs} resamples
+                          {currentResult.monte_carlo.seed !== undefined ? `, seed ${currentResult.monte_carlo.seed}` : ""}
+                          {currentResult.monte_carlo.block_length ? `, ${currentResult.monte_carlo.block_length}-bar blocks` : ""}).
+                          Shows sampling variation of this return series only - not parameter, regime or execution uncertainty.
                         </p>
                         <div className="grid grid-cols-5 gap-3">
                           <MetricCard label="5th Percentile" value={formatCurrency(currentResult.monte_carlo.percentile_5)} colorClass="text-loss" className="!p-3" />
@@ -643,7 +666,8 @@ export default function Backtest() {
                   ticker={submittedConfig?.ticker ?? ticker}
                   strategy={submittedConfig?.strategy ?? strategy}
                   initialCapital={submittedConfig?.initialCapital ?? initialCapital}
-                  blockReason={exportBlockReason}
+                  blockReason={exportBlockReason ?? haltBlockReason}
+                  blockTitle={exportBlockReason ? "Research-only strategy" : "Drawdown halt not supported by AlphaLive"}
                 />
               </div>
             </div>
@@ -916,12 +940,14 @@ function ExportPanel({
   strategy,
   initialCapital,
   blockReason,
+  blockTitle,
 }: {
   currentResult: BacktestResult | null;
   ticker: string;
   strategy: StrategyType;
   initialCapital: number;
   blockReason?: string;
+  blockTitle?: string;
 }) {
   if (!currentResult) {
     return (
@@ -944,7 +970,7 @@ function ExportPanel({
             <Lock className="h-4 w-4 text-loss" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">Research-only strategy</p>
+            <p className="text-sm font-semibold text-foreground">{blockTitle}</p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{blockReason}</p>
           </div>
         </div>
@@ -960,10 +986,11 @@ function ExportPanel({
           <Rocket className="h-4 w-4 text-gain" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-foreground">Ready for paper execution</p>
+          <p className="text-sm font-semibold text-foreground">Exportable configuration</p>
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-            This configuration passes AlphaLab's export rules and can be sent to AlphaLive for paper trading / testing.
-            Backtested performance does not imply proven live profitability.
+            The strategy, parameters and risk settings that were simulated can be exported to AlphaLive's
+            schema. Exportable is not validated: a single in-sample backtest is not evidence of an edge, and
+            simulated execution says nothing about live fills.
           </p>
         </div>
       </div>
