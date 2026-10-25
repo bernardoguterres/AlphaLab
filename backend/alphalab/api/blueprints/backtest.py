@@ -129,7 +129,10 @@ def run_backtest():
         end_date=body.end_date,
         position_sizing=body.position_sizing,
         monte_carlo_runs=body.monte_carlo_runs,
+        monte_carlo_seed=body.monte_carlo_seed,
+        monte_carlo_block_length=body.monte_carlo_block_length,
         max_drawdown_pct=body.max_drawdown_pct,
+        drawdown_halt_enabled=body.drawdown_halt_enabled,
         risk_settings=(body.risk_settings.model_dump() if body.risk_settings else None),
     )
 
@@ -150,7 +153,11 @@ def run_backtest():
             "start_date": body.start_date,
             "end_date": body.end_date,
             "initial_capital": body.initial_capital,
-            "params": body.params or {},
+            # EFFECTIVE parameters (defaults filled by the strategy class),
+            # not the raw request: the export must carry what was simulated,
+            # never leave a gap for AlphaLive's own (different) defaults.
+            "params": dict(strategy.params),
+            "position_sizing": body.position_sizing,
             "risk_settings": (
                 body.risk_settings.model_dump() if body.risk_settings else None
             ),
@@ -162,6 +169,7 @@ def run_backtest():
     response = results.to_dict()
     response["backtest_id"] = result_id
     response["data_quality_warnings"] = report.warnings
+    response["data_quality_notes"] = getattr(report, "notes", [])
     return jsonify({"status": "ok", "data": response})
 
 
@@ -513,6 +521,65 @@ def export_strategy():
                         "would reject the export as an unknown strategy type. "
                         "Backtesting rsi_simple is still supported; use "
                         "rsi_mean_reversion if you need a deployable RSI strategy."
+                    ),
+                }
+            ),
+            422,
+        )
+
+    if not req.get("risk_settings"):
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": (
+                        "This backtest ran without explicit risk settings, so it "
+                        "simulated no stop-loss/take-profit and the engine's 20% "
+                        "position cap. Exporting it would hand AlphaLive risk "
+                        "parameters (stop-loss, take-profit, position size) that "
+                        "were never backtested. Re-run the backtest with the risk "
+                        "settings you intend to deploy, then export."
+                    ),
+                }
+            ),
+            422,
+        )
+
+    if req.get("position_sizing", "equal_weight") != "equal_weight":
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": (
+                        f"This backtest used {req.get('position_sizing')!r} sizing. "
+                        "AlphaLive always sizes a position at max_position_size_pct "
+                        "of equity (equal_weight), so the exported strategy would "
+                        "trade a different size from the one backtested. Re-run "
+                        "with equal_weight sizing to export."
+                    ),
+                }
+            ),
+            422,
+        )
+
+    # Effective halt threshold the backtest simulated (None = disabled). A
+    # stored result without the key predates this record; treat it as halted.
+    halt_pct = (results.get("drawdown_halt") or {}).get("threshold_pct", "unknown")
+    if halt_pct is not None:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": (
+                        f"This backtest simulated a {halt_pct}% drawdown halt: "
+                        "once the strategy's own simulated equity fell that far "
+                        "from its peak, new entries were blocked for the rest of "
+                        "the run (exits still allowed). AlphaLive has no "
+                        "equivalent control - its daily-loss limits reset every "
+                        "trading day and its account equity is shared across "
+                        "strategies - so the exported strategy would not behave "
+                        "as backtested. Re-run with the drawdown halt disabled "
+                        "to export."
                     ),
                 }
             ),

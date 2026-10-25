@@ -114,7 +114,10 @@ def _build_export_json(
         ),
         "win_rate_pct": round(metrics.get("trades", {}).get("win_rate", 0.0) * 100, 2),
         "profit_factor": round(metrics.get("trades", {}).get("profit_factor", 0.0), 2),
-        "total_trades": results.get("total_trades", 0),
+        # completed round trips (AlphaLab metrics definition)
+        "total_trades": metrics.get("trades", {}).get(
+            "round_trips", results.get("total_trades", 0)
+        ),
         "calmar_ratio": round(metrics.get("risk", {}).get("calmar_ratio", 0.0), 2),
     }
 
@@ -129,6 +132,9 @@ def _build_export_json(
         "trailing_stop_enabled": rs.get("trailing_stop_enabled", False),
         "trailing_stop_pct": rs.get("trailing_stop_pct", 3.0),
         "commission_per_trade": rs.get("commission_per_trade", 0.0),
+        # Only halt-free backtests are exportable (see export_strategy);
+        # stated explicitly so AlphaLive can tell these from older exports.
+        "drawdown_halt_enabled": False,
     }
 
     execution = {
