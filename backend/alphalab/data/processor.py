@@ -106,8 +106,11 @@ class FeatureEngineer:
         avg_gain = gain.ewm(alpha=1 / 14, adjust=False).mean()
         avg_loss = loss.ewm(alpha=1 / 14, adjust=False).mean()
         rs = avg_gain / avg_loss.replace(0, np.nan)
-        df["RSI"] = 100 - (100 / (1 + rs))
-        df["RSI"] = df["RSI"].clip(0, 100)
+        rsi = 100 - (100 / (1 + rs))
+        # avg_loss == 0 -> 100 (gains only) / 50 (no movement); was NaN.
+        rsi = rsi.mask((avg_loss == 0) & (avg_gain > 0), 100.0)
+        rsi = rsi.mask((avg_loss == 0) & (avg_gain == 0), 50.0)
+        df["RSI"] = rsi.clip(0, 100)
 
         return df
 
