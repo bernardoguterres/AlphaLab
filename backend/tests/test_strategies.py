@@ -41,13 +41,26 @@ class TestMovingAverageCrossover:
             {"short_window": 10, "long_window": 30, "cooldown_days": 10}
         )
         signals = s.generate_signals(data)
-        # Check no two signals within 10 bars
+        # No ENTRY within 10 bars of the previous signal (exits are never
+        # suppressed - see BaseStrategy._apply_cooldown)
         sig_idx = signals[signals["signal"] != 0].index
         for i in range(1, len(sig_idx)):
             gap = signals.index.get_loc(sig_idx[i]) - signals.index.get_loc(
                 sig_idx[i - 1]
             )
-            assert gap > 10
+            if signals.loc[sig_idx[i], "signal"] == 1:
+                assert gap > 10
+
+    def test_cooldown_never_suppresses_an_exit(self):
+        import pandas as pd
+
+        sig = pd.DataFrame(
+            {"signal": [1, 0, -1, 0, 1, 0, 0, 0, 1], "confidence": 0.0, "reason": "x"}
+        )
+        out = MovingAverageCrossover._apply_cooldown(sig.copy(), 3)
+        # exit 2 bars after the entry survives; the re-entry 2 bars after the
+        # exit is suppressed; the entry 6 bars after the exit survives
+        assert list(out["signal"]) == [1, 0, -1, 0, 0, 0, 0, 0, 1]
 
 
 class TestRSIMeanReversion:
@@ -126,13 +139,55 @@ class TestBollingerBreakout:
         data = _make_featured_data()
         s = BollingerBreakout({"cooldown_days": 5})
         signals = s.generate_signals(data)
-        # Check no two signals within 5 bars
+        # No ENTRY within 5 bars of the previous signal; exits never suppressed
         sig_idx = signals[signals["signal"] != 0].index
         for i in range(1, len(sig_idx)):
             gap = signals.index.get_loc(sig_idx[i]) - signals.index.get_loc(
                 sig_idx[i - 1]
             )
-            assert gap > 5
+            if signals.loc[sig_idx[i], "signal"] == 1:
+                assert gap > 5
+
+    def test_long_only_signals_alternate_and_never_cover_a_short(self):
+        """Regression (2026-10): a lower-band breakdown used to open a phantom
+        SHORT whose later 'cover' (+1) was executed as a long entry by the
+        long-only engine. Signals must now strictly alternate BUY, SELL, ..."""
+        import numpy as np
+        import pandas as pd
+
+        rng = np.random.default_rng(0)
+        n = 600
+        close = pd.Series(100 * np.exp(np.cumsum(rng.normal(0, 0.02, n))))
+        data = pd.DataFrame(
+            {"Close": close.values, "Volume": rng.integers(5e5, 3e6, n).astype(float)},
+            index=pd.bdate_range("2020-01-01", periods=n),
+        )
+        sig = BollingerBreakout(
+            {"volume_filter": False, "cooldown_days": 0}
+        ).generate_signals(data)
+        seq = [v for v in sig["signal"] if v != 0]
+        assert len(seq) >= 4
+        assert all(seq[i] == (1 if i % 2 == 0 else -1) for i in range(len(seq)))
+
+    def test_long_exit_when_price_gaps_through_middle_band(self):
+        import pandas as pd
+
+        closes = (
+            [100.0] * 25 + [104, 108, 112] + [90.0]
+        )  # breakout, then gap far below SMA
+        data = pd.DataFrame(
+            {"Close": closes, "Volume": 1e6},
+            index=pd.bdate_range("2021-01-01", periods=len(closes)),
+        )
+        sig = BollingerBreakout(
+            {
+                "bb_period": 20,
+                "confirmation_bars": 1,
+                "volume_filter": False,
+                "cooldown_days": 0,
+            }
+        ).generate_signals(data)
+        assert sig["signal"].iloc[-1] == -1
 
     def test_volume_filter(self):
         data = _make_featured_data()

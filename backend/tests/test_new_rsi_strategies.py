@@ -14,6 +14,32 @@ from alphalab.strategies.implementations.trend_adaptive_rsi import TrendAdaptive
 from helpers import make_featured_data as _make_featured_data
 
 
+def _gen_with_injected_indicators(strategy, data, monkeypatch):
+    """Drive a strategy's state machine with hand-set RSI/BB_* columns.
+
+    Strategies compute RSI/Bollinger from their own parameters (2026-10);
+    these scenario tests specify indicator values directly, so substitute
+    the strategy module's indicator helpers with the injected columns."""
+    import importlib
+
+    mod = importlib.import_module(type(strategy).__module__)
+    if "RSI" in data.columns and hasattr(mod, "rsi_ewm"):
+        monkeypatch.setattr(
+            mod, "rsi_ewm", lambda close, period: data["RSI"].reindex(close.index)
+        )
+    if "BB_Lower" in data.columns and hasattr(mod, "bollinger"):
+        monkeypatch.setattr(
+            mod,
+            "bollinger",
+            lambda close, period, std: (
+                data["BB_Lower"],
+                data["BB_Middle"],
+                data["BB_Upper"],
+            ),
+        )
+    return strategy.generate_signals(data)
+
+
 class TestRSISimple:
     def test_default_params(self):
         s = RSISimple()
@@ -98,7 +124,7 @@ class TestBollingerRSICombo:
         assert "signal" in signals.columns
         assert set(signals["signal"].unique()).issubset({-1, 0, 1})
 
-    def test_entry_on_bb_touch_and_rsi_oversold(self):
+    def test_entry_on_bb_touch_and_rsi_oversold(self, monkeypatch):
         idx = pd.date_range("2022-01-01", periods=3)
         data = pd.DataFrame(
             {
@@ -111,13 +137,13 @@ class TestBollingerRSICombo:
             index=idx,
         )
         s = BollingerRSICombo()
-        signals = s.generate_signals(data)
+        signals = _gen_with_injected_indicators(s, data, monkeypatch)
         # Bar 0: close 10 > BB_Lower 9, no entry
         assert signals["signal"].iloc[0] == 0
         # Bar 1: close 8 <= BB_Lower 9 and RSI 30 < 45 -> buy
         assert signals["signal"].iloc[1] == 1
 
-    def test_exit_at_middle_band(self):
+    def test_exit_at_middle_band(self, monkeypatch):
         idx = pd.date_range("2022-01-01", periods=3)
         data = pd.DataFrame(
             {
@@ -130,11 +156,11 @@ class TestBollingerRSICombo:
             index=idx,
         )
         s = BollingerRSICombo({"exit_at_middle": True})
-        signals = s.generate_signals(data)
+        signals = _gen_with_injected_indicators(s, data, monkeypatch)
         assert signals["signal"].iloc[1] == 1  # entry
         assert signals["signal"].iloc[2] == -1  # exit at middle band reached
 
-    def test_exit_on_rsi_overbought(self):
+    def test_exit_on_rsi_overbought(self, monkeypatch):
         idx = pd.date_range("2022-01-01", periods=3)
         data = pd.DataFrame(
             {
@@ -147,7 +173,7 @@ class TestBollingerRSICombo:
             index=idx,
         )
         s = BollingerRSICombo({"exit_at_middle": True})
-        signals = s.generate_signals(data)
+        signals = _gen_with_injected_indicators(s, data, monkeypatch)
         assert signals["signal"].iloc[1] == 1
         # Price still below middle band, but RSI overbought triggers exit
         assert signals["signal"].iloc[2] == -1
@@ -198,7 +224,7 @@ class TestTrendAdaptiveRSI:
         signals = s.generate_signals(data)
         assert (signals["signal"] == 0).all()
 
-    def test_uptrend_buys_dip_above_range_threshold(self):
+    def test_uptrend_buys_dip_above_range_threshold(self, monkeypatch):
         # Construct a clear uptrend: SMA rising >0.5% over lookback, price above SMA.
         n = 20
         idx = pd.date_range("2022-01-01", periods=n)
@@ -208,11 +234,11 @@ class TestTrendAdaptiveRSI:
         rsi[10] = 44  # below uptrend_buy=45 but above range_buy=35
         data = pd.DataFrame({"Close": close, "RSI": rsi, "SMA_50": sma}, index=idx)
         s = TrendAdaptiveRSI({"trend_sma": 50, "trend_lookback": 5})
-        signals = s.generate_signals(data)
+        signals = _gen_with_injected_indicators(s, data, monkeypatch)
         assert signals["signal"].iloc[10] == 1
         assert "uptrend" in signals["reason"].iloc[10]
 
-    def test_downtrend_sells_rip_at_lower_threshold(self):
+    def test_downtrend_sells_rip_at_lower_threshold(self, monkeypatch):
         n = 20
         idx = pd.date_range("2022-01-01", periods=n)
         sma = np.linspace(110, 100, n)  # falling sma -> downtrend
@@ -222,12 +248,12 @@ class TestTrendAdaptiveRSI:
         rsi[10] = 56  # exit: above downtrend_sell=55
         data = pd.DataFrame({"Close": close, "RSI": rsi, "SMA_50": sma}, index=idx)
         s = TrendAdaptiveRSI({"trend_sma": 50, "trend_lookback": 5})
-        signals = s.generate_signals(data)
+        signals = _gen_with_injected_indicators(s, data, monkeypatch)
         assert signals["signal"].iloc[5] == 1
         assert signals["signal"].iloc[10] == -1
         assert "downtrend" in signals["reason"].iloc[5]
 
-    def test_range_regime_uses_standard_thresholds(self):
+    def test_range_regime_uses_standard_thresholds(self, monkeypatch):
         n = 20
         idx = pd.date_range("2022-01-01", periods=n)
         sma = np.full(n, 100.0)  # flat sma -> range regime
@@ -236,7 +262,7 @@ class TestTrendAdaptiveRSI:
         rsi[8] = 30  # below range_buy=35
         data = pd.DataFrame({"Close": close, "RSI": rsi, "SMA_50": sma}, index=idx)
         s = TrendAdaptiveRSI({"trend_sma": 50, "trend_lookback": 5})
-        signals = s.generate_signals(data)
+        signals = _gen_with_injected_indicators(s, data, monkeypatch)
         assert signals["signal"].iloc[8] == 1
         assert "range" in signals["reason"].iloc[8]
 
@@ -251,3 +277,29 @@ class TestTrendAdaptiveRSI:
         s = TrendAdaptiveRSI({"trend_sma": 50, "trend_lookback": 5})
         signals = s.generate_signals(data)
         assert signals["signal"].iloc[6] == 0
+
+
+def test_rsi_period_parameter_is_honoured_not_the_fixed_feature():
+    """Regression (2026-10): bollinger_rsi_combo / trend_adaptive_rsi /
+    greenblatt_weekly / vwap_reversion read the fixed RSI(14) feature and
+    silently ignored rsi_period (AlphaLive honours it from the export)."""
+    from alphalab.data.processor import FeatureEngineer
+    from alphalab.strategies.implementations import TrendAdaptiveRSI
+
+    rng = np.random.default_rng(1)
+    n = 400
+    close = 100 * np.exp(np.cumsum(rng.normal(0, 0.015, n)))
+    raw = pd.DataFrame(
+        {
+            "Open": close,
+            "High": close * 1.01,
+            "Low": close * 0.99,
+            "Close": close,
+            "Volume": 1e6,
+        },
+        index=pd.bdate_range("2020-01-01", periods=n),
+    )
+    data = FeatureEngineer().process(raw)
+    a = TrendAdaptiveRSI({"rsi_period": 14}).generate_signals(data)["signal"]
+    b = TrendAdaptiveRSI({"rsi_period": 5}).generate_signals(data)["signal"]
+    assert not a.equals(b)

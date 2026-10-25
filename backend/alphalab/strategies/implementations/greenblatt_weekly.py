@@ -25,6 +25,7 @@ because backtests showed they cut winners too early.
 import pandas as pd
 
 from ..base_strategy import BaseStrategy
+from ..indicators import rsi_ewm
 from ...utils.logger import setup_logger
 
 logger = setup_logger("alphalab.strategy.greenblatt_weekly")
@@ -81,7 +82,7 @@ class GreenblattWeekly(BaseStrategy):
         signals = self._init_signals_frame(data)
 
         close = data["Close"]
-        rsi = data["RSI"]
+        rsi = rsi_ewm(data["Close"], p["rsi_period"])
         fast_sma = data[fast_col]
         slow_sma = data[slow_col]
 

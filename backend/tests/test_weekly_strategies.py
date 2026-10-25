@@ -45,8 +45,17 @@ def _make_weekly_data(n=200, base_price=100.0, trend="flat", seed=42) -> pd.Data
 class TestGreenblattWeekly(unittest.TestCase):
 
     def _run(self, data, params=None):
+        """Scenario tests set specific RSI values in data["RSI"]; the
+        strategy computes RSI from its rsi_period parameter (2026-10), so
+        feed the prepared column through its indicator helper."""
+        from unittest.mock import patch
+
         strat = GreenblattWeekly(params=params or {})
-        return strat.generate_signals(data)
+        with patch(
+            "alphalab.strategies.implementations.greenblatt_weekly.rsi_ewm",
+            lambda close, period: data["RSI"].reindex(close.index),
+        ):
+            return strat.generate_signals(data)
 
     def test_signals_dataframe_has_required_columns(self):
         signals = self._run(_make_weekly_data())
