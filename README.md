@@ -169,8 +169,12 @@ but no single aggregate parity claim is supported.
 
 ## Interface and supported strategies
 
-The React UI covers backtest configuration/results (single, batch, parameter-optimize), strategy
-comparison, cached-data management, and settings - a Flask API client only.
+The React UI is a Flask API client with five screens: Overview (the latest saved run and the data
+cache), Backtest (a single run with research checks and AlphaLive export, plus batch and
+parameter-optimize tabs), Compare (two or three strategies on the same data), Data (fetch and inspect
+the cache) and Settings (a read-only reference of engine defaults). Every strategy's parameters,
+defaults, optimizer ranges and export eligibility are defined once, in
+`frontend/src/utils/strategies.ts`.
 
 Nine strategies are implemented and backtestable, spanning trend-following, mean-reversion,
 breakout, and value-factor approaches. Defaults are AlphaLab's own; AlphaLive may apply its own
@@ -249,7 +253,8 @@ Run from the repository root, using subshells so each command's `cd` doesn't lea
 
 ```bash
 (cd backend && source venv/bin/activate && pytest tests/ -v)   # 560 tests
-(cd frontend && npm run test)                                   # 42 tests (Vitest)
+(cd frontend && npm run test)                                   # 39 tests (Vitest)
+(cd frontend && npm run typecheck)                              # tsc, no emit
 (cd frontend && npm run lint)                                    # ESLint (convention, not CI-enforced)
 ```
 

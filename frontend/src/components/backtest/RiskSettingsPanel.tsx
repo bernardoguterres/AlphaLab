@@ -1,9 +1,26 @@
 import type { RiskSettings } from "@/types";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertTriangle, ShieldCheck } from "lucide-react";
+import { Disclosure } from "@/components/ui/disclosure";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Notice } from "@/components/ui/notice";
+
+type NumericSetting = Exclude<keyof RiskSettings, "trailing_stop_enabled">;
+
+const FIELDS: { key: NumericSetting; label: string; min: number; max: number; step: number; hint?: string }[] = [
+  { key: "stop_loss_pct", label: "Stop loss %", min: 0.1, max: 50, step: 0.1 },
+  { key: "take_profit_pct", label: "Take profit %", min: 0.5, max: 100, step: 0.5 },
+  { key: "max_position_size_pct", label: "Max position size %", min: 1, max: 100, step: 1 },
+  { key: "max_daily_loss_pct", label: "Max daily loss %", min: 0.5, max: 20, step: 0.5 },
+  { key: "max_open_positions", label: "Max open positions", min: 1, max: 50, step: 1 },
+  { key: "commission_per_trade", label: "Commission per trade ($)", min: 0, max: 50, step: 0.01, hint: "Charged on entry and exit." },
+];
+
+function riskSummary(s: RiskSettings): string {
+  const trailing = s.trailing_stop_enabled ? `trailing ${s.trailing_stop_pct}%` : "no trailing stop";
+  return `Position ${s.max_position_size_pct}% · stop ${s.stop_loss_pct}% · target ${s.take_profit_pct}% · ${trailing}`;
+}
 
 interface RiskSettingsPanelProps {
   settings: RiskSettings;
@@ -11,195 +28,55 @@ interface RiskSettingsPanelProps {
 }
 
 export function RiskSettingsPanel({ settings, onChange }: RiskSettingsPanelProps) {
-  const updateSetting = <K extends keyof RiskSettings>(key: K, value: RiskSettings[K]) => {
-    onChange({ ...settings, [key]: value });
-  };
+  const update = <K extends keyof RiskSettings>(key: K, value: RiskSettings[K]) => onChange({ ...settings, [key]: value });
 
-  const showStopLossWarning = settings.stop_loss_pct > settings.take_profit_pct;
+  // An empty or invalid box keeps the previous value rather than sending NaN.
+  const numberInput = (key: NumericSetting, min: number, max: number, step: number) => (
+    <Input
+      id={`risk-${key}`}
+      type="number"
+      className="num"
+      min={min}
+      max={max}
+      step={step}
+      value={settings[key]}
+      onChange={(e) => {
+        const value = e.target.valueAsNumber;
+        if (!Number.isNaN(value)) update(key, value);
+      }}
+    />
+  );
 
   return (
-    <Accordion type="single" collapsible className="w-full">
-      <AccordionItem value="risk-settings" className="rounded-xl border border-border/70 bg-card/60 px-3.5">
-        <AccordionTrigger className="hover:no-underline py-3 [&>svg]:text-muted-foreground">
-          <div className="flex items-center gap-2 min-w-0">
-            <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="text-sm font-semibold shrink-0">Risk Settings</span>
-            <span className="text-[10px] text-muted-foreground/80 font-mono-numbers truncate hidden sm:inline">
-              Position {settings.max_position_size_pct}% - Stop Loss {settings.stop_loss_pct}% - Take Profit {settings.take_profit_pct}%
-              {settings.trailing_stop_enabled ? ` - Trailing ${settings.trailing_stop_pct}%` : " - Trailing Off"}
-            </span>
-          </div>
-        </AccordionTrigger>
-        <AccordionContent className="pt-1 pb-3.5">
-          <div className="grid grid-cols-2 gap-3.5">
-            {/* Stop Loss */}
-            <div className="space-y-1.5">
-              <Label htmlFor="stop-loss" className="text-xs">
-                Stop Loss %
-                <span className="text-muted-foreground ml-1">(0.1 - 50)</span>
-              </Label>
-              <Input
-                id="stop-loss"
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="50"
-                value={settings.stop_loss_pct}
-                onChange={(e) => updateSetting("stop_loss_pct", parseFloat(e.target.value) || 2.0)}
-                className="h-8 text-sm font-mono-numbers"
-              />
-            </div>
-
-            {/* Take Profit */}
-            <div className="space-y-1.5">
-              <Label htmlFor="take-profit" className="text-xs">
-                Take Profit %
-                <span className="text-muted-foreground ml-1">(0.5 - 100)</span>
-              </Label>
-              <Input
-                id="take-profit"
-                type="number"
-                step="0.5"
-                min="0.5"
-                max="100"
-                value={settings.take_profit_pct}
-                onChange={(e) => updateSetting("take_profit_pct", parseFloat(e.target.value) || 5.0)}
-                className="h-8 text-sm font-mono-numbers"
-              />
-            </div>
-
-            {/* Max Position Size */}
-            <div className="space-y-1.5">
-              <Label htmlFor="max-position" className="text-xs">
-                Max Position Size %
-                <span className="text-muted-foreground ml-1">(1 - 100)</span>
-              </Label>
-              <Input
-                id="max-position"
-                type="number"
-                step="1"
-                min="1"
-                max="100"
-                value={settings.max_position_size_pct}
-                onChange={(e) => updateSetting("max_position_size_pct", parseFloat(e.target.value) || 10.0)}
-                className="h-8 text-sm font-mono-numbers"
-              />
-            </div>
-
-            {/* Max Daily Loss */}
-            <div className="space-y-1.5">
-              <Label htmlFor="max-daily-loss" className="text-xs">
-                Max Daily Loss %
-                <span className="text-muted-foreground ml-1">(0.5 - 20)</span>
-              </Label>
-              <Input
-                id="max-daily-loss"
-                type="number"
-                step="0.5"
-                min="0.5"
-                max="20"
-                value={settings.max_daily_loss_pct}
-                onChange={(e) => updateSetting("max_daily_loss_pct", parseFloat(e.target.value) || 3.0)}
-                className="h-8 text-sm font-mono-numbers"
-              />
-            </div>
-
-            {/* Max Open Positions */}
-            <div className="space-y-1.5">
-              <Label htmlFor="max-open" className="text-xs">
-                Max Open Positions
-                <span className="text-muted-foreground ml-1">(1 - 50)</span>
-              </Label>
-              <Input
-                id="max-open"
-                type="number"
-                step="1"
-                min="1"
-                max="50"
-                value={settings.max_open_positions}
-                onChange={(e) => updateSetting("max_open_positions", parseInt(e.target.value) || 5)}
-                className="h-8 text-sm font-mono-numbers"
-              />
-            </div>
-
-            {/* Commission */}
-            <div className="space-y-1.5">
-              <Label htmlFor="commission" className="text-xs">
-                Commission per Trade ($)
-                <span className="text-muted-foreground ml-1">(0 - 50)</span>
-              </Label>
-              <Input
-                id="commission"
-                type="number"
-                step="0.01"
-                min="0"
-                max="50"
-                value={settings.commission_per_trade}
-                onChange={(e) => updateSetting("commission_per_trade", parseFloat(e.target.value) || 0.0)}
-                className="h-8 text-sm font-mono-numbers"
-              />
-              <p className="text-[10px] text-muted-foreground">
-                Alpaca: $0 · Other brokers: $0.65-$5.00
-              </p>
-            </div>
-
-            {/* Trailing Stop Toggle */}
-            <div className="col-span-2 space-y-2.5 pt-3 border-t border-border/50">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="trailing-stop"
-                  checked={settings.trailing_stop_enabled}
-                  onCheckedChange={(checked) => updateSetting("trailing_stop_enabled", !!checked)}
-                />
-                <Label htmlFor="trailing-stop" className="text-xs font-normal cursor-pointer">
-                  Enable Trailing Stop
-                </Label>
-              </div>
-
-              {settings.trailing_stop_enabled && (
-                <div className="space-y-1.5 ml-6">
-                  <Label htmlFor="trailing-pct" className="text-xs">
-                    Trailing Stop %
-                    <span className="text-muted-foreground ml-1">(0.1 - 50)</span>
-                  </Label>
-                  <Input
-                    id="trailing-pct"
-                    type="number"
-                    step="0.5"
-                    min="0.1"
-                    max="50"
-                    value={settings.trailing_stop_pct}
-                    onChange={(e) => updateSetting("trailing_stop_pct", parseFloat(e.target.value) || 3.0)}
-                    className="h-8 text-sm font-mono-numbers max-w-xs"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Warning if stop loss > take profit */}
-          {showStopLossWarning && (
-            <div className="mt-3.5 flex items-start gap-2.5 p-3 bg-warning/[0.06] border border-warning/30 rounded-lg">
-              <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-              <div className="text-xs">
-                <p className="font-medium text-warning">Warning</p>
-                <p className="text-muted-foreground mt-0.5">
-                  Stop loss ({settings.stop_loss_pct}%) is greater than take profit ({settings.take_profit_pct}%).
-                  This is uncommon but valid for some strategies.
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-3.5 p-3 bg-secondary/30 border border-border/40 rounded-lg">
-            <p className="text-[10px] text-muted-foreground leading-relaxed">
-              <strong className="text-foreground/80">Note:</strong> Risk settings apply position limits and stop-loss/take-profit levels.
-              Commission is applied on both entry and exit (2× per round trip).
-              These settings will be included in the exported strategy config.
-            </p>
-          </div>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+    <Disclosure title="Risk settings" summary={riskSummary(settings)}>
+      <div className="grid max-w-3xl gap-x-6 gap-y-4 sm:grid-cols-3">
+        {FIELDS.map((f) => (
+          <Field key={f.key} label={f.label} htmlFor={`risk-${f.key}`} hint={f.hint}>
+            {numberInput(f.key, f.min, f.max, f.step)}
+          </Field>
+        ))}
+        <div className="flex items-center gap-2 self-end pb-2">
+          <Checkbox
+            id="risk-trailing"
+            checked={settings.trailing_stop_enabled}
+            onCheckedChange={(v) => update("trailing_stop_enabled", v === true)}
+          />
+          <Label htmlFor="risk-trailing" className="text-[13px] font-normal">
+            Trailing stop
+          </Label>
+        </div>
+        {settings.trailing_stop_enabled && (
+          <Field label="Trailing stop %" htmlFor="risk-trailing_stop_pct">
+            {numberInput("trailing_stop_pct", 0.1, 50, 0.5)}
+          </Field>
+        )}
+      </div>
+      {settings.stop_loss_pct > settings.take_profit_pct && (
+        <Notice tone="warning" title="Stop loss is wider than take profit" className="mt-4">
+          Unusual, but valid for some strategies.
+        </Notice>
+      )}
+      <p className="mt-4 text-2xs text-muted-foreground">These settings are included in an AlphaLive export.</p>
+    </Disclosure>
   );
 }

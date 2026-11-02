@@ -28,7 +28,6 @@ export function pairTradesFIFO(orders: RawOrder[]): Trade[] {
       trades.push({
         entry_date: buy.filled_timestamp ?? buy.timestamp ?? "",
         exit_date: order.filled_timestamp ?? order.timestamp ?? "",
-        action: "BUY",
         shares,
         entry_price: buyPrice,
         exit_price: sellPrice,

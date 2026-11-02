@@ -1,11 +1,9 @@
 import { useEffect } from "react";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Toaster } from "@/components/ui/sonner";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useBacktestStore } from "@/stores/backtestStore";
-import { checkHealth, getAvailableData } from "@/services/api";
+import { checkHealth } from "@/services/api";
 import Dashboard from "./pages/Dashboard";
 import Backtest from "./pages/Backtest";
 import Compare from "./pages/Compare";
@@ -13,55 +11,45 @@ import DataManager from "./pages/DataManager";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const HEALTH_POLL_MS = 30_000;
 
-function MainApp() {
-  const { setBackendOnline, setCachedTickers } = useBacktestStore();
+function useBackendHealth() {
+  const { setBackendOnline, refreshCachedTickers } = useBacktestStore();
 
   useEffect(() => {
-    const check = async () => {
-      try {
-        await checkHealth();
-        setBackendOnline(true);
-        try {
-          const tickers = await getAvailableData();
-          setCachedTickers(Array.isArray(tickers) ? tickers : []);
-        } catch {}
-      } catch {
-        setBackendOnline(false);
-      }
-    };
+    const check = () =>
+      checkHealth().then(
+        () => {
+          setBackendOnline(true);
+          return refreshCachedTickers();
+        },
+        () => setBackendOnline(false),
+      );
     check();
-    const interval = window.setInterval(check, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div className="min-h-screen bg-background flex">
-      <Sidebar />
-      <main className="flex-1 min-w-0">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/backtest" element={<Backtest />} />
-          <Route path="/compare" element={<Compare />} />
-          <Route path="/data" element={<DataManager />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-    </div>
-  );
+    const id = window.setInterval(check, HEALTH_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [setBackendOnline, refreshCachedTickers]);
 }
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Sonner />
-      <BrowserRouter>
-        <MainApp />
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+export default function App() {
+  useBackendHealth();
 
-export default App;
+  return (
+    <BrowserRouter>
+      <Toaster />
+      <div className="flex min-h-screen flex-col md:flex-row">
+        <Sidebar />
+        <main className="min-w-0 flex-1">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/backtest" element={<Backtest />} />
+            <Route path="/compare" element={<Compare />} />
+            <Route path="/data" element={<DataManager />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
+  );
+}

@@ -751,21 +751,29 @@ StrategyParamsUnion = Union[
 ]
 ```
 
-**frontend/src/types/strategy_schema.ts** - NOTE (found 2026-07): this file is currently stale, only listing the original 5 strategies, and appears to never actually be imported anywhere in the frontend app. The live UI instead uses its own separate, equally-stale `StrategyType` in `frontend/src/types/index.ts` (also only 5 strategies). Both need fixing to add the 3 missing strategies - this is a real code gap, not just a doc gap; flagged separately, not fixed as part of this doc pass.
-```typescript
-export type StrategyName =
-  | "ma_crossover"
-  | "rsi_mean_reversion"
-  | "momentum_breakout"
-  | "bollinger_breakout"
-  | "vwap_reversion"
-  | "my_new_strategy";  // Add here
+**Frontend** - two edits:
 
-export interface MyNewStrategyParams {
-  param1: number;
-  param2: number;
-}
+1. Add the id to `StrategyType` and a `MyNewStrategyParams` interface in `frontend/src/types/index.ts`.
+2. Add one entry to `STRATEGIES` in `frontend/src/utils/strategies.ts`: display name, category,
+   description, and each parameter's label, default and slider bounds (plus an `optimize` range for
+   the ones the optimizer should sweep). The parameter form, the optimizer, the strategy pickers and
+   the default request params are all generated from that entry. If AlphaLive cannot run the
+   strategy, set `exportBlock` so the UI previews the server's 422.
+
+```typescript
+my_new_strategy: {
+  name: "My New Strategy",
+  category: "Mean reversion",
+  description: "One sentence on what it trades.",
+  params: [
+    num("param1", "Param one", 20, range(5, 50), range(10, 30, 10)),
+    bool("param2", "Param two", true),
+  ],
+},
 ```
+
+`frontend/src/utils/strategies.test.ts` checks every entry (defaults inside their bounds, positive
+optimizer steps, export blocks matching the backend).
 
 ### 3. Update Version
 

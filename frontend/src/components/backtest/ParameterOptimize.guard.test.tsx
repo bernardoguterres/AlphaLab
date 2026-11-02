@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ParameterOptimize from "./ParameterOptimize";
 import * as api from "@/services/api";
 
@@ -22,18 +21,9 @@ vi.mock("@/services/api", async () => {
   };
 });
 
-function renderWithQueryClient(ui: React.ReactElement) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
-}
-
 describe("ParameterOptimize step validation (bug 3.11)", () => {
   it("rejects step=0 before starting the grid-generation loop, without calling the API", async () => {
-    renderWithQueryClient(
+    render(
       <ParameterOptimize
         ticker="AAPL"
         strategy="ma_crossover"

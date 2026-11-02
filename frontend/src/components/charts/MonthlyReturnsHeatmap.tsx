@@ -1,179 +1,79 @@
 import { useMemo } from "react";
 import type { EquityCurvePoint } from "@/types";
+import { Table, Td, Th } from "@/components/ui/data-table";
 import { cn } from "@/lib/utils";
-
-interface MonthlyReturnsHeatmapProps {
-  equityCurve: EquityCurvePoint[];
-}
-
-interface MonthlyReturn {
-  year: number;
-  month: number;
-  return: number;
-}
+import { pnlColor } from "@/utils/formatters";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function MonthlyReturnsHeatmap({ equityCurve }: MonthlyReturnsHeatmapProps) {
-  const { monthlyReturns, yearlyReturns, years } = useMemo(() => {
-    if (!equityCurve || equityCurve.length === 0) {
-      return { monthlyReturns: new Map(), yearlyReturns: new Map(), years: [] };
-    }
+/** Return from each month's first to last point, keyed "year-month". */
+function monthlyReturns(curve: EquityCurvePoint[]): Map<string, number> {
+  const bounds = new Map<string, { first: number; last: number }>();
+  for (const point of curve) {
+    const d = new Date(point.date);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    const month = bounds.get(key);
+    if (month) month.last = point.value;
+    else bounds.set(key, { first: point.value, last: point.value });
+  }
+  return new Map([...bounds].map(([key, { first, last }]) => [key, ((last - first) / first) * 100]));
+}
 
-    const returns = new Map<string, number>();
-    const yearly = new Map<number, number[]>();
-    const yearSet = new Set<number>();
+/** Background tint scaled by magnitude, saturating at ±10%. */
+function cellTint(value: number): React.CSSProperties {
+  const alpha = Math.min(Math.abs(value) / 10, 1) * 0.3;
+  return { backgroundColor: `hsl(var(--${value >= 0 ? "gain" : "loss"}) / ${alpha})` };
+}
 
-    // Calculate monthly returns
-    let monthStart = 0;
-    for (let i = 1; i < equityCurve.length; i++) {
-      const curr = new Date(equityCurve[i].date);
-      const prev = new Date(equityCurve[i - 1].date);
-
-      // New month detected
-      if (curr.getMonth() !== prev.getMonth() || curr.getFullYear() !== prev.getFullYear()) {
-        const year = prev.getFullYear();
-        const month = prev.getMonth();
-        const startValue = equityCurve[monthStart].value;
-        const endValue = equityCurve[i - 1].value;
-        const monthlyReturn = ((endValue - startValue) / startValue) * 100;
-
-        const key = `${year}-${month}`;
-        returns.set(key, monthlyReturn);
-        yearSet.add(year);
-
-        if (!yearly.has(year)) {
-          yearly.set(year, []);
-        }
-        yearly.get(year)!.push(monthlyReturn);
-
-        monthStart = i;
-      }
-    }
-
-    // Handle last month
-    if (monthStart < equityCurve.length - 1) {
-      const lastDate = new Date(equityCurve[equityCurve.length - 1].date);
-      const year = lastDate.getFullYear();
-      const month = lastDate.getMonth();
-      const startValue = equityCurve[monthStart].value;
-      const endValue = equityCurve[equityCurve.length - 1].value;
-      const monthlyReturn = ((endValue - startValue) / startValue) * 100;
-
-      const key = `${year}-${month}`;
-      returns.set(key, monthlyReturn);
-      yearSet.add(year);
-
-      if (!yearly.has(year)) {
-        yearly.set(year, []);
-      }
-      yearly.get(year)!.push(monthlyReturn);
-    }
-
-    // Calculate yearly returns
-    const yearlyReturnsMap = new Map<number, number>();
-    yearly.forEach((monthReturns, year) => {
-      // Compound monthly returns to get yearly return
-      const yearlyReturn = monthReturns.reduce((acc, r) => acc * (1 + r / 100), 1) - 1;
-      yearlyReturnsMap.set(year, yearlyReturn * 100);
-    });
-
-    return {
-      monthlyReturns: returns,
-      yearlyReturns: yearlyReturnsMap,
-      years: Array.from(yearSet).sort(),
-    };
+export function MonthlyReturnsHeatmap({ equityCurve }: { equityCurve: EquityCurvePoint[] }) {
+  const { returns, years } = useMemo(() => {
+    const returns = monthlyReturns(equityCurve);
+    const years = [...new Set([...returns.keys()].map((k) => Number(k.split("-")[0])))].sort();
+    return { returns, years };
   }, [equityCurve]);
 
-  const getColorStyle = (value: number): React.CSSProperties => {
-    const intensity = Math.min(Math.abs(value) / 10, 1); // 0 -> 0.15, 10%+ -> 0.85 opacity
-    const alpha = 0.15 + intensity * 0.7;
-    if (value === 0) return { backgroundColor: "hsl(var(--secondary))", color: "hsl(var(--muted-foreground))" };
-    return {
-      backgroundColor: `hsl(var(--${value > 0 ? "gain" : "loss"}) / ${alpha})`,
-      color: alpha > 0.5 ? "hsl(var(--foreground))" : `hsl(var(--${value > 0 ? "gain" : "loss"}))`,
-    };
-  };
-
   if (years.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">
-        No data available for monthly returns
-      </div>
-    );
+    return <p className="py-8 text-[13px] text-muted-foreground">No data for monthly returns.</p>;
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border/60">
-      <table className="w-full text-xs border-collapse">
-        <thead>
-          <tr>
-            <th className="sticky left-0 bg-secondary/30 border border-border/50 px-2 py-1.5 text-left label-caps">
-              Year
-            </th>
-            {MONTHS.map((month) => (
-              <th key={month} className="border border-border/50 px-2 py-1.5 text-center label-caps min-w-[60px]">
-                {month}
-              </th>
-            ))}
-            <th className="border border-border/50 px-2 py-1.5 text-center label-caps bg-secondary/30 min-w-[70px]">
-              Total
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {years.map((year) => (
-            <tr key={year}>
-              <td className="sticky left-0 bg-card border border-border/50 px-2 py-1.5 font-semibold">
-                {year}
-              </td>
-              {MONTHS.map((_, monthIdx) => {
-                const key = `${year}-${monthIdx}`;
-                const value = monthlyReturns.get(key);
-                if (value === undefined) {
-                  return (
-                    <td key={monthIdx} className="border border-border/50 px-2 py-1.5 text-center bg-secondary/10">
-                      <span className="text-muted-foreground/50">-</span>
-                    </td>
-                  );
-                }
-                return (
-                  <td
-                    key={monthIdx}
-                    className="border border-border/50 px-2 py-1.5 text-center font-mono-numbers font-medium transition-colors"
-                    style={getColorStyle(value)}
-                    title={`${MONTHS[monthIdx]} ${year}: ${value.toFixed(2)}%`}
-                  >
-                    {value.toFixed(1)}%
-                  </td>
-                );
-              })}
-              <td
-                className={cn(
-                  "border border-border/50 px-2 py-1.5 text-center font-mono-numbers font-bold bg-secondary/30",
-                  yearlyReturns.get(year)! >= 0 ? "text-gain" : "text-loss"
-                )}
-              >
-                {yearlyReturns.get(year)!.toFixed(1)}%
-              </td>
-            </tr>
+    <Table>
+      <thead>
+        <tr>
+          <Th>Year</Th>
+          {MONTHS.map((m) => (
+            <Th key={m} align="right">
+              {m}
+            </Th>
           ))}
-        </tbody>
-      </table>
-
-      {/* Legend */}
-      <div className="py-3 flex items-center justify-center gap-2 text-xs border-t border-border/50">
-        <span className="text-muted-foreground">Color scale:</span>
-        <div className="flex gap-1">
-          <div className="px-2 py-1 rounded" style={getColorStyle(-12)}>{"< -10%"}</div>
-          <div className="px-2 py-1 rounded" style={getColorStyle(-5)}>-5%</div>
-          <div className="px-2 py-1 rounded" style={getColorStyle(-2)}>-2%</div>
-          <div className="px-2 py-1 rounded" style={getColorStyle(0)}>0%</div>
-          <div className="px-2 py-1 rounded" style={getColorStyle(2)}>+2%</div>
-          <div className="px-2 py-1 rounded" style={getColorStyle(5)}>+5%</div>
-          <div className="px-2 py-1 rounded" style={getColorStyle(12)}>{"> +10%"}</div>
-        </div>
-      </div>
-    </div>
+          <Th align="right">Year</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {years.map((year) => {
+          const months = MONTHS.map((_, i) => returns.get(`${year}-${i}`));
+          const total = (months.reduce<number>((acc, r) => acc * (1 + (r ?? 0) / 100), 1) - 1) * 100;
+          return (
+            <tr key={year}>
+              <Td num>{year}</Td>
+              {months.map((value, i) => (
+                <Td
+                  key={i}
+                  num
+                  align="right"
+                  style={value === undefined ? undefined : cellTint(value)}
+                  title={value === undefined ? undefined : `${MONTHS[i]} ${year}: ${value.toFixed(2)}%`}
+                >
+                  {value === undefined ? <span className="text-muted-foreground">·</span> : value.toFixed(1)}
+                </Td>
+              ))}
+              <Td num align="right" className={cn("font-medium", pnlColor(total))}>
+                {total.toFixed(1)}%
+              </Td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </Table>
   );
 }

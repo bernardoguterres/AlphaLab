@@ -43,7 +43,6 @@ describe("pairTradesFIFO", () => {
     expect(trades[0]).toMatchObject({
       entry_date: "2020-01-01",
       exit_date: "2020-02-01",
-      action: "BUY",
       shares: 10,
       entry_price: 100,
       exit_price: 110,
