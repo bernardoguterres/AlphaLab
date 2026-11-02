@@ -1,6 +1,7 @@
-export function formatPercent(value: number | undefined | null, decimals = 2): string {
+/** Signed by default, for changes; pass signed=false for shares and rates (win rate, volatility). */
+export function formatPercent(value: number | undefined | null, decimals = 2, signed = true): string {
   if (value == null || isNaN(value)) return "-";
-  return `${value >= 0 ? "+" : ""}${value.toFixed(decimals)}%`;
+  return `${signed && value >= 0 ? "+" : ""}${value.toFixed(decimals)}%`;
 }
 
 export function formatCurrency(value: number | undefined | null): string {
@@ -42,25 +43,19 @@ export function formatDateTime(dateStr: string | undefined | null): string {
   });
 }
 
-export function strategyDisplayName(strategy: string): string {
-  const map: Record<string, string> = {
-    ma_crossover: "MA Crossover",
-    rsi_mean_reversion: "RSI Mean Reversion",
-    rsi_simple: "RSI Simple",
-    momentum_breakout: "Momentum Breakout",
-    bollinger_breakout: "Bollinger Breakout",
-    vwap_reversion: "VWAP Reversion",
-    bollinger_rsi_combo: "Bollinger RSI Combo",
-    trend_adaptive_rsi: "Trend Adaptive RSI",
-    greenblatt_weekly: "Greenblatt Weekly",
-  };
-  return map[strategy] || strategy;
+export type QualityLevel = "good" | "fair" | "poor";
+
+/** Bands for the 0-1 data quality score returned by POST /api/data/fetch. */
+export function qualityLevel(score: number): QualityLevel {
+  if (score >= 0.95) return "good";
+  if (score >= 0.85) return "fair";
+  return "poor";
 }
 
+const QUALITY_COLOR: Record<QualityLevel, string> = { good: "text-gain", fair: "text-warning", poor: "text-loss" };
+
 export function qualityColor(score: number): string {
-  if (score >= 0.95) return "text-gain";
-  if (score >= 0.85) return "text-warning";
-  return "text-loss";
+  return QUALITY_COLOR[qualityLevel(score)];
 }
 
 export function pnlColor(value: number): string {

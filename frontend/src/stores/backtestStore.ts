@@ -1,7 +1,9 @@
 import { create } from "zustand";
+import { getAvailableData } from "@/services/api";
 import type { BacktestHistoryItem, BacktestResult, CachedTicker } from "@/types";
 
 const HISTORY_KEY = "alphalab_history";
+const HISTORY_LIMIT = 50;
 
 function loadHistory(): BacktestHistoryItem[] {
   try {
@@ -11,38 +13,50 @@ function loadHistory(): BacktestHistoryItem[] {
   }
 }
 
-function saveHistory(items: BacktestHistoryItem[]) {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(items));
-}
-
 interface BacktestStore {
   history: BacktestHistoryItem[];
   cachedTickers: CachedTicker[];
-  currentResult: BacktestResult | null;
-  isBackendOnline: boolean;
-  setCachedTickers: (tickers: CachedTicker[]) => void;
-  setCurrentResult: (result: BacktestResult | null) => void;
+  /** The run shown in Backtest: the latest one, or one reopened from history. */
+  currentRun: BacktestHistoryItem | null;
+  /** null until the first health check answers. */
+  isBackendOnline: boolean | null;
+  /** Re-reads the cached-dataset listing; keeps the old list if the API is down. */
+  refreshCachedTickers: () => Promise<void>;
+  setCurrentRun: (run: BacktestHistoryItem | null) => void;
   setBackendOnline: (online: boolean) => void;
-  addToHistory: (item: BacktestHistoryItem) => void;
-  clearHistory: () => void;
+  addToHistory: (items: BacktestHistoryItem[]) => void;
 }
 
 export const useBacktestStore = create<BacktestStore>((set) => ({
   history: loadHistory(),
   cachedTickers: [],
-  currentResult: null,
-  isBackendOnline: false,
-  setCachedTickers: (tickers) => set({ cachedTickers: tickers }),
-  setCurrentResult: (result) => set({ currentResult: result }),
+  currentRun: null,
+  isBackendOnline: null,
+  refreshCachedTickers: async () => {
+    const tickers = await getAvailableData().catch(() => null);
+    if (tickers) set({ cachedTickers: tickers });
+  },
+  setCurrentRun: (run) => set({ currentRun: run }),
   setBackendOnline: (online) => set({ isBackendOnline: online }),
-  addToHistory: (item) =>
+  addToHistory: (items) =>
     set((state) => {
-      const history = [item, ...state.history].slice(0, 50);
-      saveHistory(history);
+      const history = [...items, ...state.history].slice(0, HISTORY_LIMIT);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
       return { history };
     }),
-  clearHistory: () => {
-    localStorage.removeItem(HISTORY_KEY);
-    set({ history: [] });
-  },
 }));
+
+/** Wraps a finished run with the ticker and strategy that produced it. */
+export function historyItem(result: BacktestResult, ticker: string, strategy: string): BacktestHistoryItem {
+  return {
+    id: result.backtest_id || `${Date.now()}-${strategy}`,
+    date: new Date().toISOString(),
+    ticker,
+    strategy,
+    total_return_pct: result.total_return_pct,
+    sharpe_ratio: result.metrics.risk.sharpe_ratio,
+    max_drawdown: result.metrics.drawdown.max_drawdown_pct,
+    total_trades: result.total_trades,
+    result,
+  };
+}

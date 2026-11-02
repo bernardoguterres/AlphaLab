@@ -5,26 +5,22 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default:
-          "bg-gradient-to-b from-primary to-lab-deep text-primary-foreground shadow-[0_1px_0_hsl(210_40%_98%/0.15)_inset,0_4px_14px_-4px_hsl(var(--primary)/0.5)] hover:shadow-[0_1px_0_hsl(210_40%_98%/0.15)_inset,0_6px_20px_-4px_hsl(var(--primary)/0.65)] hover:brightness-[1.06] active:brightness-95",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline:
-          "border border-border bg-card/40 hover:bg-secondary/60 hover:border-primary/30 hover:text-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        default: "bg-primary text-primary-foreground hover:bg-primary/85",
+        outline: "border border-input hover:border-muted-foreground hover:bg-muted",
+        ghost: "text-muted-foreground hover:bg-muted hover:text-foreground",
+        link: "text-foreground underline decoration-muted-foreground underline-offset-4 hover:decoration-foreground",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-lg px-8",
-        icon: "h-10 w-10",
+        default: "h-9 px-3.5",
+        sm: "h-8 px-2.5 text-[13px]",
       },
     },
+    // A link sits inline with text, whatever size it was given.
+    compoundVariants: [{ variant: "link", className: "h-auto px-0" }],
     defaultVariants: {
       variant: "default",
       size: "default",
@@ -46,4 +42,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = "Button";
 
-export { Button, buttonVariants };
+export { Button };

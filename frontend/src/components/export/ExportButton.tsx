@@ -1,85 +1,43 @@
 import { useState } from "react";
-import { exportStrategy } from "@/services/api";
-import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { errorMessage, exportStrategy } from "@/services/api";
+import { downloadBlob, isoDate } from "@/utils/download";
 
 interface ExportButtonProps {
   backtestId: string;
-  strategyName: string;
+  strategy: string;
   ticker: string;
-  variant?: "default" | "outline" | "ghost";
-  size?: "default" | "sm" | "lg" | "icon";
-  showLabel?: boolean;
+  variant?: "default" | "outline" | "link";
+  size?: "default" | "sm";
+  label?: string;
 }
 
-export function ExportButton({
-  backtestId,
-  strategyName,
-  ticker,
-  variant = "default",
-  size = "default",
-  showLabel = true,
-}: ExportButtonProps) {
-  const [isExporting, setIsExporting] = useState(false);
+export function ExportButton({ backtestId, strategy, ticker, variant = "outline", size = "sm", label = "Export to AlphaLive" }: ExportButtonProps) {
+  const [busy, setBusy] = useState(false);
 
   const handleExport = async () => {
-    if (!backtestId) {
-      toast.error("No backtest ID available");
-      return;
-    }
-
-    setIsExporting(true);
-
+    setBusy(true);
     try {
-      // Call API to get export JSON
-      const blob = await exportStrategy(backtestId);
-
-      // Create filename: {strategy}_{ticker}_{YYYYMMDD}.json
-      const date = new Date().toISOString().split("T")[0].replace(/-/g, "");
-      const filename = `${strategyName}_${ticker}_${date}.json`;
-
-      // Trigger download
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast.success(`Exported: ${filename}`, {
-        description: "Strategy config ready for AlphaLive",
-      });
+      const filename = `${strategy}_${ticker}_${isoDate().split("-").join("")}.json`;
+      downloadBlob(await exportStrategy(backtestId), filename);
+      toast.success(`Saved ${filename}`);
     } catch (error) {
-      console.error("Export failed:", error);
-      toast.error("Export failed", {
-        description: error instanceof Error ? error.message : "Unknown error",
-      });
+      toast.error("Export failed", { description: errorMessage(error, "Unknown error") });
     } finally {
-      setIsExporting(false);
+      setBusy(false);
     }
   };
 
-  const accessibleLabel = isExporting ? `Exporting ${ticker} ${strategyName} to AlphaLive...` : `Export ${ticker} ${strategyName} to AlphaLive`;
-
   return (
     <Button
-      onClick={handleExport}
-      disabled={isExporting}
       variant={variant}
       size={size}
-      className="gap-2"
-      aria-label={showLabel ? undefined : accessibleLabel}
-      title={showLabel ? undefined : accessibleLabel}
+      onClick={handleExport}
+      disabled={busy || !backtestId}
+      aria-label={`Export ${ticker} ${strategy} to AlphaLive`}
     >
-      {isExporting ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <Download className="h-4 w-4" />
-      )}
-      {showLabel && (isExporting ? "Exporting..." : "Export to AlphaLive")}
+      {busy ? "Exporting…" : label}
     </Button>
   );
 }

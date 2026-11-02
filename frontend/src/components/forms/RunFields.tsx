@@ -1,0 +1,95 @@
+import type { StrategyType } from "@/types";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { INTERVALS } from "@/utils/defaults";
+import { STRATEGIES, STRATEGY_TYPES } from "@/utils/strategies";
+
+/** Form fields that Backtest, Compare and Batch all ask for. */
+
+export function StrategyField({ value, onChange }: { value: StrategyType; onChange: (value: StrategyType) => void }) {
+  return (
+    <Field label="Strategy" htmlFor="strategy" hint={STRATEGIES[value].category}>
+      <Select value={value} onValueChange={(v) => onChange(v as StrategyType)}>
+        <SelectTrigger id="strategy">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {STRATEGY_TYPES.map((id) => (
+            <SelectItem key={id} value={id}>
+              {STRATEGIES[id].name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </Field>
+  );
+}
+
+export function TickerField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <Field label="Ticker" htmlFor="ticker">
+      <Input id="ticker" className="num uppercase" value={value} onChange={(e) => onChange(e.target.value.toUpperCase())} />
+    </Field>
+  );
+}
+
+export function CapitalField({ value, onChange }: { value: number; onChange: (value: number) => void }) {
+  return (
+    <Field label="Starting capital" htmlFor="capital">
+      <Input
+        id="capital"
+        type="number"
+        min={1000}
+        step={1000}
+        className="num"
+        value={value}
+        onChange={(e) => onChange(e.target.valueAsNumber || 0)}
+      />
+    </Field>
+  );
+}
+
+interface DateRangeFieldsProps {
+  start: string;
+  end: string;
+  onStartChange: (value: string) => void;
+  onEndChange: (value: string) => void;
+}
+
+export function DateRangeFields({ start, end, onStartChange, onEndChange }: DateRangeFieldsProps) {
+  return (
+    <>
+      <Field label="From" htmlFor="start-date">
+        <Input id="start-date" type="date" className="num" value={start} onChange={(e) => onStartChange(e.target.value)} />
+      </Field>
+      <Field label="To" htmlFor="end-date">
+        <Input id="end-date" type="date" className="num" value={end} onChange={(e) => onEndChange(e.target.value)} />
+      </Field>
+    </>
+  );
+}
+
+interface IntervalSelectProps {
+  value: string;
+  onChange: (value: string) => void;
+  id?: string;
+  className?: string;
+}
+
+export function IntervalSelect({ value, onChange, id, className }: IntervalSelectProps) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger id={id} aria-label={id ? undefined : "Bar interval"} className={className}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {INTERVALS.map((i) => (
+          <SelectItem key={i.value} value={i.value}>
+            {i.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}

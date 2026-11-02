@@ -4,7 +4,6 @@ import {
   formatCurrency,
   formatNumber,
   formatDate,
-  strategyDisplayName,
   qualityColor,
   pnlColor,
 } from "./formatters";
@@ -20,6 +19,10 @@ describe("formatPercent", () => {
 
   it("treats zero as positive", () => {
     expect(formatPercent(0)).toBe("+0.00%");
+  });
+
+  it("omits the sign for unsigned quantities", () => {
+    expect(formatPercent(55, 1, false)).toBe("55.0%");
   });
 
   it("respects the decimals argument", () => {
@@ -72,29 +75,6 @@ describe("formatDate", () => {
     expect(formatDate("")).toBe("-");
     expect(formatDate(null)).toBe("-");
     expect(formatDate("not-a-date")).toBe("-");
-  });
-});
-
-describe("strategyDisplayName", () => {
-  // All 8 backend strategies must have display names - unmapped ids leak
-  // raw snake_case into the Compare page and strategy cards.
-  const expected: Record<string, string> = {
-    ma_crossover: "MA Crossover",
-    rsi_mean_reversion: "RSI Mean Reversion",
-    momentum_breakout: "Momentum Breakout",
-    bollinger_breakout: "Bollinger Breakout",
-    vwap_reversion: "VWAP Reversion",
-    bollinger_rsi_combo: "Bollinger RSI Combo",
-    trend_adaptive_rsi: "Trend Adaptive RSI",
-    greenblatt_weekly: "Greenblatt Weekly",
-  };
-
-  it.each(Object.entries(expected))("maps %s", (id, name) => {
-    expect(strategyDisplayName(id)).toBe(name);
-  });
-
-  it("falls back to the raw id for unknown strategies", () => {
-    expect(strategyDisplayName("mystery_strategy")).toBe("mystery_strategy");
   });
 });
 

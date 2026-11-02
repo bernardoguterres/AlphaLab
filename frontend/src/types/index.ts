@@ -11,7 +11,6 @@ export interface EquityCurvePoint {
 export interface Trade {
   entry_date: string;
   exit_date: string;
-  action: "BUY" | "SELL";
   shares: number;
   entry_price: number;
   exit_price: number;
@@ -244,6 +243,8 @@ export interface GreenblattWeeklyParams {
 export type StrategyParams = MACrossoverParams | RSIMeanReversionParams | RSISimpleParams | MomentumBreakoutParams | BollingerBreakoutParams | VWAPReversionParams | BollingerRSIComboParams | TrendAdaptiveRSIParams | GreenblattWeeklyParams;
 
 export interface CachedTicker {
+  /** The backend's cache key, unique per ticker, interval and window. */
+  key: string;
   ticker: string;
   interval: string;
   start_date: string;
@@ -438,160 +439,3 @@ export interface HeatmapResponse {
   };
   message?: string;
 }
-
-export interface TelegramSettings {
-  enabled: boolean;
-  alert_trades: boolean;
-  alert_daily_summary: boolean;
-  alert_errors: boolean;
-  alert_drawdown: boolean;
-  alert_signals: boolean;
-  drawdown_threshold_pct: number;
-  bot_token_configured?: boolean;
-}
-
-export interface AlpacaSettings {
-  paper_trading: boolean;
-  api_key_configured?: boolean;
-  secret_key_configured?: boolean;
-}
-
-export interface NotificationSettings {
-  telegram: TelegramSettings;
-  alpaca: AlpacaSettings;
-}
-
-export interface NotificationSettingsResponse {
-  status: "ok" | "error";
-  data: NotificationSettings;
-  message?: string;
-}
-
-export interface SaveSettingsResponse {
-  status: "ok" | "error";
-  message?: string;
-}
-
-export interface TestConnectionResponse {
-  status: "ok" | "error";
-  message?: string;
-  data?: {
-    account_number?: string;
-    status?: string;
-    buying_power?: number;
-    cash?: number;
-    paper_trading?: boolean;
-  };
-}
-
-export const STRATEGY_INFO: Record<StrategyType, { name: string; description: string }> = {
-  ma_crossover: {
-    name: "MA Crossover",
-    description: "Trades when short-term moving average crosses long-term moving average",
-  },
-  rsi_mean_reversion: {
-    name: "RSI Mean Reversion",
-    description: "Buys oversold conditions and sells overbought using RSI indicator",
-  },
-  rsi_simple: {
-    name: "RSI Simple",
-    description: "Ultra-simple RSI mean reversion for frequent trading - no BB/ADX confirmation, no state machine",
-  },
-  momentum_breakout: {
-    name: "Momentum Breakout",
-    description: "Enters positions on price breakouts confirmed by volume surge",
-  },
-  bollinger_breakout: {
-    name: "Bollinger Breakout",
-    description: "Trades consecutive closes outside Bollinger Bands with volume confirmation",
-  },
-  vwap_reversion: {
-    name: "VWAP Reversion",
-    description: "Mean reversion strategy trading deviations from Volume-Weighted Average Price",
-  },
-  bollinger_rsi_combo: {
-    name: "Bollinger RSI Combo",
-    description: "Entry on Bollinger lower-band touch and RSI oversold together; exits at BB middle or RSI overbought",
-  },
-  trend_adaptive_rsi: {
-    name: "Trend Adaptive RSI",
-    description: "RSI buy/sell thresholds that adapt to the prevailing trend regime (uptrend, downtrend, or range)",
-  },
-  greenblatt_weekly: {
-    name: "Greenblatt Weekly",
-    description: "Value-factor strategy on weekly bars: Magic Formula screening, weekly golden-cross/RSI entry, 52-week min hold with a trailing-stop exit",
-  },
-};
-
-export const DEFAULT_PARAMS: Record<StrategyType, StrategyParams> = {
-  ma_crossover: {
-    short_window: 50,
-    long_window: 200,
-    volume_confirmation: true,
-    cooldown_days: 5,
-  },
-  rsi_mean_reversion: {
-    rsi_period: 14,
-    oversold: 30,
-    overbought: 70,
-    use_bb_confirmation: true,
-    adx_threshold: 25,
-  },
-  rsi_simple: {
-    period: 14,
-    oversold: 40,
-    overbought: 60,
-  },
-  momentum_breakout: {
-    lookback: 20,
-    volume_surge_pct: 150,
-    rsi_min: 50,
-    stop_loss_atr_mult: 2.0,
-  },
-  bollinger_breakout: {
-    bb_period: 20,
-    bb_std_dev: 2.0,
-    confirmation_bars: 2,
-    volume_filter: true,
-    volume_threshold: 1.5,
-    cooldown_days: 3,
-  },
-  vwap_reversion: {
-    vwap_period: 20,
-    deviation_threshold: 2.0,
-    rsi_period: 14,
-    oversold: 30,
-    overbought: 70,
-    cooldown_days: 3,
-  },
-  bollinger_rsi_combo: {
-    bb_period: 20,
-    bb_std: 2.0,
-    rsi_period: 14,
-    rsi_oversold: 45,
-    rsi_overbought: 55,
-    exit_at_middle: true,
-  },
-  trend_adaptive_rsi: {
-    rsi_period: 14,
-    trend_sma: 50,
-    trend_lookback: 5,
-    uptrend_buy: 45,
-    uptrend_sell: 65,
-    downtrend_buy: 35,
-    downtrend_sell: 55,
-    range_buy: 35,
-    range_sell: 65,
-  },
-  greenblatt_weekly: {
-    fast_sma: 10,
-    slow_sma: 50,
-    rsi_period: 14,
-    rsi_oversold: 35,
-    rsi_overbought: 65,
-    min_hold_bars: 52,
-    trailing_stop_pct: 0.20,
-    exit_rsi_overbought: false,
-    exit_sma_cross: false,
-  },
-};

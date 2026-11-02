@@ -1,60 +1,26 @@
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { EquityCurvePoint } from "@/types";
+import { drawdownSeries } from "@/utils/series";
+import { gridProps, tooltipProps, xAxisProps, yAxisProps } from "./chartTheme";
 
-interface DrawdownChartProps {
-  equityCurve: EquityCurvePoint[];
-  height?: number;
-}
-
-export function DrawdownChart({ equityCurve, height = 200 }: DrawdownChartProps) {
-  let peak = 0;
-  const data = equityCurve.map((point) => {
-    if (point.value > peak) peak = point.value;
-    const drawdown = peak > 0 ? ((point.value - peak) / peak) * 100 : 0;
-    return { date: point.date, drawdown };
-  });
+export function DrawdownChart({ equityCurve, height = 220 }: { equityCurve: EquityCurvePoint[]; height?: number }) {
+  const drawdowns = drawdownSeries(equityCurve.map((p) => p.value));
+  const rows = equityCurve.map((p, i) => ({ date: p.date, drawdown: drawdowns[i] }));
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(217 33% 22%)" />
-        <XAxis
-          dataKey="date"
-          tick={{ fill: "hsl(215 20% 55%)", fontSize: 11 }}
-          tickFormatter={(v) => new Date(v).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}
-          stroke="hsl(217 33% 22%)"
-          minTickGap={40}
-        />
-        <YAxis
-          tick={{ fill: "hsl(215 20% 55%)", fontSize: 11 }}
-          tickFormatter={(v) => `${v.toFixed(0)}%`}
-          stroke="hsl(217 33% 22%)"
-          width={50}
-        />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: "hsl(217 33% 17%)",
-            border: "1px solid hsl(217 33% 22%)",
-            borderRadius: "8px",
-            fontSize: 12,
-          }}
-          labelFormatter={(v) => new Date(v).toLocaleDateString()}
-          formatter={(value: number) => [`${value.toFixed(2)}%`, "Drawdown"]}
-        />
+      <AreaChart data={rows} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+        <CartesianGrid {...gridProps} />
+        <XAxis {...xAxisProps} />
+        <YAxis {...yAxisProps} domain={["auto", 0]} tickFormatter={(v: number) => `${v.toFixed(Math.abs(v) < 5 ? 1 : 0)}%`} />
+        <Tooltip {...tooltipProps} formatter={(value: number) => [`${value.toFixed(2)}%`, "Drawdown"]} />
         <Area
-          type="monotone"
+          type="linear"
           dataKey="drawdown"
-          stroke="hsl(0 84% 60%)"
-          fill="hsl(0 84% 60% / 0.2)"
-          strokeWidth={1.5}
+          stroke="hsl(var(--loss))"
+          fill="hsl(var(--loss) / 0.12)"
+          strokeWidth={1}
+          isAnimationActive={false}
         />
       </AreaChart>
     </ResponsiveContainer>

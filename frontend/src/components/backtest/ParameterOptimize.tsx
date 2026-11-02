@@ -1,25 +1,50 @@
-import { useState, useEffect } from "react";
-import { optimizeParameters, generateHeatmap } from "@/services/api";
-import type {
-  ParameterOptimizeRequest,
-  ParameterOptimizeResponse,
-  ParameterOptimizeResult,
-  WalkForwardResult,
-  HeatmapRequest,
-  HeatmapResponse,
-  StrategyType,
-} from "@/types";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Download, Check, SlidersHorizontal, Trophy, ListOrdered, LayoutGrid } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { formatPercent, formatNumber } from "@/utils/formatters";
-import { cn } from "@/lib/utils";
+import type { HeatmapResponse, ParameterOptimizeResponse, ParameterOptimizeResult, StrategyType, WalkForwardResult } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Table, Td, Th } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { KeyValue, KeyValueList } from "@/components/ui/key-value";
+import { Label } from "@/components/ui/label";
+import { Section } from "@/components/ui/section";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Stat, StatGrid } from "@/components/ui/stat";
+import { Switch } from "@/components/ui/switch";
+import { errorMessage, generateHeatmap, optimizeParameters } from "@/services/api";
+import { downloadJson, isoDate } from "@/utils/download";
+import { formatNumber, formatPercent, pnlColor } from "@/utils/formatters";
+import { STRATEGIES, optimizeRanges, paramLabel } from "@/utils/strategies";
+
+type Target = "sharpe_ratio" | "total_return_pct" | "max_drawdown_pct" | "win_rate";
+type Range = { min: number; max: number; step: number };
+type OptimizeData = ParameterOptimizeResponse["data"];
+
+const TARGETS: { value: Target; label: string }[] = [
+  { value: "sharpe_ratio", label: "Sharpe ratio" },
+  { value: "total_return_pct", label: "Total return" },
+  { value: "max_drawdown_pct", label: "Max drawdown (smaller is better)" },
+  { value: "win_rate", label: "Win rate" },
+];
+
+/** Every value from min to max in `step` increments; callers check step > 0 first. */
+function gridValues({ min, max, step }: Range): number[] {
+  const values: number[] = [];
+  for (let v = min; v <= max; v += step) values.push(v);
+  return values;
+}
+
+/** The heatmap starts on the first two swept parameters. */
+function defaultAxes(ranges: Record<string, Range>): [string, string] {
+  const [x, y = x] = Object.keys(ranges);
+  return [x, y];
+}
+
+/** The first parameter whose step would make the grid loop forever. */
+function invalidStep(ranges: Record<string, Range>, keys = Object.keys(ranges)): string | undefined {
+  return keys.find((k) => !(ranges[k]?.step > 0));
+}
 
 interface ParameterOptimizeProps {
   ticker: string;
@@ -30,651 +55,404 @@ interface ParameterOptimizeProps {
   onApplyParams: (params: Record<string, number>) => void;
 }
 
-// Default optimizable (numeric-only) parameter ranges per strategy, mirroring the
-// per-strategy fields in Backtest.tsx's forms and DEFAULT_PARAMS in types/index.ts.
-// Boolean flags (volume_confirmation, use_bb_confirmation, etc.) aren't included -
-// grid search only varies numeric params.
-const STRATEGY_PARAM_RANGES: Record<StrategyType, Record<string, { min: number; max: number; step: number }>> = {
-  ma_crossover: {
-    short_window: { min: 20, max: 50, step: 10 },
-    long_window: { min: 100, max: 200, step: 50 },
-  },
-  rsi_mean_reversion: {
-    rsi_period: { min: 10, max: 20, step: 5 },
-    oversold: { min: 20, max: 35, step: 5 },
-    overbought: { min: 65, max: 80, step: 5 },
-  },
-  rsi_simple: {
-    period: { min: 10, max: 20, step: 5 },
-    oversold: { min: 30, max: 45, step: 5 },
-    overbought: { min: 55, max: 70, step: 5 },
-  },
-  momentum_breakout: {
-    lookback: { min: 10, max: 40, step: 10 },
-    volume_surge_pct: { min: 120, max: 200, step: 20 },
-    rsi_min: { min: 40, max: 60, step: 5 },
-  },
-  bollinger_breakout: {
-    bb_period: { min: 10, max: 30, step: 10 },
-    bb_std_dev: { min: 1.5, max: 3, step: 0.5 },
-    confirmation_bars: { min: 1, max: 3, step: 1 },
-  },
-  vwap_reversion: {
-    vwap_period: { min: 10, max: 30, step: 10 },
-    deviation_threshold: { min: 1, max: 3, step: 0.5 },
-    rsi_period: { min: 10, max: 20, step: 5 },
-  },
-  bollinger_rsi_combo: {
-    bb_period: { min: 10, max: 30, step: 10 },
-    rsi_period: { min: 10, max: 20, step: 5 },
-    rsi_oversold: { min: 35, max: 49, step: 7 },
-  },
-  trend_adaptive_rsi: {
-    rsi_period: { min: 10, max: 20, step: 5 },
-    trend_sma: { min: 30, max: 100, step: 10 },
-    trend_lookback: { min: 3, max: 10, step: 2 },
-  },
-  greenblatt_weekly: {
-    // fast_sma/slow_sma only 10/20/50/100/200 - FeatureEngineer's precomputed SMA windows
-    fast_sma: { min: 10, max: 20, step: 10 },
-    slow_sma: { min: 50, max: 100, step: 50 },
-    min_hold_bars: { min: 26, max: 78, step: 26 },
-  },
-};
-
-export default function ParameterOptimize({
-  ticker,
-  strategy,
-  startDate,
-  endDate,
-  initialCapital,
-  onApplyParams,
-}: ParameterOptimizeProps) {
-  // Optimization settings
-  const [optimizationTarget, setOptimizationTarget] = useState<"sharpe_ratio" | "total_return_pct" | "max_drawdown_pct" | "win_rate">("sharpe_ratio");
+export default function ParameterOptimize({ ticker, strategy, startDate, endDate, initialCapital, onApplyParams }: ParameterOptimizeProps) {
+  const [target, setTarget] = useState<Target>("sharpe_ratio");
   const [walkForward, setWalkForward] = useState(false);
-  const [nFolds, setNFolds] = useState(5);
+  const [folds, setFolds] = useState(5);
+  const [ranges, setRanges] = useState(() => optimizeRanges(strategy));
+  const [axes, setAxes] = useState(() => defaultAxes(ranges));
+  const [optimizing, setOptimizing] = useState(false);
+  const [mapping, setMapping] = useState(false);
+  const [result, setResult] = useState<OptimizeData | null>(null);
+  const [heatmap, setHeatmap] = useState<HeatmapResponse["data"] | null>(null);
 
-  // Parameter ranges - defaults per strategy (see STRATEGY_PARAM_RANGES above)
-  const [paramRanges, setParamRanges] = useState<Record<string, { min: number; max: number; step: number }>>(
-    STRATEGY_PARAM_RANGES[strategy]
-  );
-
-  // Heatmap settings
-  const defaultKeys = Object.keys(STRATEGY_PARAM_RANGES[strategy]);
-  const [param1, setParam1] = useState(defaultKeys[0]);
-  const [param2, setParam2] = useState(defaultKeys[1] ?? defaultKeys[0]);
-
-  // Results
-  const [isOptimizing, setIsOptimizing] = useState(false);
-  const [isGeneratingHeatmap, setIsGeneratingHeatmap] = useState(false);
-  const [optimizeResult, setOptimizeResult] = useState<ParameterOptimizeResponse["data"] | null>(null);
-  const [heatmapResult, setHeatmapResult] = useState<HeatmapResponse["data"] | null>(null);
-
-  // Reset ranges/results whenever the selected strategy changes - each strategy
-  // has different (and differently-named) numeric parameters (F2 fix: this
-  // previously stayed hardcoded to MA Crossover's fields for every strategy).
+  // Each strategy sweeps different parameters, so start over when it changes.
   useEffect(() => {
-    const ranges = STRATEGY_PARAM_RANGES[strategy];
-    setParamRanges(ranges);
-    const keys = Object.keys(ranges);
-    setParam1(keys[0]);
-    setParam2(keys[1] ?? keys[0]);
-    setOptimizeResult(null);
-    setHeatmapResult(null);
+    const next = optimizeRanges(strategy);
+    setRanges(next);
+    setAxes(defaultAxes(next));
+    setResult(null);
+    setHeatmap(null);
   }, [strategy]);
 
+  const keys = Object.keys(ranges);
+  const label = (key: string) => paramLabel(strategy, key);
+  const updateRange = (key: string, field: keyof Range, value: number) =>
+    setRanges((r) => ({ ...r, [key]: { ...r[key], [field]: value } }));
+
   const handleOptimize = async () => {
-    if (!ticker || !strategy) {
-      toast.error("Please select ticker and strategy first");
+    const bad = invalidStep(ranges);
+    if (bad) {
+      toast.error(`${label(bad)}: step must be greater than 0`);
       return;
     }
-
-    // Bug 3.11: a step <= 0 makes `val += range.step` never advance past
-    // range.max (or move the wrong direction) - the grid-generation loop
-    // below would hang the browser tab indefinitely, before any network
-    // request is ever sent. Validate every range up front instead.
-    const invalidStepParam = Object.entries(paramRanges).find(
-      ([, range]) => !(range.step > 0)
-    )?.[0];
-    if (invalidStepParam) {
-      toast.error(`Step for "${invalidStepParam}" must be greater than 0`);
-      return;
-    }
-
-    setIsOptimizing(true);
+    setOptimizing(true);
     try {
-      // Build param grid from ranges
-      const paramGrid: Record<string, number[]> = {};
-      for (const [paramName, range] of Object.entries(paramRanges)) {
-        const values: number[] = [];
-        for (let val = range.min; val <= range.max; val += range.step) {
-          values.push(val);
-        }
-        paramGrid[paramName] = values;
-      }
-
-      const request: ParameterOptimizeRequest = {
+      const response = await optimizeParameters({
         ticker,
         strategy,
         start_date: startDate,
         end_date: endDate,
-        param_grid: paramGrid,
+        param_grid: Object.fromEntries(keys.map((k) => [k, gridValues(ranges[k])])),
         initial_capital: initialCapital,
-        optimization_target: optimizationTarget,
+        optimization_target: target,
         walk_forward: walkForward,
-        n_folds: nFolds,
-      };
-
-      const response = await optimizeParameters(request);
-      setOptimizeResult(response.data);
-      toast.success("Optimization complete!");
-    } catch (err: any) {
-      toast.error(err.message || "Optimization failed");
+        n_folds: folds,
+      });
+      setResult(response.data);
+    } catch (error) {
+      toast.error(errorMessage(error, "Optimization failed"));
     } finally {
-      setIsOptimizing(false);
+      setOptimizing(false);
     }
   };
 
-  const handleGenerateHeatmap = async () => {
-    if (!ticker || !strategy) {
-      toast.error("Please select ticker and strategy first");
+  const handleHeatmap = async () => {
+    const [x, y] = axes;
+    const bad = invalidStep(ranges, axes);
+    if (bad) {
+      toast.error(`${label(bad)}: step must be greater than 0`);
       return;
     }
-
-    // Need exactly 2 parameters for heatmap
-    const paramKeys = Object.keys(paramRanges);
-    if (paramKeys.length < 2) {
-      toast.error("Heatmap requires at least 2 parameters");
-      return;
-    }
-
-    // Same guard as handleOptimize (bug 3.11): a step <= 0 sent to the
-    // backend's np.arange(min, max+step, step) raises ZeroDivisionError -
-    // not a client-side hang, but still worth rejecting client-side with a
-    // clear message rather than a raw 500.
-    const invalidStepParam = [param1, param2].find(
-      (p) => !(paramRanges[p]?.step > 0)
-    );
-    if (invalidStepParam) {
-      toast.error(`Step for "${invalidStepParam}" must be greater than 0`);
-      return;
-    }
-
-    setIsGeneratingHeatmap(true);
+    setMapping(true);
     try {
-      const range1 = paramRanges[param1];
-      const range2 = paramRanges[param2];
-
-      // Get fixed params (all params except the two being varied)
-      const fixedParams: Record<string, number> = {};
-      for (const [key, range] of Object.entries(paramRanges)) {
-        if (key !== param1 && key !== param2) {
-          fixedParams[key] = range.min; // Use min value as default
-        }
-      }
-
-      const request: HeatmapRequest = {
+      const response = await generateHeatmap({
         ticker,
         strategy,
         start_date: startDate,
         end_date: endDate,
-        param1_name: param1,
-        param1_min: range1.min,
-        param1_max: range1.max,
-        param1_step: range1.step,
-        param2_name: param2,
-        param2_min: range2.min,
-        param2_max: range2.max,
-        param2_step: range2.step,
-        fixed_params: fixedParams,
+        param1_name: x,
+        param1_min: ranges[x].min,
+        param1_max: ranges[x].max,
+        param1_step: ranges[x].step,
+        param2_name: y,
+        param2_min: ranges[y].min,
+        param2_max: ranges[y].max,
+        param2_step: ranges[y].step,
+        // Parameters off the two axes are held at the bottom of their range.
+        fixed_params: Object.fromEntries(keys.filter((k) => k !== x && k !== y).map((k) => [k, ranges[k].min])),
         initial_capital: initialCapital,
-      };
-
-      const response = await generateHeatmap(request);
-      setHeatmapResult(response.data);
-      toast.success("Heatmap generated!");
-    } catch (err: any) {
-      toast.error(err.message || "Heatmap generation failed");
+      });
+      setHeatmap(response.data);
+    } catch (error) {
+      toast.error(errorMessage(error, "Heatmap failed"));
     } finally {
-      setIsGeneratingHeatmap(false);
+      setMapping(false);
     }
-  };
-
-  const handleApplyBestParams = () => {
-    if (optimizeResult) {
-      onApplyParams(optimizeResult.best_params);
-      toast.success("Best parameters applied!");
-    }
-  };
-
-  const handleExportBest = () => {
-    if (optimizeResult) {
-      const exportData = {
-        ticker,
-        strategy,
-        optimization_target: optimizeResult.optimization_target,
-        walk_forward: optimizeResult.walk_forward,
-        best_params: optimizeResult.best_params,
-        best_score: optimizeResult.best_score,
-        final_backtest: optimizeResult.final_backtest,
-      };
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `optimized_${strategy}_${ticker}_${new Date().toISOString().split("T")[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("Best parameters exported!");
-    }
-  };
-
-  const updateParamRange = (paramName: string, field: "min" | "max" | "step", value: number) => {
-    setParamRanges(prev => ({
-      ...prev,
-      [paramName]: {
-        ...prev[paramName],
-        [field]: value,
-      },
-    }));
   };
 
   return (
-    <div className="space-y-5">
-      <div className="grid gap-5 md:grid-cols-2 items-start">
-        {/* Configuration */}
-        <div className="card-elevated p-4 sm:p-5 space-y-4">
-          <h3 className="text-[15px] font-bold tracking-tight flex items-center gap-2">
-            <SlidersHorizontal className="h-3.5 w-3.5 text-primary" /> Optimization Settings
-          </h3>
+    <div className="space-y-10">
+      <p className="text-[13px] text-muted-foreground">
+        Grid search over {STRATEGIES[strategy].name} on <span className="num text-foreground">{ticker}</span>, {startDate} to {endDate}. Ticker,
+        strategy and window come from the Single run tab.
+      </p>
 
-          {/* Optimization Target */}
-          <div className="space-y-2">
-            <Label>Optimization Target</Label>
-            <Select value={optimizationTarget} onValueChange={(v: any) => setOptimizationTarget(v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sharpe_ratio">Sharpe Ratio</SelectItem>
-                <SelectItem value="total_return_pct">Total Return %</SelectItem>
-                <SelectItem value="max_drawdown_pct">Max Drawdown % (Lower is Better)</SelectItem>
-                <SelectItem value="win_rate">Win Rate</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Walk-Forward Toggle */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Walk-Forward Validation</Label>
-              <p className="text-sm text-muted-foreground">
-                Prevent overfitting with out-of-sample testing
-              </p>
-            </div>
-            <Switch checked={walkForward} onCheckedChange={setWalkForward} />
-          </div>
-
-          {/* N Folds (only if walk-forward enabled) */}
-          {walkForward && (
-            <div className="space-y-2">
-              <Label>Number of Folds</Label>
-              <Input
-                type="number"
-                min={2}
-                max={10}
-                value={nFolds}
-                onChange={(e) => setNFolds(parseInt(e.target.value) || 5)}
-              />
-            </div>
-          )}
-
-          {/* Parameter Ranges */}
-          <div className="space-y-4 pt-4 border-t border-border/50">
-            <h4 className="section-label">Parameter Ranges</h4>
-            {Object.entries(paramRanges).map(([paramName, range]) => (
-              <div key={paramName} className="space-y-2">
-                <Label className="text-sm font-medium">{paramName}</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Min</Label>
-                    <Input
-                      type="number"
-                      value={range.min}
-                      onChange={(e) => updateParamRange(paramName, "min", parseFloat(e.target.value))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Max</Label>
-                    <Input
-                      type="number"
-                      value={range.max}
-                      onChange={(e) => updateParamRange(paramName, "max", parseFloat(e.target.value))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Step</Label>
-                    <Input
-                      type="number"
-                      min={0.0001}
-                      step="any"
-                      value={range.step}
-                      onChange={(e) => updateParamRange(paramName, "step", parseFloat(e.target.value))}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Optimize Button */}
-          <Button onClick={handleOptimize} disabled={isOptimizing} className="w-full">
-            {isOptimizing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Optimizing...
-              </>
-            ) : (
-              "Run Optimization"
+      <div className="grid gap-10 lg:grid-cols-2">
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Optimize for" htmlFor="opt-target">
+              <Select value={target} onValueChange={(v) => setTarget(v as Target)}>
+                <SelectTrigger id="opt-target">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TARGETS.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            {walkForward && (
+              <Field label="Folds" htmlFor="opt-folds">
+                <Input
+                  id="opt-folds"
+                  type="number"
+                  min={2}
+                  max={10}
+                  className="num"
+                  value={folds}
+                  onChange={(e) => setFolds(e.target.valueAsNumber || 5)}
+                />
+              </Field>
             )}
+          </div>
+          <div className="flex items-start gap-3">
+            <Switch id="opt-wf" checked={walkForward} onCheckedChange={setWalkForward} />
+            <Label htmlFor="opt-wf" className="text-[13px] font-normal leading-5">
+              Walk-forward validation
+              <span className="block text-2xs text-muted-foreground">Each fold picks parameters on its training window and is scored on held-out data.</span>
+            </Label>
+          </div>
+
+          <Table>
+            <thead>
+              <tr>
+                <Th>Parameter</Th>
+                <Th>Min</Th>
+                <Th>Max</Th>
+                <Th>Step</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {keys.map((key) => (
+                <tr key={key}>
+                  <Td className="text-muted-foreground">{label(key)}</Td>
+                  {(["min", "max", "step"] as const).map((field) => (
+                    <Td key={field} className="pr-2">
+                      <Input
+                        type="number"
+                        step="any"
+                        aria-label={`${label(key)} ${field}`}
+                        className="num h-8 w-24"
+                        value={ranges[key][field]}
+                        onChange={(e) => updateRange(key, field, e.target.valueAsNumber)}
+                      />
+                    </Td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+
+          <Button onClick={handleOptimize} disabled={optimizing}>
+            {optimizing ? "Optimizing…" : "Run optimization"}
           </Button>
         </div>
 
-        {/* Results Summary - real once optimizeResult exists, honest ghost preview until then */}
-        {optimizeResult ? (
-          <div className="card-elevated p-4 sm:p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[15px] font-bold tracking-tight flex items-center gap-2">
-                <Trophy className="h-3.5 w-3.5 text-warning" /> Best Parameters
-              </h3>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={handleApplyBestParams}>
-                  <Check className="mr-2 h-4 w-4" />
-                  Apply
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleExportBest}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </div>
-            </div>
-
-            {/* Best Params */}
-            <div className="space-y-2">
-              {Object.entries(optimizeResult.best_params).map(([key, value]) => (
-                <div key={key} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{key}</span>
-                  <span className="font-mono-numbers font-bold">{value}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Score */}
-            <div className="pt-4 border-t border-border/50">
-              <div className="label-caps">Best Score ({optimizeResult.optimization_target})</div>
-              <div className="text-2xl font-bold font-mono-numbers mt-1">
-                {optimizeResult.optimization_target.includes("pct")
-                  ? formatPercent(optimizeResult.best_score)
-                  : formatNumber(optimizeResult.best_score)}
-              </div>
-            </div>
-
-            {/* Final Backtest (walk-forward only) */}
-            {optimizeResult.walk_forward && optimizeResult.final_backtest && (
-              <div className="space-y-2 pt-4 border-t border-border/50">
-                <h4 className="section-label">Full Data Performance</h4>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <div>
-                    <div className="label-caps">Return</div>
-                    <div className="font-bold font-mono-numbers text-gain mt-0.5">
-                      {formatPercent(optimizeResult.final_backtest.total_return_pct)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="label-caps">Sharpe</div>
-                    <div className="font-bold font-mono-numbers mt-0.5">{formatNumber(optimizeResult.final_backtest.sharpe_ratio, 2)}</div>
-                  </div>
-                  <div>
-                    <div className="label-caps">Max DD</div>
-                    <div className="font-bold font-mono-numbers text-loss mt-0.5">
-                      {formatPercent(optimizeResult.final_backtest.max_drawdown_pct)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+        {result ? (
+          <BestParameters
+            result={result}
+            keys={keys}
+            label={label}
+            onApply={() => {
+              onApplyParams(result.best_params);
+              toast.success("Best parameters applied to the Single run tab");
+            }}
+            onExport={() => {
+              const { optimization_target, walk_forward, best_params, best_score, final_backtest } = result;
+              const summary = { ticker, strategy, optimization_target, walk_forward, best_params, best_score, final_backtest };
+              downloadJson(summary, `optimized_${strategy}_${ticker}_${isoDate()}.json`);
+            }}
+          />
         ) : (
-          <div className="card-elevated p-4 sm:p-5 flex flex-col">
-            <h3 className="text-[15px] font-bold tracking-tight flex items-center gap-2 mb-1">
-              <Trophy className="h-3.5 w-3.5 text-muted-foreground" /> Best Parameters
-            </h3>
-            <EmptyState
-              icon={Trophy}
-              title="No optimization run yet"
-              description="Set your parameter ranges and run an optimization - the best combination and score will appear here."
-              size="sm"
-              preview={
-                <div className="rounded-lg border border-border/50 bg-secondary/20 p-4 opacity-70 space-y-2">
-                  {Object.keys(paramRanges).map((key) => (
-                    <div key={key} className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">{key}</span>
-                      <Skeleton className="h-3 w-12 rounded" />
-                    </div>
-                  ))}
-                  <div className="pt-2 border-t border-border/40 flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Best Score ({optimizationTarget})</span>
-                    <Skeleton className="h-5 w-14 rounded" />
-                  </div>
-                </div>
-              }
-            />
-          </div>
+          <EmptyState title="No optimization yet" description="The best parameter set and its score will appear here." />
         )}
       </div>
 
-      {/* Top Results Table */}
-      {optimizeResult && optimizeResult.all_results.length > 0 && !optimizeResult.walk_forward && (
-        <div className="card-elevated p-4 sm:p-5">
-          <h3 className="text-[15px] font-bold tracking-tight flex items-center gap-2 mb-4">
-            <ListOrdered className="h-3.5 w-3.5 text-primary" /> Top 10 Parameter Combinations
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-secondary/20">
-                  <th className="text-left py-2.5 px-2 label-caps">Rank</th>
-                  {Object.keys(optimizeResult.best_params).map(key => (
-                    <th key={key} className="text-left py-2.5 px-2 label-caps">{key}</th>
-                  ))}
-                  <th className="text-right py-2.5 px-2 label-caps">Score</th>
-                  <th className="text-right py-2.5 px-2 label-caps">Return %</th>
-                  <th className="text-right py-2.5 px-2 label-caps">Sharpe</th>
-                  <th className="text-right py-2.5 px-2 label-caps">Trades</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(optimizeResult.all_results as ParameterOptimizeResult[]).slice(0, 10).map((result, idx) => (
-                  <tr key={idx} className="border-b border-border/50 hover:bg-secondary/40 transition-colors">
-                    <td className="py-2.5 px-2 font-mono-numbers text-muted-foreground">{idx + 1}</td>
-                    {Object.keys(optimizeResult.best_params).map(key => (
-                      <td key={key} className="py-2.5 px-2 font-mono-numbers text-xs">{result.params[key]}</td>
-                    ))}
-                    <td className="text-right py-2.5 px-2 font-bold font-mono-numbers">{formatNumber(result.score)}</td>
-                    <td className="text-right py-2.5 px-2 font-mono-numbers">{formatPercent(result.total_return_pct)}</td>
-                    <td className="text-right py-2.5 px-2 font-mono-numbers">{formatNumber(result.sharpe_ratio, 2)}</td>
-                    <td className="text-right py-2.5 px-2 font-mono-numbers">{result.total_trades}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Walk-Forward Fold Results Table */}
-      {optimizeResult && optimizeResult.all_results.length > 0 && optimizeResult.walk_forward && (
-        <div className="card-elevated p-4 sm:p-5">
-          <h3 className="text-[15px] font-bold tracking-tight flex items-center gap-2 mb-4">
-            <ListOrdered className="h-3.5 w-3.5 text-primary" /> Walk-Forward Folds
-          </h3>
-          <p className="text-xs text-muted-foreground mb-3">
-            Each fold selects its own best parameters using only that fold's training window,
-            then reports the honest out-of-sample score on its held-out test window.
-          </p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-secondary/20">
-                  <th className="text-left py-2.5 px-2 label-caps">Fold</th>
-                  <th className="text-left py-2.5 px-2 label-caps">Test Period</th>
-                  {Object.keys(optimizeResult.best_params).map(key => (
-                    <th key={key} className="text-left py-2.5 px-2 label-caps">{key}</th>
-                  ))}
-                  <th className="text-right py-2.5 px-2 label-caps">Train Score</th>
-                  <th className="text-right py-2.5 px-2 label-caps">Out-of-Sample Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(optimizeResult.all_results as WalkForwardResult[]).map((result) => (
-                  <tr key={result.fold} className="border-b border-border/50 hover:bg-secondary/40 transition-colors">
-                    <td className="py-2.5 px-2 font-mono-numbers text-muted-foreground">{result.fold + 1}</td>
-                    <td className="py-2.5 px-2 text-xs text-muted-foreground">
-                      {result.test_start?.slice(0, 10)} → {result.test_end?.slice(0, 10)}
-                    </td>
-                    {Object.keys(optimizeResult.best_params).map(key => (
-                      <td key={key} className="py-2.5 px-2 font-mono-numbers text-xs">{result.selected_params[key]}</td>
-                    ))}
-                    <td className="text-right py-2.5 px-2 font-mono-numbers">{formatNumber(result.train_score)}</td>
-                    <td className="text-right py-2.5 px-2 font-bold font-mono-numbers">
-                      {result.avg_out_of_sample_score === null ? '—' : formatNumber(result.avg_out_of_sample_score)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Heatmap Section */}
-      {Object.keys(paramRanges).length >= 2 && (
-        <div className="card-elevated p-4 sm:p-5 space-y-4">
-          <h3 className="text-[15px] font-bold tracking-tight flex items-center gap-2">
-            <LayoutGrid className="h-3.5 w-3.5 text-lab-secondary" /> Parameter Heatmap
-          </h3>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>X-Axis Parameter</Label>
-              <Select value={param1} onValueChange={setParam1}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.keys(paramRanges).map(key => (
-                    <SelectItem key={key} value={key}>{key}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Y-Axis Parameter</Label>
-              <Select value={param2} onValueChange={setParam2}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.keys(paramRanges).map(key => (
-                    <SelectItem key={key} value={key}>{key}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <Button onClick={handleGenerateHeatmap} disabled={isGeneratingHeatmap} className="w-full">
-            {isGeneratingHeatmap ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating Heatmap...
-              </>
-            ) : (
-              "Generate Heatmap"
-            )}
-          </Button>
-
-          {/* Heatmap Display - real once generated, honest ghost grid until then */}
-          {heatmapResult ? (
-            <div className="pt-2">
-              <div className="text-xs text-muted-foreground mb-2">
-                Sharpe Ratio Heatmap ({heatmapResult.param2_name} vs {heatmapResult.param1_name})
-              </div>
-              <div className="overflow-x-auto">
-                <table className="border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="border border-border/50 p-1 text-xs"></th>
-                      {heatmapResult.param1_values.map((val, i) => (
-                        <th key={i} className="border border-border/50 p-1 text-xs font-mono-numbers text-muted-foreground">{val}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {heatmapResult.heatmap_data.map((row, rowIdx) => (
-                      <tr key={rowIdx}>
-                        <th className="border border-border/50 p-1 text-xs font-mono-numbers text-muted-foreground">
-                          {heatmapResult.param2_values[rowIdx]}
-                        </th>
-                        {row.map((cell, cellIdx) => {
-                          const value = cell !== null ? cell : 0;
-                          const colorIntensity = value > 0
-                            ? Math.min(Math.max((value / 2) * 100, 0), 100)
-                            : 0;
-                          return (
-                            <td
-                              key={cellIdx}
-                              className="border border-border/50 p-1 text-xs font-mono-numbers text-center"
-                              style={{
-                                backgroundColor: cell !== null
-                                  ? `rgba(16, 185, 129, ${colorIntensity / 100})`
-                                  : "hsl(var(--secondary))",
-                                color: cell !== null ? (colorIntensity > 50 ? "#ffffff" : "#e2e8f0") : "hsl(var(--muted-foreground))",
-                              }}
-                            >
-                              {formatNumber(cell, 2)}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+      {result && result.all_results.length > 0 && (
+        <Section title={result.walk_forward ? "Walk-forward folds" : "Top 10 combinations"}>
+          {result.walk_forward ? (
+            <FoldsTable folds={result.all_results as WalkForwardResult[]} keys={keys} label={label} />
           ) : (
-            <div className="pt-2">
-              <EmptyState
-                icon={LayoutGrid}
-                title="No heatmap generated yet"
-                description={`Generate a heatmap to visualize the score across ${param1} × ${param2}.`}
-                size="sm"
-                preview={
-                  <div className="overflow-x-auto opacity-60">
-                    <div className="inline-grid grid-cols-6 gap-1">
-                      {Array.from({ length: 36 }).map((_, i) => (
-                        <Skeleton key={i} className="h-6 w-9 rounded-sm" />
-                      ))}
-                    </div>
-                  </div>
-                }
-              />
-            </div>
+            <TopResultsTable rows={(result.all_results as ParameterOptimizeResult[]).slice(0, 10)} keys={keys} label={label} />
           )}
-        </div>
+        </Section>
+      )}
+
+      {keys.length >= 2 && (
+        <Section title="Sharpe heatmap">
+          <div className="mb-5 flex flex-wrap items-end gap-4">
+            {(["Columns", "Rows"] as const).map((axis, i) => (
+              <Field key={axis} label={axis} htmlFor={`axis-${i}`} className="w-48">
+                <Select value={axes[i]} onValueChange={(v) => setAxes(i === 0 ? [v, axes[1]] : [axes[0], v])}>
+                  <SelectTrigger id={`axis-${i}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {keys.map((k) => (
+                      <SelectItem key={k} value={k}>
+                        {label(k)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            ))}
+            <Button variant="outline" onClick={handleHeatmap} disabled={mapping}>
+              {mapping ? "Generating…" : "Generate heatmap"}
+            </Button>
+          </div>
+          {heatmap ? (
+            <Heatmap data={heatmap} label={label} />
+          ) : (
+            <p className="text-[13px] text-muted-foreground">
+              Sharpe ratio across every {label(axes[0])} × {label(axes[1])} pair. Other parameters are held at their minimum.
+            </p>
+          )}
+        </Section>
       )}
     </div>
+  );
+}
+
+interface BestParametersProps {
+  result: OptimizeData;
+  /** The swept parameters; best_params also echoes the fixed ones. */
+  keys: string[];
+  label: (key: string) => string;
+  onApply: () => void;
+  onExport: () => void;
+}
+
+function BestParameters({ result, keys, label, onApply, onExport }: BestParametersProps) {
+  const score = result.optimization_target.includes("pct") ? formatPercent(result.best_score) : formatNumber(result.best_score);
+  const full = result.walk_forward ? result.final_backtest : null;
+
+  return (
+    <Section
+      title="Best parameters"
+      aside={
+        <>
+          <Button variant="link" size="sm" onClick={onApply}>
+            Apply
+          </Button>
+          <Button variant="link" size="sm" onClick={onExport}>
+            Export JSON
+          </Button>
+        </>
+      }
+    >
+      <KeyValueList>
+        {keys.map((key) => (
+          <KeyValue key={key} label={label(key)} value={result.best_params[key]} />
+        ))}
+      </KeyValueList>
+      <StatGrid className="mt-6">
+        <Stat label={`Best ${TARGETS.find((t) => t.value === result.optimization_target)?.label.toLowerCase() ?? "score"}`} value={score} />
+        {full && <Stat label="Full-period return" value={formatPercent(full.total_return_pct)} tone={pnlColor(full.total_return_pct)} />}
+        {full && <Stat label="Full-period Sharpe" value={formatNumber(full.sharpe_ratio)} />}
+        {full && <Stat label="Full-period max drawdown" value={formatPercent(full.max_drawdown_pct)} />}
+      </StatGrid>
+    </Section>
+  );
+}
+
+function TopResultsTable({ rows, keys, label }: { rows: ParameterOptimizeResult[]; keys: string[]; label: (k: string) => string }) {
+  return (
+    <Table>
+      <thead>
+        <tr>
+          <Th>#</Th>
+          {keys.map((k) => (
+            <Th key={k} align="right">
+              {label(k)}
+            </Th>
+          ))}
+          <Th align="right">Score</Th>
+          <Th align="right">Return</Th>
+          <Th align="right">Sharpe</Th>
+          <Th align="right">Trades</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={i}>
+            <Td num className="text-muted-foreground">
+              {i + 1}
+            </Td>
+            {keys.map((k) => (
+              <Td key={k} num align="right">
+                {r.params[k]}
+              </Td>
+            ))}
+            <Td num align="right">
+              {formatNumber(r.score)}
+            </Td>
+            <Td num align="right" className={pnlColor(r.total_return_pct)}>
+              {formatPercent(r.total_return_pct)}
+            </Td>
+            <Td num align="right">
+              {formatNumber(r.sharpe_ratio)}
+            </Td>
+            <Td num align="right">
+              {r.total_trades}
+            </Td>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
+  );
+}
+
+function FoldsTable({ folds, keys, label }: { folds: WalkForwardResult[]; keys: string[]; label: (k: string) => string }) {
+  return (
+    <Table>
+      <thead>
+        <tr>
+          <Th>Fold</Th>
+          <Th>Test window</Th>
+          {keys.map((k) => (
+            <Th key={k} align="right">
+              {label(k)}
+            </Th>
+          ))}
+          <Th align="right">Train score</Th>
+          <Th align="right">Out-of-sample</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {folds.map((f) => (
+          <tr key={f.fold}>
+            <Td num>{f.fold + 1}</Td>
+            <Td num className="text-muted-foreground">
+              {f.test_start?.slice(0, 10)} – {f.test_end?.slice(0, 10)}
+            </Td>
+            {keys.map((k) => (
+              <Td key={k} num align="right">
+                {f.selected_params[k]}
+              </Td>
+            ))}
+            <Td num align="right">
+              {formatNumber(f.train_score)}
+            </Td>
+            <Td num align="right">
+              {f.avg_out_of_sample_score === null ? "-" : formatNumber(f.avg_out_of_sample_score)}
+            </Td>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
+  );
+}
+
+/** Green tint grows with Sharpe up to 2; non-positive cells stay untinted. */
+function Heatmap({ data, label }: { data: HeatmapResponse["data"]; label: (k: string) => string }) {
+  return (
+    <Table>
+      <thead>
+        <tr>
+          <Th>
+            {label(data.param2_name)} ↓ / {label(data.param1_name)} →
+          </Th>
+          {data.param1_values.map((v) => (
+            <Th key={v} align="right">
+              {v}
+            </Th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {data.heatmap_data.map((row, r) => (
+          <tr key={data.param2_values[r]}>
+            <Td num className="text-muted-foreground">
+              {data.param2_values[r]}
+            </Td>
+            {row.map((cell, c) => (
+              <Td
+                key={c}
+                num
+                align="right"
+                style={cell !== null && cell > 0 ? { backgroundColor: `hsl(var(--gain) / ${Math.min(cell / 2, 1) * 0.45})` } : undefined}
+              >
+                {formatNumber(cell)}
+              </Td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </Table>
   );
 }

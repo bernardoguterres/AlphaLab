@@ -12,10 +12,6 @@ import type {
   ParameterOptimizeResponse,
   HeatmapRequest,
   HeatmapResponse,
-  NotificationSettings,
-  NotificationSettingsResponse,
-  SaveSettingsResponse,
-  TestConnectionResponse,
 } from "@/types";
 
 const api = axios.create({
@@ -41,6 +37,12 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/** The message to show for a failed call; the interceptor above has already
+ * swapped in the backend's own reason when it sent one. */
+export function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
 
 export async function checkHealth(): Promise<{ status: string; version: string }> {
   const { data } = await api.get("/health");
@@ -122,30 +124,6 @@ export async function generateHeatmap(request: HeatmapRequest): Promise<HeatmapR
   const { data } = await api.post("/strategies/optimize/heatmap", request, {
     timeout: 300000, // 5 minutes for heatmap generation
   });
-  if (data.status === "error") throw new Error(data.message);
-  return data;
-}
-
-export async function getNotificationSettings(): Promise<NotificationSettingsResponse> {
-  const { data } = await api.get("/settings/notifications");
-  if (data.status === "error") throw new Error(data.message);
-  return data;
-}
-
-export async function saveNotificationSettings(settings: NotificationSettings): Promise<SaveSettingsResponse> {
-  const { data } = await api.post("/settings/notifications", settings);
-  if (data.status === "error") throw new Error(data.message);
-  return data;
-}
-
-export async function testTelegramConnection(): Promise<TestConnectionResponse> {
-  const { data } = await api.post("/settings/telegram/test");
-  if (data.status === "error") throw new Error(data.message);
-  return data;
-}
-
-export async function testAlpacaConnection(): Promise<TestConnectionResponse> {
-  const { data } = await api.post("/settings/alpaca/test");
   if (data.status === "error") throw new Error(data.message);
   return data;
 }

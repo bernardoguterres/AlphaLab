@@ -14,7 +14,6 @@ function makeTrades(n: number): Trade[] {
   return Array.from({ length: n }, (_, i) => ({
     entry_date: `2020-01-${String(i + 1).padStart(2, "0")}`,
     exit_date: `2020-02-${String(i + 1).padStart(2, "0")}`,
-    action: "BUY" as const,
     shares: 10,
     entry_price: 100,
     exit_price: 110,

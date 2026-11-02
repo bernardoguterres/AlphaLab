@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BatchBacktest } from "./BatchBacktest";
 import * as api from "@/services/api";
 
@@ -23,15 +22,6 @@ vi.mock("@/services/api", async () => {
     runBatchBacktest: vi.fn(),
   };
 });
-
-function renderWithQueryClient(ui: React.ReactElement) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
-}
 
 describe("BatchBacktest percentage display (bug 3.10)", () => {
   it("renders total_return_pct, max_drawdown_pct, win_rate, and profitable_pct at the correct scale", async () => {
@@ -59,7 +49,7 @@ describe("BatchBacktest percentage display (bug 3.10)", () => {
       },
     } as never);
 
-    renderWithQueryClient(<BatchBacktest />);
+    render(<BatchBacktest />);
 
     fireEvent.change(screen.getByPlaceholderText(/enter ticker/i), {
       target: { value: "AAPL" },
@@ -79,9 +69,9 @@ describe("BatchBacktest percentage display (bug 3.10)", () => {
     });
     // max_drawdown_pct=-8.3 must render as "-8.30%", not "-0.08%".
     expect(screen.getByText("-8.30%")).toBeInTheDocument();
-    // win_rate=0.6 (a fraction) must render as "+60.00%", not "+0.60%".
-    expect(screen.getByText("+60.00%")).toBeInTheDocument();
-    // profitable_pct=100 must render as "+100.00%", not "+1.00%".
-    expect(screen.getByText(/\+100\.00%/)).toBeInTheDocument();
+    // win_rate=0.6 (a fraction) must render as "60.00%", not "0.60%".
+    expect(screen.getByText("60.00%")).toBeInTheDocument();
+    // profitable_pct=100 must render as "100.00%", not "1.00%".
+    expect(screen.getByText("100.00%")).toBeInTheDocument();
   });
 });

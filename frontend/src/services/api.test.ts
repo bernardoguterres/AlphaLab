@@ -5,8 +5,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // etc.) surfaced to callers as axios's generic "Request failed with
 // status code 400" instead of the backend's real {"message": "..."}
 // body - even though every Flask error response includes one. Every
-// toast.error(err.message) across the app (Settings' Test Telegram/Alpaca
-// Connection buttons, backtest error handling, etc.) inherited this,
+// toast.error(err.message) across the app (backtest, compare and data
+// fetch error handling) inherited this,
 // making real failures undebuggable from the UI. Fixed by adding a
 // response interceptor that rewrites error.message from
 // error.response.data.message when present.
