@@ -7,8 +7,8 @@ and returns schema-validated JSON compatible with a separate execution engine, *
 ## Status and evidence boundary
 
 **Portfolio release / engineering prototype.** The backtest engine, cost modelling, and
-walk-forward machinery are implemented and exercised by an automated test suite (532 backend
-tests) and real-data research scripts run outside CI. This README makes no claim of discovered
+walk-forward machinery are implemented and exercised by an automated backend test suite and
+real-data research scripts run outside CI. This README makes no claim of discovered
 trading alpha: the daily-strategy walk-forward script covers three of nine strategies with
 uncommitted output, and the Greenblatt screener has a committed result for one of six regime
 windows, where the ranking didn't beat diversification (see [Results](#results)). Both are evidence
@@ -29,8 +29,8 @@ about the validation machinery, not proof of trading performance.
   model; a conditional cross-repo test compares schema fields when AlphaLive is available, reducing
   but not eliminating contract-drift risk.
 - **Real cross-repo compatibility evidence** - AlphaLive's pytest-collected multi-ticker
-  signal-parity tests, including a documented xfail for one ATR-related case, not just this
-  README's own assertion of parity.
+  signal-parity tests require nonzero decision coverage and zero decision mismatches on their
+  SPY/MSFT fixtures; see the bounded scope below.
 
 ## Research-to-export architecture
 
@@ -76,9 +76,9 @@ evidence, not just a design claim.
 Costs are applied in the portfolio layer, and two commission settings shouldn't be confused. The
 engine simulates `backend/config.yaml`'s `backtest.commission` - a percentage-of-notional rate per
 fill, currently `0.0` - plus slippage and position-size limits, all in the portfolio layer.
-`risk_settings.commission_per_trade` is different: a flat USD fee, accepted and exported but not
-simulated by AlphaLab, since the portfolio has no flat-fee model. It, `max_daily_loss_pct`, and
-`max_open_positions` flow through to the export but aren't simulated here either - AlphaLab is
+`risk_settings.commission_per_trade` is different: a flat USD fee added to each filled order
+by the portfolio, in addition to percentage commission, and carried through to the export.
+`max_daily_loss_pct` and `max_open_positions` are exported but not simulated here - AlphaLab is
 single-ticker/single-position, with no multi-position cap or daily-loss tracking to enforce; they
 take effect once running in AlphaLive. The `max_drawdown_pct` halt is checked on every bar's
 mark-to-market equity update (the portfolio's single per-bar `record_value()` call, used by every
@@ -158,8 +158,9 @@ Contract and cross-engine evidence exist at four levels, which shouldn't be conf
   [`test_signal_parity.py`](https://github.com/bernardoguterres/AlphaLive/blob/main/tests/test_signal_parity.py)
   is a standalone diagnostic script, not pytest/CI-collected.
   [`test_multi_ticker_parity.py`](https://github.com/bernardoguterres/AlphaLive/blob/main/tests/test_multi_ticker_parity.py)
-  is pytest-collected with strict assertions and a documented `xfail` for an RSI/MSFT case tied to
-  the two repos' independently implemented ATR calculations.
+  is pytest-collected and requires nonzero decision coverage and zero decision mismatches
+  against AlphaLab-generated fixtures for seven strategies on SPY/MSFT. The live-only bear-market
+  entry filter is disabled, and fills are not compared. There is no current `xfail` in that test.
   [`test_schema_contract.py`](https://github.com/bernardoguterres/AlphaLive/blob/main/tests/test_schema_contract.py)
   mirrors the check above from AlphaLive's own suite.
 
@@ -252,14 +253,15 @@ curl -X POST http://127.0.0.1:5050/api/strategies/export \
 Run from the repository root, using subshells so each command's `cd` doesn't leak into the next:
 
 ```bash
-(cd backend && source venv/bin/activate && pytest tests/ -v)   # 560 tests
-(cd frontend && npm run test)                                   # 39 tests (Vitest)
+(cd backend && source venv/bin/activate && pytest tests/ -v)   # backend tests
+(cd frontend && npm run test)                                   # Vitest
 (cd frontend && npm run typecheck)                              # tsc, no emit
 (cd frontend && npm run lint)                                    # ESLint (convention, not CI-enforced)
 ```
 
-Test count is a coverage indicator, not the headline result - the walk-forward methodology and
-export-contract evidence above are. CI (`.github/workflows/ci.yml`) runs `black --check` and
+The test commands report the current counts; the walk-forward methodology and
+export-contract evidence above describe their scope. CI (`.github/workflows/ci.yml`) runs
+`black --check` and
 `pytest`, plus a conditional AlphaLive checkout for the schema-contract test (see
 [export contract and parity evidence](#alphalive-export-contract-and-parity-evidence)); no backend
 lint step or frontend CI lint gate exists today.
@@ -279,7 +281,7 @@ externally reachable deployment - deployment configuration, not a runtime-verifi
   historical prices, over a hand-picked present-day universe.
 - **Cross-engine parity is diagnostic, not a measured percentage** - see
   [export contract and parity evidence](#alphalive-export-contract-and-parity-evidence).
-- **`max_daily_loss_pct`, `max_open_positions`, and `commission_per_trade` aren't simulated here** -
+- **`max_daily_loss_pct` and `max_open_positions` aren't simulated here** -
   accepted and exported, taking effect only once running in AlphaLive.
 - **Only one of six Greenblatt regime windows has a committed result.**
 - **Only three daily strategies have a walk-forward script (two SPY windows), and its output isn't
