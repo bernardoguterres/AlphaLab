@@ -172,10 +172,23 @@ but no single aggregate parity claim is supported.
 
 The React UI is a Flask API client with five screens: Overview (the latest saved run and the data
 cache), Backtest (a single run with research checks and AlphaLive export, plus batch and
-parameter-optimize tabs), Compare (two or three strategies on the same data), Data (fetch and inspect
+parameter-optimize tabs), Compare (two or three strategies on the same data, run with the same sizing and
+risk settings as Backtest), Data (fetch and inspect
 the cache) and Settings (a read-only reference of engine defaults). Every strategy's parameters,
 defaults, optimizer ranges and export eligibility are defined once, in
 `frontend/src/utils/strategies.ts`.
+
+<img src="docs/screenshots/backtest.png" alt="AlphaLab Backtest page: a Bollinger RSI Combo run on SPY with metrics, an equity chart against buy and hold, a drawdown chart, a research-checks panel and an AlphaLive export panel" width="100%">
+
+<sub>Backtest: one run with its research checks and the AlphaLive export check. Demo run; one in-sample backtest is not evidence of an edge.</sub>
+
+<img src="docs/screenshots/optimize-walk-forward.png" alt="AlphaLab Optimize tab: a grid search with walk-forward validation, the best parameters found and a table of five walk-forward folds with train and out-of-sample scores" width="100%">
+
+<sub>Optimize: grid search with walk-forward validation. Each fold picks parameters on its training window and is scored on held-out data.</sub>
+
+<img src="docs/screenshots/compare.png" alt="AlphaLab Compare page: three strategies on SPY simulated with the same sizing and risk settings as the Backtest page, with an equity chart against buy and hold, leaders and a metrics table" width="100%">
+
+<sub>Compare: up to three strategies on one ticker, simulated with the settings shown above the results and benchmarked against buy and hold. In-sample on this window only.</sub>
 
 Nine strategies are implemented and backtestable, spanning trend-following, mean-reversion,
 breakout, and value-factor approaches. Defaults are AlphaLab's own; AlphaLive may apply its own
