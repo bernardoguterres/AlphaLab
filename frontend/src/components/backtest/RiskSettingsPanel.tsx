@@ -5,6 +5,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Notice } from "@/components/ui/notice";
+import { riskSummary } from "@/utils/runSettings";
 
 type NumericSetting = Exclude<keyof RiskSettings, "trailing_stop_enabled">;
 
@@ -16,11 +17,6 @@ const FIELDS: { key: NumericSetting; label: string; min: number; max: number; st
   { key: "max_open_positions", label: "Max open positions", min: 1, max: 50, step: 1 },
   { key: "commission_per_trade", label: "Commission per trade ($)", min: 0, max: 50, step: 0.01, hint: "Charged on entry and exit." },
 ];
-
-function riskSummary(s: RiskSettings): string {
-  const trailing = s.trailing_stop_enabled ? `trailing ${s.trailing_stop_pct}%` : "no trailing stop";
-  return `Position ${s.max_position_size_pct}% · stop ${s.stop_loss_pct}% · target ${s.take_profit_pct}% · ${trailing}`;
-}
 
 interface RiskSettingsPanelProps {
   settings: RiskSettings;

@@ -297,6 +297,12 @@ class CompareRequest(BaseModel):
     start_date: str
     end_date: str
     initial_capital: float = 100_000
+    # The same run settings as BacktestRequest, applied to every strategy in
+    # the comparison. Omitted, they fall back to the engine's own defaults,
+    # exactly as before these fields existed.
+    position_sizing: Literal["equal_weight", "volatility_weighted"] = "equal_weight"
+    risk_settings: Optional[RiskSettings] = None
+    drawdown_halt_enabled: bool = True
 
     @field_validator("strategies")
     @classmethod
