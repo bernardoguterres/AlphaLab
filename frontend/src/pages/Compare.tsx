@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import type { BacktestResult, StrategyType } from "@/types";
+import type { BacktestResult, PositionSizing, RiskSettings, StrategyType } from "@/types";
+import { DEFAULT_RISK_SETTINGS } from "@/types";
 import { ApiOfflineNotice } from "@/components/layout/ApiOfflineNotice";
 import { Page } from "@/components/layout/Page";
 import { BENCHMARK_COLOR, SERIES_COLORS } from "@/components/charts/chartTheme";
+import { RiskSettingsPanel } from "@/components/backtest/RiskSettingsPanel";
 import { OverlayEquityChart, type OverlayView } from "@/components/comparison/OverlayEquityChart";
-import { CapitalField, DateRangeFields, TickerField } from "@/components/forms/RunFields";
+import { CapitalField, DateRangeFields, DrawdownHaltField, SizingField, TickerField } from "@/components/forms/RunFields";
 import { Button } from "@/components/ui/button";
 import { Table, Td, Th } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -17,8 +19,9 @@ import { Swatch } from "@/components/ui/swatch";
 import { Tag } from "@/components/ui/tag";
 import { compareStrategies, errorMessage, fetchData } from "@/services/api";
 import { historyItem, useBacktestStore } from "@/stores/backtestStore";
-import { DEFAULT_CAPITAL, DEFAULT_END, DEFAULT_START, DEFAULT_TICKER } from "@/utils/defaults";
+import { DEFAULT_CAPITAL, DEFAULT_DRAWDOWN_HALT, DEFAULT_END, DEFAULT_SIZING, DEFAULT_START, DEFAULT_TICKER } from "@/utils/defaults";
 import { formatNumber, formatPercent, pnlColor } from "@/utils/formatters";
+import { runSettingsSummary } from "@/utils/runSettings";
 import { STRATEGIES, STRATEGY_TYPES, strategyName, strategySpec } from "@/utils/strategies";
 
 const MIN_STRATEGIES = 2;
@@ -41,6 +44,15 @@ const VIEWS: { value: OverlayView; label: string }[] = [
   { value: "rollingSharpe", label: "Rolling Sharpe" },
 ];
 
+/** What every strategy in a comparison was simulated with; the same fields as a Backtest run. */
+interface RunSettings {
+  risk: RiskSettings;
+  sizing: PositionSizing;
+  drawdownHalt: boolean;
+}
+
+const DEFAULT_RUN_SETTINGS: RunSettings = { risk: DEFAULT_RISK_SETTINGS, sizing: DEFAULT_SIZING, drawdownHalt: DEFAULT_DRAWDOWN_HALT };
+
 function leader(entries: [string, BacktestResult][], ranking: Ranking): [string, BacktestResult] {
   return entries.reduce((best, entry) => (ranking.get(entry[1]) > ranking.get(best[1]) ? entry : best));
 }
@@ -52,16 +64,32 @@ export default function Compare() {
   const [endDate, setEndDate] = useState(DEFAULT_END);
   const [capital, setCapital] = useState(DEFAULT_CAPITAL);
   const [selected, setSelected] = useState<StrategyType[]>(["ma_crossover", "rsi_mean_reversion"]);
+  const [settings, setSettings] = useState(DEFAULT_RUN_SETTINGS);
   const [view, setView] = useState<OverlayView>("equity");
   const [running, setRunning] = useState(false);
-  const [results, setResults] = useState<{ ticker: string; byStrategy: Record<string, BacktestResult> } | null>(null);
+  const [results, setResults] = useState<{
+    ticker: string;
+    settings: RunSettings;
+    byStrategy: Record<string, BacktestResult>;
+  } | null>(null);
+
+  const setSetting = <K extends keyof RunSettings>(key: K, value: RunSettings[K]) => setSettings((s) => ({ ...s, [key]: value }));
 
   const handleRun = async () => {
     setRunning(true);
     try {
       await fetchData([ticker], startDate, endDate, "1d");
-      const response = await compareStrategies({ ticker, strategies: selected, start_date: startDate, end_date: endDate, initial_capital: capital });
-      setResults({ ticker, byStrategy: response.data });
+      const response = await compareStrategies({
+        ticker,
+        strategies: selected,
+        start_date: startDate,
+        end_date: endDate,
+        initial_capital: capital,
+        position_sizing: settings.sizing,
+        risk_settings: settings.risk,
+        drawdown_halt_enabled: settings.drawdownHalt,
+      });
+      setResults({ ticker, settings, byStrategy: response.data });
     } catch (error) {
       toast.error(errorMessage(error, "Comparison failed"));
     } finally {
@@ -90,10 +118,11 @@ export default function Compare() {
       <ApiOfflineNotice />
 
       <div className="space-y-5">
-        <div className="grid max-w-4xl grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="grid max-w-5xl grid-cols-2 gap-4 md:grid-cols-5">
           <TickerField value={ticker} onChange={setTicker} />
           <DateRangeFields start={startDate} end={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />
           <CapitalField value={capital} onChange={setCapital} />
+          <SizingField value={settings.sizing} onChange={(v) => setSetting("sizing", v)} />
         </div>
 
         <Field label={`Strategies (${MIN_STRATEGIES} to ${MAX_STRATEGIES}), benchmarked against buy & hold of the same ticker`}>
@@ -125,13 +154,23 @@ export default function Compare() {
           </div>
         </Field>
 
-        <Button onClick={handleRun} disabled={running || !ticker}>
-          {running ? "Running…" : "Run comparison"}
-        </Button>
+        <div>
+          <RiskSettingsPanel settings={settings.risk} onChange={(risk) => setSetting("risk", risk)} />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <Button onClick={handleRun} disabled={running || !ticker}>
+            {running ? "Running…" : "Run comparison"}
+          </Button>
+          <DrawdownHaltField checked={settings.drawdownHalt} onChange={(v) => setSetting("drawdownHalt", v)} />
+        </div>
       </div>
 
       {results ? (
         <>
+          <p className="num text-2xs text-muted-foreground">
+            Simulated with: {runSettingsSummary(results.settings.risk, results.settings.sizing, results.settings.drawdownHalt)}
+          </p>
           <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_340px]">
             <Section title={`${results.ticker}, ${entries.length} strategies`} aside={<Segmented label="Chart" options={VIEWS} value={view} onChange={setView} />}>
               <OverlayEquityChart results={results.byStrategy} view={view} />

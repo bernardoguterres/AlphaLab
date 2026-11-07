@@ -269,6 +269,73 @@ class TestCompareEndpoint:
         )
         assert resp.status_code == 422
 
+    RUN_SETTINGS = {
+        "position_sizing": "equal_weight",
+        "risk_settings": {
+            "stop_loss_pct": 5.0,
+            "take_profit_pct": 10.0,
+            "max_position_size_pct": 75.0,
+            "max_daily_loss_pct": 3.0,
+            "max_open_positions": 5,
+            "trailing_stop_enabled": False,
+            "trailing_stop_pct": 3.0,
+            "commission_per_trade": 0.0,
+        },
+        "drawdown_halt_enabled": False,
+    }
+    WINDOW = {"ticker": "AAPL", "start_date": "2020-01-01", "end_date": "2024-12-31"}
+    STRATEGIES = ["rsi_simple", "bollinger_rsi_combo"]
+
+    @staticmethod
+    def _summary(result):
+        return (
+            result["total_return_pct"],
+            result["total_trades"],
+            result["metrics"]["risk"]["sharpe_ratio"],
+            result["metrics"]["drawdown"]["max_drawdown_pct"],
+        )
+
+    def _compare_and_backtests(self, client, settings):
+        compared = client.post(
+            "/api/compare", json={**self.WINDOW, "strategies": self.STRATEGIES, **settings}
+        )
+        assert compared.status_code == 200
+        singles = {
+            s: client.post(
+                "/api/strategies/backtest", json={**self.WINDOW, "strategy": s, **settings}
+            )
+            for s in self.STRATEGIES
+        }
+        assert all(r.status_code == 200 for r in singles.values())
+        return compared.get_json()["data"], {
+            s: r.get_json()["data"] for s, r in singles.items()
+        }
+
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
+    def test_compare_applies_run_settings_like_backtest(self, mock_ticker, mock_dl, client):
+        """Compare used to ignore risk and sizing settings and always run the
+        engine defaults, so its numbers disagreed with a Backtest of the same
+        strategy, ticker and window. With the same settings they must match."""
+        mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
+        mock_dl.return_value = _mock_download(500)
+
+        compared, singles = self._compare_and_backtests(client, self.RUN_SETTINGS)
+        for s in self.STRATEGIES:
+            assert self._summary(compared[s]) == self._summary(singles[s])
+
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
+    def test_compare_without_settings_keeps_engine_defaults(self, mock_ticker, mock_dl, client):
+        """Omitting the new fields behaves as before: engine defaults, the
+        same as a Backtest request that sends no risk settings."""
+        mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
+        mock_dl.return_value = _mock_download(500)
+
+        compared, singles = self._compare_and_backtests(client, {})
+        for s in self.STRATEGIES:
+            assert self._summary(compared[s]) == self._summary(singles[s])
+
 
 class TestNotFound:
     def test_404(self, client):

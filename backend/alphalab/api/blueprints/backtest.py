@@ -328,6 +328,11 @@ def compare_strategies():
             initial_capital=body.initial_capital,
             start_date=body.start_date,
             end_date=body.end_date,
+            position_sizing=body.position_sizing,
+            risk_settings=(
+                body.risk_settings.model_dump() if body.risk_settings else None
+            ),
+            drawdown_halt_enabled=body.drawdown_halt_enabled,
         )
         metrics = metrics_calc.calculate_all(
             results.equity_curve,

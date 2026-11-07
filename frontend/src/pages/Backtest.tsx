@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import type { BacktestResult, RiskSettings, StrategyParams, StrategyType } from "@/types";
+import type { BacktestResult, PositionSizing, RiskSettings, StrategyParams, StrategyType } from "@/types";
 import { DEFAULT_RISK_SETTINGS } from "@/types";
 import { Page } from "@/components/layout/Page";
 import { BatchBacktest } from "@/components/backtest/BatchBacktest";
@@ -14,25 +14,28 @@ import { StrategyParamsPanel } from "@/components/backtest/StrategyParamsPanel";
 import { DrawdownChart } from "@/components/charts/DrawdownChart";
 import { MonthlyReturnsHeatmap } from "@/components/charts/MonthlyReturnsHeatmap";
 import { TradeTable } from "@/components/charts/TradeTable";
-import { CapitalField, DateRangeFields, IntervalSelect, StrategyField, TickerField } from "@/components/forms/RunFields";
+import {
+  CapitalField,
+  DateRangeFields,
+  DrawdownHaltField,
+  IntervalSelect,
+  SizingField,
+  StrategyField,
+  TickerField,
+} from "@/components/forms/RunFields";
 import { MetricsBreakdown } from "@/components/metrics/MetricsBreakdown";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { errorMessage, fetchData, runBacktest } from "@/services/api";
 import { historyItem, useBacktestStore } from "@/stores/backtestStore";
-import { DEFAULT_CAPITAL, DEFAULT_END, DEFAULT_START, DEFAULT_TICKER } from "@/utils/defaults";
+import { DEFAULT_CAPITAL, DEFAULT_DRAWDOWN_HALT, DEFAULT_END, DEFAULT_SIZING, DEFAULT_START, DEFAULT_TICKER } from "@/utils/defaults";
 import { qualityColor } from "@/utils/formatters";
 import { DEFAULT_PARAMS } from "@/utils/strategies";
 import { pairTradesFIFO } from "@/utils/tradePairing";
-
-type Sizing = "equal_weight" | "volatility_weighted";
 
 interface RunConfig {
   ticker: string;
@@ -41,7 +44,7 @@ interface RunConfig {
   endDate: string;
   interval: string;
   initialCapital: number;
-  sizing: Sizing;
+  sizing: PositionSizing;
   monteCarloRuns: number;
   drawdownHalt: boolean;
   risk: RiskSettings;
@@ -56,9 +59,9 @@ const INITIAL_CONFIG: RunConfig = {
   endDate: DEFAULT_END,
   interval: "1d",
   initialCapital: DEFAULT_CAPITAL,
-  sizing: "equal_weight",
+  sizing: DEFAULT_SIZING,
   monteCarloRuns: 0,
-  drawdownHalt: true,
+  drawdownHalt: DEFAULT_DRAWDOWN_HALT,
   risk: DEFAULT_RISK_SETTINGS,
   params: DEFAULT_PARAMS,
 };
@@ -155,17 +158,7 @@ export default function Backtest() {
                 onEndChange={(v) => set("endDate", v)}
               />
               <CapitalField value={config.initialCapital} onChange={(v) => set("initialCapital", v)} />
-              <Field label="Sizing" htmlFor="sizing">
-                <Select value={config.sizing} onValueChange={(v) => set("sizing", v as Sizing)}>
-                  <SelectTrigger id="sizing">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="equal_weight">Equal weight</SelectItem>
-                    <SelectItem value="volatility_weighted">Volatility weighted</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
+              <SizingField value={config.sizing} onChange={(v) => set("sizing", v)} />
               <Field label="Monte Carlo runs" htmlFor="mc-runs" hint="0 turns it off">
                 <Input
                   id="mc-runs"
@@ -183,13 +176,7 @@ export default function Backtest() {
               <Button onClick={handleRun} disabled={running || !config.ticker}>
                 {running ? "Running…" : "Run backtest"}
               </Button>
-              <div className="flex items-center gap-2">
-                <Checkbox id="drawdown-halt" checked={config.drawdownHalt} onCheckedChange={(v) => set("drawdownHalt", v === true)} />
-                <Label htmlFor="drawdown-halt" className="text-[13px] font-normal">
-                  Halt new entries after a 10% drawdown
-                </Label>
-                <span className="text-2xs text-muted-foreground">(not exportable)</span>
-              </div>
+              <DrawdownHaltField checked={config.drawdownHalt} onChange={(v) => set("drawdownHalt", v)} />
               <div className="flex items-center gap-2 text-[13px]">
                 <IntervalSelect value={config.interval} onChange={(v) => set("interval", v)} className="h-8 w-28" />
                 <Button variant="link" onClick={handleFetch} disabled={fetching || !config.ticker}>

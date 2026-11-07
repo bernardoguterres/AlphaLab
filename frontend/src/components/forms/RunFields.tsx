@@ -1,8 +1,10 @@
-import type { StrategyType } from "@/types";
+import type { PositionSizing, StrategyType } from "@/types";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { INTERVALS } from "@/utils/defaults";
+import { INTERVALS, SIZINGS } from "@/utils/defaults";
 import { STRATEGIES, STRATEGY_TYPES } from "@/utils/strategies";
 
 /** Form fields that Backtest, Compare and Batch all ask for. */
@@ -91,5 +93,36 @@ export function IntervalSelect({ value, onChange, id, className }: IntervalSelec
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+export function SizingField({ value, onChange }: { value: PositionSizing; onChange: (value: PositionSizing) => void }) {
+  return (
+    <Field label="Sizing" htmlFor="sizing">
+      <Select value={value} onValueChange={(v) => onChange(v as PositionSizing)}>
+        <SelectTrigger id="sizing">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {SIZINGS.map((s) => (
+            <SelectItem key={s.value} value={s.value}>
+              {s.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </Field>
+  );
+}
+
+export function DrawdownHaltField({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <Checkbox id="drawdown-halt" checked={checked} onCheckedChange={(v) => onChange(v === true)} />
+      <Label htmlFor="drawdown-halt" className="text-[13px] font-normal">
+        Halt new entries after a 10% drawdown
+      </Label>
+      <span className="text-2xs text-muted-foreground">(not exportable)</span>
+    </div>
   );
 }

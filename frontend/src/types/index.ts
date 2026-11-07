@@ -282,6 +282,8 @@ export const DEFAULT_RISK_SETTINGS: RiskSettings = {
   commission_per_trade: 0.0,
 };
 
+export type PositionSizing = "equal_weight" | "volatility_weighted";
+
 export interface BacktestRequest {
   ticker: string;
   strategy: StrategyType;
@@ -289,7 +291,7 @@ export interface BacktestRequest {
   end_date: string;
   initial_capital: number;
   params: StrategyParams;
-  position_sizing: "equal_weight" | "volatility_weighted";
+  position_sizing: PositionSizing;
   monte_carlo_runs: number;
   risk_settings?: RiskSettings;
   drawdown_halt_enabled?: boolean;
@@ -301,6 +303,9 @@ export interface CompareRequest {
   start_date: string;
   end_date: string;
   initial_capital: number;
+  position_sizing: PositionSizing;
+  risk_settings: RiskSettings;
+  drawdown_halt_enabled: boolean;
 }
 
 export interface BatchBacktestRequest {
@@ -310,7 +315,7 @@ export interface BatchBacktestRequest {
   end_date: string;
   initial_capital: number;
   params: StrategyParams;
-  position_sizing: "equal_weight" | "volatility_weighted";
+  position_sizing: PositionSizing;
   risk_settings?: RiskSettings;
 }
 
