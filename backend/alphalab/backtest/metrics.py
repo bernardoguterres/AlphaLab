@@ -85,6 +85,8 @@ class PerformanceMetrics:
         equity_curve: list[dict],
         trades: list[dict],
         benchmark_curve: Optional[list[dict]] = None,
+        include_open_trades: bool = False,
+        terminal_prices: Optional[dict[str, float]] = None,
     ) -> dict:
         """Compute all metric groups from equity curve and trade log.
 
@@ -111,7 +113,11 @@ class PerformanceMetrics:
             "returns": self._return_metrics(eq, periods_per_year),
             "risk": self._risk_metrics(eq, periods_per_year),
             "drawdown": self._drawdown_metrics(eq),
-            "trades": self._trade_metrics(trades),
+            "trades": self._trade_metrics(
+                trades,
+                include_open=include_open_trades,
+                terminal_prices=terminal_prices,
+            ),
             "consistency": self._consistency_metrics(eq, periods_per_year),
         }
 
@@ -330,39 +336,67 @@ class PerformanceMetrics:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def round_trips(trades: list[dict]) -> list[float]:
-        """Completed round trips (flat -> long -> flat), FIFO by quantity.
+    def round_trips(
+        trades: list[dict],
+        include_open: bool = False,
+        terminal_prices: Optional[dict[str, float]] = None,
+    ) -> list[float]:
+        """Completed round trips (flat -> long -> flat), FIFO by quantity per ticker.
 
         Each round trip's P&L sums every lot bought and sold while the
-        position was open, net of all commissions. Handles add-on buys and
-        partial sells (the previous pairing popped one buy per sell and
-        mis-paired anything but strict buy/sell alternation)."""
+        position was open for that ticker, net of all commissions. Handles
+        add-on buys, partial sells, and multi-ticker portfolios without
+        cross-ticker lot contamination.
+
+        If `include_open=True` and `terminal_prices` provides mark-to-market
+        valuation for tickers with open lots at backtest termination, the
+        unrealized P&L of terminal open positions is also closed out.
+        """
         filled = [t for t in trades if t.get("status") == "filled"]
         trips: list[float] = []
-        lots: list[list[float]] = []  # [qty, price]
-        pnl = 0.0
+        lots_by_ticker: dict[str, list[list[float]]] = {}
+        pnl_by_ticker: dict[str, float] = {}
+
         for t in filled:
+            ticker = str(t.get("ticker") or "")
             qty = float(t.get("shares", 0) or 0)
             px = float(t.get("filled_price", 0) or 0)
-            pnl -= float(t.get("commission", 0) or 0)
+            comm = float(t.get("commission", 0) or 0)
+
+            lots = lots_by_ticker.setdefault(ticker, [])
+            pnl_by_ticker[ticker] = pnl_by_ticker.get(ticker, 0.0) - comm
+
             if t.get("side") == "buy":
                 lots.append([qty, px])
             elif t.get("side") == "sell" and lots:
                 remaining = qty
                 while remaining > 1e-9 and lots:
                     take = min(remaining, lots[0][0])
-                    pnl += (px - lots[0][1]) * take
+                    pnl_by_ticker[ticker] += (px - lots[0][1]) * take
                     lots[0][0] -= take
                     remaining -= take
                     if lots[0][0] <= 1e-9:
                         lots.pop(0)
                 if not lots:
-                    trips.append(pnl)
-                    pnl = 0.0
+                    trips.append(pnl_by_ticker.pop(ticker, 0.0))
+
+        if include_open and terminal_prices:
+            for ticker, lots in lots_by_ticker.items():
+                if lots and ticker in terminal_prices:
+                    term_px = float(terminal_prices[ticker])
+                    term_pnl = pnl_by_ticker.pop(ticker, 0.0)
+                    for lot_qty, lot_px in lots:
+                        term_pnl += (term_px - lot_px) * lot_qty
+                    trips.append(term_pnl)
+
         return trips
 
     @staticmethod
-    def _trade_metrics(trades: list[dict]) -> dict:
+    def _trade_metrics(
+        trades: list[dict],
+        include_open: bool = False,
+        terminal_prices: Optional[dict[str, float]] = None,
+    ) -> dict:
         if not trades:
             return {
                 "total_trades": 0,
@@ -373,7 +407,9 @@ class PerformanceMetrics:
 
         filled = [t for t in trades if t.get("status") == "filled"]
         rejected = [t for t in trades if t.get("status") == "rejected"]
-        pnls = PerformanceMetrics.round_trips(trades)
+        pnls = PerformanceMetrics.round_trips(
+            trades, include_open=include_open, terminal_prices=terminal_prices
+        )
 
         wins = [p for p in pnls if p > 0]
         losses = [p for p in pnls if p <= 0]
