@@ -524,6 +524,15 @@ class RiskConfig(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def validate_portfolio_positions(self):
+        if self.portfolio_max_positions < self.max_open_positions:
+            raise ValueError(
+                f"portfolio_max_positions ({self.portfolio_max_positions}) must be >= "
+                f"max_open_positions ({self.max_open_positions})"
+            )
+        return self
+
 
 class ExecutionConfig(BaseModel):
     """Order execution settings."""
