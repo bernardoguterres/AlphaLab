@@ -356,7 +356,7 @@ class Portfolio:
     # ------------------------------------------------------------------
 
     def _can_afford(self, cost: float) -> bool:
-        reserve = self.initial_capital * self.cash_reserve_pct
+        reserve = self.cash * self.cash_reserve_pct
         return self.cash - cost >= reserve
 
     def _get_execution_price(self, order: Order, market_price: float) -> float | None:
