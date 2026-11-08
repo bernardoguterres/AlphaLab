@@ -143,6 +143,7 @@ def _build_export_json(
         "order_type": "market",
         "limit_offset_pct": 0.1,
         "cooldown_bars": params.get("cooldown_days", 1),
+        "bear_market_filter": params.get("bear_market_filter", None),
     }
 
     safety_limits = {

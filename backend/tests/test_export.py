@@ -73,6 +73,7 @@ class TestStrategyExport:
         # Execution section
         assert "order_type" in export["execution"]
         assert "cooldown_bars" in export["execution"]
+        assert "bear_market_filter" in export["execution"]
 
         # Metadata section
         assert export["metadata"]["backtest_id"] == "test_123"
@@ -683,3 +684,24 @@ def test_extreme_but_valid_ratios_do_not_block_export():
         total_trades=1,
         calmar_ratio=-0.06,
     )
+
+
+def test_export_with_bear_market_filter():
+    """Test that bear_market_filter is passed through to execution config."""
+    config = {"app": {"version": "0.1.0"}}
+    export = _build_export_json(
+        backtest_id="test_bm",
+        ticker="AAPL",
+        strategy_name="ma_crossover",
+        params={
+            "short_window": 50,
+            "long_window": 200,
+            "bear_market_filter": False,
+        },
+        start_date="2020-01-01",
+        end_date="2024-12-31",
+        initial_capital=100000,
+        results={"metrics": {}},
+        config=config,
+    )
+    assert export["execution"]["bear_market_filter"] is False

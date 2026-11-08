@@ -7,7 +7,7 @@ All models use Pydantic v2 with strict validation.
 """
 
 from datetime import datetime
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal, Optional, Union
 
 from pydantic import ConfigDict, BaseModel, Field, field_validator, model_validator
 
@@ -546,6 +546,10 @@ class ExecutionConfig(BaseModel):
     )
     cooldown_bars: int = Field(
         ge=0, le=100, description="Min bars between signals for same ticker"
+    )
+    bear_market_filter: Optional[bool] = Field(
+        default=None,
+        description="Enable bear market entry suppression filter in live execution.",
     )
 
     @model_validator(mode="after")
