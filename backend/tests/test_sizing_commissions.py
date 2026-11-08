@@ -132,7 +132,9 @@ def test_equal_weight_exact_cost_boundary():
         max_position_pct=100.0,
     )
     data = _make_ohlcv([price, price])
-    shares_exact = engine._calculate_shares(p_exact, "TEST", price, "equal_weight", data, 1)
+    shares_exact = engine._calculate_shares(
+        p_exact, "TEST", price, "equal_weight", data, 1
+    )
     assert shares_exact == 5
 
     res_exact = p_exact.execute_order(
@@ -149,7 +151,9 @@ def test_equal_weight_exact_cost_boundary():
         cash_reserve_pct=0.0,
         max_position_pct=100.0,
     )
-    shares_short = engine._calculate_shares(p_short, "TEST", price, "equal_weight", data, 1)
+    shares_short = engine._calculate_shares(
+        p_short, "TEST", price, "equal_weight", data, 1
+    )
     assert shares_short == 4
 
     res_short = p_short.execute_order(
@@ -207,7 +211,9 @@ def test_volatility_weighted_zero_vs_nonzero_commission_rate():
         max_loss_per_trade_pct=100.0,  # ATR won't be the bottleneck
     )
     data = _make_ohlcv([100.0, 100.0], atr_val=1.0)
-    shares_zero = engine._calculate_shares(p_zero, "TEST", 100.0, "volatility_weighted", data, 1)
+    shares_zero = engine._calculate_shares(
+        p_zero, "TEST", 100.0, "volatility_weighted", data, 1
+    )
     assert shares_zero == 10
 
     # Case B: commission_rate = 0.005 (0.5%)
@@ -219,7 +225,9 @@ def test_volatility_weighted_zero_vs_nonzero_commission_rate():
         max_position_pct=100.0,
         max_loss_per_trade_pct=100.0,
     )
-    shares_comm = engine._calculate_shares(p_comm, "TEST", 100.0, "volatility_weighted", data, 1)
+    shares_comm = engine._calculate_shares(
+        p_comm, "TEST", 100.0, "volatility_weighted", data, 1
+    )
     assert shares_comm == 9
 
     res = p_comm.execute_order(
@@ -269,7 +277,9 @@ def test_volatility_weighted_three_constraints():
         max_loss_per_trade_pct=2.0,
     )
     data_risk = _make_ohlcv([100.0, 100.0], atr_val=5.0)
-    shares_risk = engine._calculate_shares(p_risk, "TEST", 100.0, "volatility_weighted", data_risk, 1)
+    shares_risk = engine._calculate_shares(
+        p_risk, "TEST", 100.0, "volatility_weighted", data_risk, 1
+    )
     assert shares_risk == 20
 
     # Constraint 2: Position cap is tightest
@@ -283,7 +293,9 @@ def test_volatility_weighted_three_constraints():
         max_loss_per_trade_pct=50.0,
     )
     data_cap = _make_ohlcv([100.0, 100.0], atr_val=0.1)
-    shares_cap = engine._calculate_shares(p_cap, "TEST", 100.0, "volatility_weighted", data_cap, 1)
+    shares_cap = engine._calculate_shares(
+        p_cap, "TEST", 100.0, "volatility_weighted", data_cap, 1
+    )
     assert shares_cap == 5
 
     # Constraint 3: Cash budget is tightest
@@ -302,7 +314,9 @@ def test_volatility_weighted_three_constraints():
     )
     p_cash.cash = 500.0
     data_cash = _make_ohlcv([100.0, 100.0], atr_val=0.1)
-    shares_cash = engine._calculate_shares(p_cash, "TEST", 100.0, "volatility_weighted", data_cash, 1)
+    shares_cash = engine._calculate_shares(
+        p_cash, "TEST", 100.0, "volatility_weighted", data_cash, 1
+    )
     assert shares_cash == int(500.0 / 101.0)  # 4 shares
 
     res = p_cash.execute_order(
@@ -318,16 +332,26 @@ def test_volatility_weighted_atr_warmup():
     data = _make_ohlcv([100.0, 100.0], atr_val=2.0)
 
     # bar_idx = 0: prev = -1 -> no prior bar ATR
-    assert engine._calculate_shares(p, "TEST", 100.0, "volatility_weighted", data, 0) == 0
+    assert (
+        engine._calculate_shares(p, "TEST", 100.0, "volatility_weighted", data, 0) == 0
+    )
 
     # ATR column missing entirely
     data_no_atr = data.drop(columns=["ATR"])
-    assert engine._calculate_shares(p, "TEST", 100.0, "volatility_weighted", data_no_atr, 1) == 0
+    assert (
+        engine._calculate_shares(
+            p, "TEST", 100.0, "volatility_weighted", data_no_atr, 1
+        )
+        == 0
+    )
 
     # ATR is NaN
     data_nan = data.copy()
     data_nan.loc[data_nan.index[0], "ATR"] = float("nan")
-    assert engine._calculate_shares(p, "TEST", 100.0, "volatility_weighted", data_nan, 1) == 0
+    assert (
+        engine._calculate_shares(p, "TEST", 100.0, "volatility_weighted", data_nan, 1)
+        == 0
+    )
 
 
 # ===========================================================================
