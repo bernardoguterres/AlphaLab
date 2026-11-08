@@ -377,19 +377,28 @@ class BacktestEngine:
             return 0
 
         available = portfolio.cash * (1 - portfolio.cash_reserve_pct)
+        effective_price = price * (1 + portfolio.slippage_pct)
+        cost_per_share = effective_price * (1 + portfolio.commission_rate)
+        cash_budget = available - portfolio.commission_per_trade
 
         if sizing == "equal_weight":
+            if cash_budget <= 0 or cost_per_share <= 0:
+                return 0
             port_val = portfolio.get_portfolio_value(current_prices or {ticker: price})
             # Cumulative cap: only the headroom left above the existing
             # position may be bought (an add-on BUY while already at the cap
             # buys nothing).
             held_val = portfolio.get_position(ticker) * price
-            max_alloc = max(0.0, port_val * portfolio.max_position_pct - held_val)
-            budget = min(available, max_alloc) - portfolio.commission_per_trade
-            effective_price = price * (1 + portfolio.slippage_pct)
-            if budget <= 0:
-                return 0
-            return int(budget / effective_price)
+            headroom = max(0.0, port_val * portfolio.max_position_pct - held_val)
+            return int(
+                max(
+                    0,
+                    min(
+                        cash_budget / cost_per_share,
+                        headroom / effective_price,
+                    ),
+                )
+            )
 
         if sizing == "volatility_weighted":
             # Risk-based: lose at most max_loss_per_trade_pct of equity if a
@@ -405,22 +414,22 @@ class BacktestEngine:
             )
             if not (atr > 0):
                 return 0
+            if cash_budget <= 0 or cost_per_share <= 0:
+                return 0
             port_val = portfolio.get_portfolio_value(current_prices or {ticker: price})
             held_val = portfolio.get_position(ticker) * price
             shares = portfolio.calculate_position_size(price, price - 2 * atr, port_val)
             headroom = max(0.0, port_val * portfolio.max_position_pct - held_val)
-            # Size the cap and cash limits at the price the fill will actually
-            # pay (slippage) and net of the flat fee, as equal_weight does;
-            # sizing at the raw open made cap-bound orders exceed the cap by
-            # the slippage and be rejected outright.
-            effective_price = price * (1 + portfolio.slippage_pct)
-            cash_budget = available - portfolio.commission_per_trade
+            # Size the cash limit using the effective per-share cash cost
+            # (including slippage and percentage commission), and position cap
+            # headroom using effective price (slippage only, since position
+            # valuation does not include commissions).
             return int(
                 max(
                     0,
                     min(
                         shares,
-                        cash_budget / effective_price,
+                        cash_budget / cost_per_share,
                         headroom / effective_price,
                     ),
                 )
