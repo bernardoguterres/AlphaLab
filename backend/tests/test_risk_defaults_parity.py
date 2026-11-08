@@ -8,7 +8,9 @@ from pathlib import Path
 
 from alphalab.api.validators import RiskSettings
 
-TYPES_TS = Path(__file__).resolve().parents[2] / "frontend" / "src" / "types" / "index.ts"
+TYPES_TS = (
+    Path(__file__).resolve().parents[2] / "frontend" / "src" / "types" / "index.ts"
+)
 
 
 def _frontend_defaults() -> dict:

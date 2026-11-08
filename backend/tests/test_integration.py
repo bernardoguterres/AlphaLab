@@ -297,12 +297,14 @@ class TestCompareEndpoint:
 
     def _compare_and_backtests(self, client, settings):
         compared = client.post(
-            "/api/compare", json={**self.WINDOW, "strategies": self.STRATEGIES, **settings}
+            "/api/compare",
+            json={**self.WINDOW, "strategies": self.STRATEGIES, **settings},
         )
         assert compared.status_code == 200
         singles = {
             s: client.post(
-                "/api/strategies/backtest", json={**self.WINDOW, "strategy": s, **settings}
+                "/api/strategies/backtest",
+                json={**self.WINDOW, "strategy": s, **settings},
             )
             for s in self.STRATEGIES
         }
@@ -313,7 +315,9 @@ class TestCompareEndpoint:
 
     @patch("alphalab.data.fetcher.yf.download")
     @patch("alphalab.data.fetcher.yf.Ticker")
-    def test_compare_applies_run_settings_like_backtest(self, mock_ticker, mock_dl, client):
+    def test_compare_applies_run_settings_like_backtest(
+        self, mock_ticker, mock_dl, client
+    ):
         """Compare used to ignore risk and sizing settings and always run the
         engine defaults, so its numbers disagreed with a Backtest of the same
         strategy, ticker and window. With the same settings they must match."""
@@ -326,7 +330,9 @@ class TestCompareEndpoint:
 
     @patch("alphalab.data.fetcher.yf.download")
     @patch("alphalab.data.fetcher.yf.Ticker")
-    def test_compare_without_settings_keeps_engine_defaults(self, mock_ticker, mock_dl, client):
+    def test_compare_without_settings_keeps_engine_defaults(
+        self, mock_ticker, mock_dl, client
+    ):
         """Omitting the new fields behaves as before: engine defaults, the
         same as a Backtest request that sends no risk settings."""
         mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
