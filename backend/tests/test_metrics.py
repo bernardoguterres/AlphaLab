@@ -324,3 +324,126 @@ class TestNaNInfinitySanitization:
         ]
         result = m.calculate_all(curve, trades)
         json.dumps(result, allow_nan=False)  # raises ValueError if NaN/Infinity present
+
+
+class TestMultiTickerAndTerminalTradeMetrics:
+    """Tests for multi-ticker round trip isolation and terminal open position accounting."""
+
+    def test_multi_ticker_round_trips_no_cross_contamination(self):
+        """Interleaved trades across tickers must not cross-pair lots."""
+        trades = [
+            {
+                "ticker": "AAPL",
+                "side": "buy",
+                "status": "filled",
+                "shares": 10,
+                "filled_price": 100.0,
+                "commission": 1.0,
+            },
+            {
+                "ticker": "MSFT",
+                "side": "buy",
+                "status": "filled",
+                "shares": 10,
+                "filled_price": 300.0,
+                "commission": 1.0,
+            },
+            {
+                "ticker": "MSFT",
+                "side": "sell",
+                "status": "filled",
+                "shares": 10,
+                "filled_price": 320.0,
+                "commission": 1.0,
+            },
+            {
+                "ticker": "AAPL",
+                "side": "sell",
+                "status": "filled",
+                "shares": 10,
+                "filled_price": 110.0,
+                "commission": 1.0,
+            },
+        ]
+        trips = PerformanceMetrics.round_trips(trades)
+        assert trips == pytest.approx([198.0, 98.0])
+
+    def test_multi_ticker_one_held_one_sold(self):
+        """When one ticker is held open, completed round trips for other tickers must be retained."""
+        trades = [
+            {
+                "ticker": "AAPL",
+                "side": "buy",
+                "status": "filled",
+                "shares": 10,
+                "filled_price": 100.0,
+                "commission": 1.0,
+            },
+            {
+                "ticker": "MSFT",
+                "side": "buy",
+                "status": "filled",
+                "shares": 10,
+                "filled_price": 300.0,
+                "commission": 1.0,
+            },
+            {
+                "ticker": "MSFT",
+                "side": "sell",
+                "status": "filled",
+                "shares": 10,
+                "filled_price": 320.0,
+                "commission": 1.0,
+            },
+        ]
+        trips_closed_only = PerformanceMetrics.round_trips(trades, include_open=False)
+        assert trips_closed_only == pytest.approx([198.0])
+
+        trips_with_open = PerformanceMetrics.round_trips(
+            trades, include_open=True, terminal_prices={"AAPL": 125.0}
+        )
+        assert trips_with_open == pytest.approx([198.0, 249.0])
+
+    def test_calculate_all_with_open_trades_and_terminal_prices(self):
+        """calculate_all forwards include_open_trades and terminal_prices to trade metrics."""
+        m = PerformanceMetrics()
+        trades = [
+            {
+                "ticker": "AAPL",
+                "side": "buy",
+                "status": "filled",
+                "shares": 10,
+                "filled_price": 100.0,
+                "commission": 1.0,
+            },
+            {
+                "ticker": "MSFT",
+                "side": "buy",
+                "status": "filled",
+                "shares": 10,
+                "filled_price": 300.0,
+                "commission": 1.0,
+            },
+            {
+                "ticker": "MSFT",
+                "side": "sell",
+                "status": "filled",
+                "shares": 10,
+                "filled_price": 320.0,
+                "commission": 1.0,
+            },
+        ]
+        curve = _make_equity_curve()
+        res_default = m.calculate_all(curve, trades)
+        assert res_default["trades"]["total_trades"] == 1
+        assert res_default["trades"]["win_rate"] == 1.0
+
+        res_open = m.calculate_all(
+            curve,
+            trades,
+            include_open_trades=True,
+            terminal_prices={"AAPL": 125.0},
+        )
+        assert res_open["trades"]["total_trades"] == 2
+        assert res_open["trades"]["win_rate"] == 1.0
+        assert res_open["trades"]["best_trade"] == pytest.approx(249.0)

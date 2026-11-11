@@ -7,7 +7,7 @@ All models use Pydantic v2 with strict validation.
 """
 
 from datetime import datetime
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal, Optional, Union
 
 from pydantic import ConfigDict, BaseModel, Field, field_validator, model_validator
 
@@ -524,6 +524,15 @@ class RiskConfig(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def validate_portfolio_positions(self):
+        if self.portfolio_max_positions < self.max_open_positions:
+            raise ValueError(
+                f"portfolio_max_positions ({self.portfolio_max_positions}) must be >= "
+                f"max_open_positions ({self.max_open_positions})"
+            )
+        return self
+
 
 class ExecutionConfig(BaseModel):
     """Order execution settings."""
@@ -537,6 +546,10 @@ class ExecutionConfig(BaseModel):
     )
     cooldown_bars: int = Field(
         ge=0, le=100, description="Min bars between signals for same ticker"
+    )
+    bear_market_filter: Optional[bool] = Field(
+        default=None,
+        description="Enable bear market entry suppression filter in live execution.",
     )
 
     @model_validator(mode="after")

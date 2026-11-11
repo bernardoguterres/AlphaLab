@@ -122,13 +122,15 @@ def _build_export_json(
     }
 
     rs = risk_settings or {}
+    max_open = rs.get("max_open_positions", 5)
+    portfolio_max = rs.get("portfolio_max_positions", 10)
     risk = {
         "stop_loss_pct": rs.get("stop_loss_pct", 2.0),
         "take_profit_pct": rs.get("take_profit_pct", 5.0),
         "max_position_size_pct": rs.get("max_position_size_pct", 10.0),
         "max_daily_loss_pct": rs.get("max_daily_loss_pct", 3.0),
-        "max_open_positions": rs.get("max_open_positions", 5),
-        "portfolio_max_positions": 10,
+        "max_open_positions": max_open,
+        "portfolio_max_positions": max(portfolio_max, max_open),
         "trailing_stop_enabled": rs.get("trailing_stop_enabled", False),
         "trailing_stop_pct": rs.get("trailing_stop_pct", 3.0),
         "commission_per_trade": rs.get("commission_per_trade", 0.0),
@@ -141,6 +143,7 @@ def _build_export_json(
         "order_type": "market",
         "limit_offset_pct": 0.1,
         "cooldown_bars": params.get("cooldown_days", 1),
+        "bear_market_filter": params.get("bear_market_filter", None),
     }
 
     safety_limits = {
