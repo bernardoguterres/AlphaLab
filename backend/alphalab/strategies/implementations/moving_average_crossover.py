@@ -96,8 +96,12 @@ class MovingAverageCrossover(BaseStrategy):
             vol_avg = data["Volume"].rolling(p["volume_avg_period"]).mean()
             vol_ok = data["Volume"] > vol_avg
 
+        # Separation and volume filters screen ENTRIES only. Applying them to
+        # the death cross too dropped exits on quiet days (AAPL was held from
+        # 2019 through the 2022 bear market) - an entry filter must never
+        # trap a position. Mirrored in AlphaLive's signal_engine.py.
         buy_mask = cross_up & sep_ok & vol_ok
-        sell_mask = cross_down & sep_ok & vol_ok
+        sell_mask = cross_down
 
         signals.loc[buy_mask, "signal"] = 1
         signals.loc[sell_mask, "signal"] = -1

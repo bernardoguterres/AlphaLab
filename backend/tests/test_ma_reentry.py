@@ -149,3 +149,28 @@ def test_cooldown_gates_reentry_like_alphalive(cooldown):
     rebuy = next(t for t in trades if t["reason"].startswith("Re-entry"))
     rebuy_decision = pos[str(rebuy["timestamp"])[:10]] - 1
     assert rebuy_decision == max(exit_decision + 2, entry_decision + cooldown)
+
+
+def test_low_volume_death_cross_still_exits():
+    """Volume/separation filters screen entries only: a death cross on a
+    quiet day must still emit SELL (it used to be dropped, trapping the
+    position until a later cross)."""
+    close = np.r_[
+        np.full(40, 100.0), np.linspace(100, 120, 20), np.linspace(119, 95, 20)
+    ]
+    vol = np.full(len(close), 1e6)
+    data = _frame(close)
+    data["Volume"] = vol
+    s = MovingAverageCrossover(
+        {
+            "short_window": 5,
+            "long_window": 20,
+            "volume_confirmation": True,
+            "cooldown_days": 0,
+        }
+    )
+    sig = s.generate_signals(data)["signal"]
+    death = int(np.flatnonzero(sig.to_numpy() == -1)[0])
+    data.iloc[death, data.columns.get_loc("Volume")] = 1e3  # quiet day
+    sig2 = s.generate_signals(data)["signal"]
+    assert sig2.iloc[death] == -1
