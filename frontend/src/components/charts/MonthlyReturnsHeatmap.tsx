@@ -3,21 +3,9 @@ import type { EquityCurvePoint } from "@/types";
 import { Table, Td, Th } from "@/components/ui/data-table";
 import { cn } from "@/lib/utils";
 import { pnlColor } from "@/utils/formatters";
+import { monthlyReturns } from "@/utils/monthlyReturns";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** Return from each month's first to last point, keyed "year-month". */
-function monthlyReturns(curve: EquityCurvePoint[]): Map<string, number> {
-  const bounds = new Map<string, { first: number; last: number }>();
-  for (const point of curve) {
-    const d = new Date(point.date);
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
-    const month = bounds.get(key);
-    if (month) month.last = point.value;
-    else bounds.set(key, { first: point.value, last: point.value });
-  }
-  return new Map([...bounds].map(([key, { first, last }]) => [key, ((last - first) / first) * 100]));
-}
 
 /** Background tint scaled by magnitude, saturating at ±10%. */
 function cellTint(value: number): React.CSSProperties {

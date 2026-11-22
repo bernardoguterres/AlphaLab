@@ -23,10 +23,13 @@ export function formatDate(dateStr: string | undefined | null): string {
   if (!dateStr) return "-";
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return "-";
+  // Bar dates are calendar days stored as UTC midnight; formatting them in the
+  // viewer's zone showed "2020-01-01" as "Dec 31, 2019" west of UTC.
   return date.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 
