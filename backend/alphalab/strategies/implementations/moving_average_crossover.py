@@ -25,11 +25,28 @@ class MovingAverageCrossover(BaseStrategy):
         p.setdefault("volume_avg_period", 20)
         p.setdefault("min_separation_pct", 0.0)
         p.setdefault("cooldown_days", 5)
+        # Re-entry after a protective exit (stop-loss / take-profit /
+        # trailing stop). Off by default: entries happen only on a cross.
+        # When on, a position closed by a protective exit is re-opened while
+        # the short MA is still above the long MA, once more than
+        # reentry_wait_bars completed bars have passed since the exit bar.
+        # The backtest engine applies it (it alone knows when a protective
+        # exit happened); AlphaLive mirrors the same rule.
+        p.setdefault("reentry_after_protective_exit", False)
+        p.setdefault("reentry_wait_bars", 1)
 
         if p["short_window"] >= p["long_window"]:
             raise ValueError("short_window must be < long_window")
         if p["short_window"] < 2:
             raise ValueError("short_window must be >= 2")
+        if not isinstance(p["reentry_after_protective_exit"], bool):
+            raise ValueError("reentry_after_protective_exit must be a bool")
+        if (
+            isinstance(p["reentry_wait_bars"], bool)
+            or not isinstance(p["reentry_wait_bars"], int)
+            or not 0 <= p["reentry_wait_bars"] <= 100
+        ):
+            raise ValueError("reentry_wait_bars must be an int in [0, 100]")
 
         self._reject_unknown_params(
             {
@@ -39,6 +56,8 @@ class MovingAverageCrossover(BaseStrategy):
                 "volume_avg_period",
                 "min_separation_pct",
                 "cooldown_days",
+                "reentry_after_protective_exit",
+                "reentry_wait_bars",
             }
         )
 
@@ -93,6 +112,15 @@ class MovingAverageCrossover(BaseStrategy):
 
         # Cooldown enforcement
         signals = self._apply_cooldown(signals, p["cooldown_days"])
+
+        # Re-entry permission per bar (read by BacktestEngine._simulate only
+        # after a protective exit). Absent column = feature off.
+        if p["reentry_after_protective_exit"]:
+            signals["reentry_ok"] = (short_ma > long_ma).fillna(False)
+            signals.attrs["reentry_wait_bars"] = int(p["reentry_wait_bars"])
+            # Exported to AlphaLive as execution.cooldown_bars, whose risk
+            # cooldown also gates re-entries - mirror it in the backtest.
+            signals.attrs["reentry_cooldown_bars"] = int(p["cooldown_days"])
 
         logger.info(
             "%s generated %d signals on %d bars",

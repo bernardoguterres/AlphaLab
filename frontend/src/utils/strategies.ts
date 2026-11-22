@@ -69,6 +69,11 @@ export const STRATEGIES: Record<StrategyType, StrategySpec> = {
       num("long_window", "Long window", 200, range(50, 300), range(100, 200, 50)),
       bool("volume_confirmation", "Volume confirmation", true),
       num("cooldown_days", "Cooldown days", 5, range(0, 30)),
+      bool("reentry_after_protective_exit", "Re-enter after stop/take-profit while trend holds", false),
+      {
+        ...num("reentry_wait_bars", "Re-entry wait (bars)", 1, range(0, 20)),
+        shownWhen: "reentry_after_protective_exit",
+      },
     ],
   },
   rsi_mean_reversion: {
