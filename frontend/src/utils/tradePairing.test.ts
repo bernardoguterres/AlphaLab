@@ -92,3 +92,52 @@ describe("pairTradesFIFO", () => {
     expect(pairTradesFIFO(orders)).toHaveLength(0);
   });
 });
+
+// B12 (Nov 2026 audit): one-buy-one-sell pairing dropped add-on lots and
+// mispaired them with later sells. These mirror metrics.py round_trips().
+describe("pairTradesFIFO round trips (quantity FIFO, like the backend)", () => {
+  it("keeps an add-on buy inside the round trip", () => {
+    const trades = pairTradesFIFO([
+      order({ side: "buy", shares: 10, filled_price: 100, filled_timestamp: "2020-01-01" }),
+      order({ side: "buy", shares: 5, filled_price: 110, filled_timestamp: "2020-01-05" }),
+      order({ side: "sell", shares: 15, filled_price: 120, filled_timestamp: "2020-02-01" }),
+    ]);
+    expect(trades).toHaveLength(1);
+    expect(trades[0].pnl).toBeCloseTo(250); // 10*20 + 5*10
+    expect(trades[0].shares).toBe(15);
+    expect(trades[0].entry_price).toBeCloseTo(1550 / 15);
+    expect(trades[0].exit_price).toBe(120);
+    expect(trades[0].entry_date).toBe("2020-01-01");
+    expect(trades[0].exit_date).toBe("2020-02-01");
+  });
+
+  it("closes the trip only when the position is flat after partial sells", () => {
+    const trades = pairTradesFIFO([
+      order({ side: "buy", shares: 10, filled_price: 100 }),
+      order({ side: "sell", shares: 4, filled_price: 110, filled_timestamp: "2020-01-10" }),
+      order({ side: "sell", shares: 6, filled_price: 90, filled_timestamp: "2020-01-20" }),
+    ]);
+    expect(trades).toHaveLength(1);
+    expect(trades[0].pnl).toBeCloseTo(4 * 10 + 6 * -10);
+    expect(trades[0].exit_date).toBe("2020-01-20");
+  });
+
+  it("nets the commission of every order in the round trip", () => {
+    const trades = pairTradesFIFO([
+      order({ side: "buy", shares: 10, filled_price: 100, commission: 1 }),
+      order({ side: "buy", shares: 10, filled_price: 100, commission: 1 }),
+      order({ side: "sell", shares: 20, filled_price: 100, commission: 1 }),
+    ]);
+    expect(trades[0].pnl).toBeCloseTo(-3);
+  });
+
+  it("does not mix lots across tickers", () => {
+    const trades = pairTradesFIFO([
+      order({ ticker: "AAPL", side: "buy", shares: 10, filled_price: 100 }),
+      order({ ticker: "MSFT", side: "buy", shares: 10, filled_price: 300 }),
+      order({ ticker: "AAPL", side: "sell", shares: 10, filled_price: 110 }),
+      order({ ticker: "MSFT", side: "sell", shares: 10, filled_price: 290 }),
+    ]);
+    expect(trades.map((t) => t.pnl)).toEqual([100, -100]);
+  });
+});
