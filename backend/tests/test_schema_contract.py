@@ -142,7 +142,15 @@ def test_safety_limits_field_parity():
 
 
 def test_ma_crossover_param_field_parity():
-    _assert_field_parity(MACrossoverParams, MACrossoverStrategyParams)
+    # reentry_after_protective_exit / reentry_wait_bars are rolling out in both
+    # repos (export contract 1.3); CI checks this repo against AlphaLive's
+    # main, which gains them in the companion PR - allow them as lab_only
+    # until both are merged (same pattern as bear_market_filter).
+    _assert_field_parity(
+        MACrossoverParams,
+        MACrossoverStrategyParams,
+        lab_only={"reentry_after_protective_exit", "reentry_wait_bars"},
+    )
 
 
 def test_rsi_mean_reversion_param_field_parity():
