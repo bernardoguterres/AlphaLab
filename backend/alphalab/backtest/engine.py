@@ -270,6 +270,29 @@ class BacktestEngine:
 
         pending_signal = None  # Signal from previous bar to execute on this bar's open
 
+        # Optional re-entry after a protective exit (stop-loss / take-profit
+        # / trailing stop). A strategy opts in by adding a boolean
+        # "reentry_ok" column (True on bars where re-entry is allowed, e.g.
+        # short MA above long MA) and signals.attrs["reentry_wait_bars"].
+        # Rule (mirrored by AlphaLive): after a protective exit decided on
+        # bar t, while flat, queue a BUY at the close of bar i once
+        # i - t > wait and reentry_ok[i]; a strategy SELL signal or a filled
+        # BUY cancels the pending re-entry.
+        reentry_ok = signals["reentry_ok"] if "reentry_ok" in signals.columns else None
+        reentry_wait = int(signals.attrs.get("reentry_wait_bars", 1))
+        # AlphaLive's RiskManager cooldown also gates a re-entry: it needs at
+        # least `cooldown_bars` (exported from the strategy's cooldown_days)
+        # completed bars since the decision bar of the last strategy order
+        # (entry or exit; protective exits don't count). Mirrored here so
+        # backtest and live re-enter on the same day.
+        reentry_cooldown = int(signals.attrs.get("reentry_cooldown_bars", 0))
+        last_order_decision_bar = None
+        pending_decision_bar = None  # decision bar of a pending strategy order
+        protective_exit_bar = None  # decision bar of the last protective exit
+        pending_protective_bar = (
+            None  # set while the pending order is a protective exit
+        )
+
         for i in range(len(data)):
             row = data.iloc[i]
             ts = data.index[i]
@@ -299,6 +322,10 @@ class BacktestEngine:
                             reason=sig_reason,
                         )
                         portfolio.execute_order(order, exec_price_map, timestamp=ts)
+                    if portfolio.get_position(ticker) > 0:
+                        protective_exit_bar = None
+                        if shares > 0 and pending_decision_bar is not None:
+                            last_order_decision_bar = pending_decision_bar
 
                 elif sig_val == -1:
                     held = portfolio.get_position(ticker)
@@ -311,8 +338,20 @@ class BacktestEngine:
                             reason=sig_reason,
                         )
                         portfolio.execute_order(order, exec_price_map, timestamp=ts)
+                        if (
+                            pending_protective_bar is not None
+                            and portfolio.get_position(ticker) == 0
+                        ):
+                            protective_exit_bar = pending_protective_bar
+                        if (
+                            pending_protective_bar is None
+                            and pending_decision_bar is not None
+                        ):
+                            last_order_decision_bar = pending_decision_bar
 
                 pending_signal = None
+                pending_protective_bar = None
+                pending_decision_bar = None
 
             # Record today's value (using close)
             portfolio.record_value(ts, prices)
@@ -335,6 +374,9 @@ class BacktestEngine:
                         else ""
                     )
                     pending_signal = (sig_val, reason)
+                    pending_decision_bar = i
+                if sig_val == -1:
+                    protective_exit_bar = None  # strategy exit ends the re-entry window
 
             # Trailing stop (previously tracked/ratcheted by
             # update_trailing_stops() above but never actually checked
@@ -347,6 +389,8 @@ class BacktestEngine:
             )
             if trailing_exit_reason is not None:
                 pending_signal = (-1, trailing_exit_reason)
+                pending_protective_bar = i
+                pending_decision_bar = None
 
             # Portfolio-level stop-loss/take-profit overlay (audit bug 3.1):
             # checked against this bar's close, queued for execution on the
@@ -359,6 +403,24 @@ class BacktestEngine:
             risk_exit_reason = portfolio.check_risk_overlay_exit(ticker, row["Close"])
             if risk_exit_reason is not None:
                 pending_signal = (-1, risk_exit_reason)
+                pending_protective_bar = i
+                pending_decision_bar = None
+
+            # Re-entry after a protective exit (opt-in, see above).
+            if (
+                reentry_ok is not None
+                and protective_exit_bar is not None
+                and pending_signal is None
+                and portfolio.get_position(ticker) == 0
+                and i - protective_exit_bar > reentry_wait
+                and (
+                    last_order_decision_bar is None
+                    or i - last_order_decision_bar >= reentry_cooldown
+                )
+                and bool(reentry_ok.get(ts, False))
+            ):
+                pending_signal = (1, "Re-entry after protective exit (trend intact)")
+                pending_decision_bar = i
 
         return portfolio, portfolio.ledger
 

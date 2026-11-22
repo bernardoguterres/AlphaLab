@@ -50,6 +50,17 @@ class MACrossoverParams(BaseModel):
     cooldown_days: int = Field(
         default=5, ge=0, le=100, description="Min days between signals"
     )
+    reentry_after_protective_exit: bool = Field(
+        default=False,
+        description="Re-enter while fast MA > slow MA after a stop-loss/"
+        "take-profit/trailing-stop exit (otherwise wait for the next cross)",
+    )
+    reentry_wait_bars: int = Field(
+        default=1,
+        ge=0,
+        le=100,
+        description="Completed bars after the exit bar before re-entry is allowed",
+    )
 
     @model_validator(mode="after")
     def validate_windows(self):
