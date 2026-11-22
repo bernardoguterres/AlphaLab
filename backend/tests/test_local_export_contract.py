@@ -8,7 +8,7 @@ degrades to the same skip there too. That leaves no protection at all in an
 environment where AlphaLive simply isn't present.
 
 This file is the local, self-contained replacement for that gap: a small,
-explicitly versioned JSON fixture (tests/fixtures/export_contract_v1.2.json)
+explicitly versioned JSON fixture (tests/fixtures/export_contract_v1.3.json)
 records what AlphaLab's OWN StrategyExportSchema currently produces for each
 exportable strategy - required/optional fields, nested block shapes, alias
 translations, strategy identifiers, schema_version - and every test below
@@ -42,7 +42,7 @@ from alphalab.strategies.implementations import (
     TrendAdaptiveRSI,
 )
 
-_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "export_contract_v1.2.json"
+_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "export_contract_v1.3.json"
 
 with open(_FIXTURE_PATH) as f:
     CONTRACT = json.load(f)
