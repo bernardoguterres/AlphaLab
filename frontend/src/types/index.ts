@@ -145,6 +145,8 @@ export interface BacktestResult {
     halted_at: string | null;
     halted_drawdown_pct: number | null;
   } | null;
+  /** Data-quality and coverage warnings for the fetched window (backend). */
+  data_quality_warnings?: string[];
 }
 
 export interface BacktestHistoryItem {
