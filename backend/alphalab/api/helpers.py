@@ -2,11 +2,27 @@
 
 from datetime import datetime, timezone
 
-from flask import jsonify
+from flask import jsonify, request
+from werkzeug.exceptions import BadRequest
 
 from ..data.fetcher import DataFetchError
 from ..data.validator import DataValidator
 from ..data.processor import FeatureEngineer
+
+
+def json_body(allow_empty: bool = False) -> dict:
+    """The request's JSON object, or a 400 if the body is not one.
+
+    ``request.get_json(force=True)`` raised BadRequest on malformed JSON (which
+    the catch-all handler turned into a 500), and a valid non-object body
+    (``[]``, ``null``) crashed the ``Model(**body)`` call with a TypeError.
+    """
+    body = request.get_json(force=True, silent=True)
+    if body is None and allow_empty and not request.get_data():
+        return {}
+    if not isinstance(body, dict):
+        raise BadRequest("Request body must be a JSON object")
+    return body
 
 
 def _fetch_and_prepare(

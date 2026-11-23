@@ -1,6 +1,8 @@
 """Portfolio optimization endpoint."""
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify
+
+from ..helpers import json_body
 
 from ..validators import PortfolioConstraints, PortfolioOptimizeRequest
 from ...backtest.portfolio_optimizer import PortfolioOptimizer, build_returns_matrix
@@ -16,7 +18,7 @@ portfolio_bp = Blueprint("portfolio", __name__)
 def optimize_portfolio():
     """Optimize portfolio weights across multiple strategies."""
     results_store = current_app.extensions["results_store"]
-    body = PortfolioOptimizeRequest(**request.get_json(force=True))
+    body = PortfolioOptimizeRequest(**json_body())
 
     strategies = [s.model_dump() for s in body.strategies]
     constraints = body.constraints or PortfolioConstraints()
