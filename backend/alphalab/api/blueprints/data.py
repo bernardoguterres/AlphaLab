@@ -1,6 +1,8 @@
 """Data fetch and cache endpoints."""
 
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, current_app
+
+from ..helpers import json_body
 
 from ...data.fetcher import DataFetchError
 from ..validators import FetchDataRequest
@@ -14,7 +16,7 @@ data_bp = Blueprint("data", __name__)
 @data_bp.route("/api/data/fetch", methods=["POST"])
 def fetch_data():
     fetcher = current_app.extensions["fetcher"]
-    body = FetchDataRequest(**request.get_json(force=True))
+    body = FetchDataRequest(**json_body())
     results = {}
     errors = []
 
