@@ -2,7 +2,9 @@
 
 import os
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
+
+from ..helpers import json_body
 from pydantic import ValidationError
 
 from ..settings_validators import NotificationSettingsRequest
@@ -25,7 +27,7 @@ def get_notification_settings():
 def save_notification_settings():
     """Save notification settings. Rejects requests containing secrets."""
     try:
-        body = NotificationSettingsRequest(**request.get_json(force=True))
+        body = NotificationSettingsRequest(**json_body())
     except ValidationError as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 

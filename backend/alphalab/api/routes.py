@@ -6,6 +6,7 @@ import uuid
 from flask import Flask, g, jsonify, request
 from flask_cors import CORS
 from pydantic import ValidationError
+from werkzeug.exceptions import HTTPException
 
 from .blueprints.backtest import backtest_bp
 from .blueprints.data import data_bp
@@ -75,6 +76,12 @@ def create_app() -> Flask:
 
     @app.errorhandler(Exception)
     def _handle_error(e):
+        if isinstance(e, HTTPException):
+            # 400/405/413 etc. keep their status; only unexpected errors are 500.
+            return (
+                jsonify({"status": "error", "message": e.description or e.name}),
+                e.code or 500,
+            )
         if isinstance(e, ValidationError):
             return jsonify({"status": "error", "message": _validation_message(e)}), 422
         logger.exception("[%s] Unhandled error", getattr(g, "request_id", "?"))
