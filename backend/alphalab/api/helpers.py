@@ -39,9 +39,48 @@ def _fetch_and_prepare(
             ),
         )
 
+    report.warnings.extend(
+        _coverage_warnings(cleaned.index, start_date, end_date, interval)
+    )
     featured = FeatureEngineer().process(cleaned)
     featured.attrs["ticker"] = ticker
     return featured, report, None
+
+
+# Calendar-day slack before a gap at either end is reported: covers weekends,
+# holidays and the bar size itself.
+_COVERAGE_SLACK_DAYS = {"1d": 7, "1wk": 14, "1mo": 45}
+
+
+def _coverage_warnings(index, start_date, end_date, interval: str = "1d") -> list:
+    """Warn when the data starts after / ends before the requested window.
+
+    A run silently covering a shorter period than asked for looked like a
+    normal result (a corrupted cache entry ending 14 months early went
+    unnoticed). Requested dates in the future are not counted as gaps.
+    """
+    if len(index) == 0 or not start_date or not end_date:
+        return []
+    import pandas as pd
+
+    slack = pd.Timedelta(days=_COVERAGE_SLACK_DAYS.get(interval, 7))
+    idx = pd.DatetimeIndex(index)
+    first = idx.min().tz_localize(None) if idx.tz is not None else idx.min()
+    last = idx.max().tz_localize(None) if idx.tz is not None else idx.max()
+    start = pd.Timestamp(start_date)
+    end = min(pd.Timestamp(end_date), pd.Timestamp(datetime.now(timezone.utc).date()))
+    out = []
+    if first - start > slack:
+        out.append(
+            f"Data starts {first.date()}, {(first - start).days} days after the "
+            f"requested start {start.date()}"
+        )
+    if end - last > slack:
+        out.append(
+            f"Data ends {last.date()}, {(end - last).days} days before the "
+            f"requested end {end.date()}"
+        )
+    return out
 
 
 _INTERVAL_TO_TIMEFRAME = {

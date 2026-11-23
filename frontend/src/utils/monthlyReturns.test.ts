@@ -42,3 +42,25 @@ describe("formatDate", () => {
     expect(formatDate("2020-01-01")).toBe("Jan 1, 2020");
   });
 });
+
+// Trade timestamps arrive timezone-less ("2024-07-08 00:00:00"); JS reads
+// them as local time. They must keep their calendar day in every timezone.
+describe("bar dates in both backend shapes", () => {
+  it.each([
+    ["2024-07-08 00:00:00", "Jul 8, 2024"],
+    ["2024-07-08T00:00:00", "Jul 8, 2024"],
+    ["2024-07-08", "Jul 8, 2024"],
+    ["Mon, 08 Jul 2024 00:00:00 GMT", "Jul 8, 2024"],
+    ["Wed, 01 Jan 2020 00:00:00 GMT", "Jan 1, 2020"],
+  ])("formatDate(%s) = %s", (input, expected) => {
+    expect(formatDate(input)).toBe(expected);
+  });
+
+  it("keeps timezone-less first-of-month points in their month", () => {
+    const r = monthlyReturns([
+      { date: "2024-06-28 00:00:00", value: 100 },
+      { date: "2024-07-01 00:00:00", value: 105 },
+    ]);
+    expect([...r.keys()]).toEqual(["2024-5", "2024-6"]);
+  });
+});

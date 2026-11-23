@@ -26,6 +26,23 @@ from ..utils.logger import setup_logger
 logger = setup_logger("alphalab.api")
 
 
+def _validation_message(e: ValidationError) -> str:
+    """One readable line per problem, e.g. "tickers: Invalid ticker: ZZZZZQ".
+
+    str(e) is Pydantic's debug text (model name, error type, a docs URL),
+    which the frontend shows verbatim in its error toast.
+    """
+    parts = []
+    for err in e.errors():
+        msg = str(err.get("msg", "invalid value"))
+        for prefix in ("Value error, ", "Assertion failed, "):
+            if msg.startswith(prefix):
+                msg = msg[len(prefix) :]
+        loc = ".".join(str(p) for p in err.get("loc", ()) if p != "__root__")
+        parts.append(f"{loc}: {msg}" if loc else msg)
+    return "; ".join(parts) or "Invalid request"
+
+
 def create_app() -> Flask:
     """Create and configure the Flask application."""
     config = load_config()
@@ -59,7 +76,7 @@ def create_app() -> Flask:
     @app.errorhandler(Exception)
     def _handle_error(e):
         if isinstance(e, ValidationError):
-            return jsonify({"status": "error", "message": str(e)}), 422
+            return jsonify({"status": "error", "message": _validation_message(e)}), 422
         logger.exception("[%s] Unhandled error", getattr(g, "request_id", "?"))
         return jsonify({"status": "error", "message": "Internal server error"}), 500
 
