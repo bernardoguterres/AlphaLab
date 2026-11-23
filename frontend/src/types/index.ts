@@ -253,12 +253,22 @@ export interface CachedTicker {
   last_updated: string;
 }
 
+/** One per-ticker failure from POST /api/data/fetch (backend data.py). */
+export interface FetchDataError {
+  ticker: string;
+  error: string;
+}
+
 export interface FetchDataResponse {
   status: "ok" | "error";
   data: Record<string, { records: number; quality_score: number }>;
-  errors: string[];
+  errors: FetchDataError[];
   message?: string;
 }
+
+/** "AAPL: reason" - never render the raw error object (React crashes on it). */
+export const formatFetchError = (e: FetchDataError | string): string =>
+  typeof e === "string" ? e : `${e.ticker}: ${e.error}`;
 
 export interface RiskSettings {
   stop_loss_pct: number;

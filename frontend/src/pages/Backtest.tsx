@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import type { BacktestResult, PositionSizing, RiskSettings, StrategyParams, StrategyType } from "@/types";
-import { DEFAULT_RISK_SETTINGS } from "@/types";
+import { DEFAULT_RISK_SETTINGS, formatFetchError } from "@/types";
 import { Page } from "@/components/layout/Page";
 import { BatchBacktest } from "@/components/backtest/BatchBacktest";
 import { ExportPanel } from "@/components/backtest/ExportPanel";
@@ -96,7 +96,7 @@ export default function Backtest() {
         setQuality({ score: fetched.quality_score, ticker, startDate, endDate });
         toast.success(`Fetched ${fetched.records} bars for ${ticker}`);
       }
-      if (response.errors?.length) toast.error(response.errors.join(", "));
+      if (response.errors?.length) toast.error(response.errors.map(formatFetchError).join(", "));
     } catch (error) {
       toast.error(errorMessage(error, "Fetching data failed"));
     } finally {
