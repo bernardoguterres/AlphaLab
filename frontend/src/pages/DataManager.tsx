@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { CachedTicker } from "@/types";
+import { formatFetchError } from "@/types";
 import { ApiOfflineNotice } from "@/components/layout/ApiOfflineNotice";
 import { Page } from "@/components/layout/Page";
 import { DateRangeFields, IntervalSelect } from "@/components/forms/RunFields";
@@ -52,7 +53,7 @@ export default function DataManager() {
         recordQuality(response.data);
         toast.success(`Cached ${fetched.join(", ")}`);
       }
-      response.errors?.forEach((e) => toast.error(e));
+      response.errors?.forEach((e) => toast.error(formatFetchError(e)));
       await refreshCachedTickers();
     } catch (error) {
       toast.error(errorMessage(error, "Fetching data failed"));
