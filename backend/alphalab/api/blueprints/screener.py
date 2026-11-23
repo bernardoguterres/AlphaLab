@@ -1,6 +1,8 @@
 """Fundamental screener endpoints."""
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
+
+from ..helpers import json_body
 
 from ...screener import FundamentalScreener
 from ...utils.logger import setup_logger
@@ -17,14 +19,25 @@ def run_greenblatt_screen():
     Body: {"tickers": [...], "top_n": 20, "min_market_cap_b": 1.0, "max_debt_to_equity": 2.0}
     Returns ranked candidates sorted by combined Greenblatt rank.
     """
-    body = request.get_json(force=True) or {}
+    body = json_body(allow_empty=True)
     tickers = body.get("tickers")
     if not tickers or not isinstance(tickers, list):
         return jsonify({"status": "error", "message": "tickers list required"}), 400
 
-    top_n = int(body.get("top_n", 20))
-    min_cap = float(body.get("min_market_cap_b", 1.0))
-    max_dte = float(body.get("max_debt_to_equity", 2.0))
+    try:
+        top_n = int(body.get("top_n", 20))
+        min_cap = float(body.get("min_market_cap_b", 1.0))
+        max_dte = float(body.get("max_debt_to_equity", 2.0))
+    except (TypeError, ValueError):
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "top_n, min_market_cap_b and max_debt_to_equity must be numbers",
+                }
+            ),
+            400,
+        )
 
     logger.info("Greenblatt screen: %d tickers, top_n=%d", len(tickers), top_n)
     try:

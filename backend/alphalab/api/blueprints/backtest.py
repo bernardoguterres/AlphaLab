@@ -8,10 +8,10 @@ import uuid
 from datetime import datetime
 
 import numpy as np
-from flask import Blueprint, Response, current_app, jsonify, request
+from flask import Blueprint, Response, current_app, jsonify
 from pydantic import ValidationError
 
-from ..helpers import _build_export_json, _fetch_and_prepare
+from ..helpers import _build_export_json, _fetch_and_prepare, json_body
 from ..validators import (
     BacktestRequest,
     BatchBacktestRequest,
@@ -105,7 +105,7 @@ backtest_bp = Blueprint("backtest", __name__)
 def run_backtest():
     fetcher = current_app.extensions["fetcher"]
     results_store = current_app.extensions["results_store"]
-    body = BacktestRequest(**request.get_json(force=True))
+    body = BacktestRequest(**json_body())
     interval = _resolve_interval(body.strategy, body.interval)
 
     featured, report, err = _fetch_and_prepare(
@@ -177,7 +177,7 @@ def run_backtest():
 def optimize_strategy():
     """Optimize strategy parameters with optional walk-forward validation."""
     fetcher = current_app.extensions["fetcher"]
-    body = OptimizeRequest(**request.get_json(force=True))
+    body = OptimizeRequest(**json_body())
 
     featured, report, err = _fetch_and_prepare(
         fetcher, body.ticker, body.start_date, body.end_date
@@ -217,7 +217,7 @@ def optimize_strategy():
 def parameter_heatmap():
     """Generate 2D parameter heatmap for visualization."""
     fetcher = current_app.extensions["fetcher"]
-    body = HeatmapRequest(**request.get_json(force=True))
+    body = HeatmapRequest(**json_body())
 
     featured, report, err = _fetch_and_prepare(
         fetcher, body.ticker, body.start_date, body.end_date
@@ -303,7 +303,7 @@ def get_metrics(backtest_id):
 @backtest_bp.route("/api/compare", methods=["POST"])
 def compare_strategies():
     fetcher = current_app.extensions["fetcher"]
-    body = CompareRequest(**request.get_json(force=True))
+    body = CompareRequest(**json_body())
 
     featured, report, err = _fetch_and_prepare(
         fetcher, body.ticker, body.start_date, body.end_date
@@ -360,7 +360,7 @@ def compare_strategies():
 def batch_backtest():
     """Run backtests across multiple tickers with the same strategy."""
     fetcher = current_app.extensions["fetcher"]
-    body = BatchBacktestRequest(**request.get_json(force=True))
+    body = BatchBacktestRequest(**json_body())
     interval = _resolve_interval(body.strategy, body.interval)
 
     start_time = time.time()
@@ -483,7 +483,7 @@ def batch_backtest():
 def export_strategy():
     """Export a strategy config for AlphaLive."""
     results_store = current_app.extensions["results_store"]
-    body = ExportStrategyRequest(**request.get_json(force=True))
+    body = ExportStrategyRequest(**json_body())
 
     stored = results_store.get(body.backtest_id)
     if not stored:
