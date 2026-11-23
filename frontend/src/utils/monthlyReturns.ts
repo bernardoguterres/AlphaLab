@@ -1,4 +1,5 @@
 import type { EquityCurvePoint } from "@/types";
+import { parseBarDate } from "@/utils/formatters";
 
 /**
  * Month-over-month return, keyed "year-month" (month 0-based): each month is
@@ -14,7 +15,8 @@ export function monthlyReturns(curve: EquityCurvePoint[]): Map<string, number> {
   let prevMonthEnd: number | undefined;
   let currentKey: string | undefined;
   for (const point of curve) {
-    const d = new Date(point.date);
+    const d = parseBarDate(point.date);
+    if (!d) continue;
     const key = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
     if (key !== currentKey) {
       if (currentKey !== undefined) prevMonthEnd = months.get(currentKey)!.last;
