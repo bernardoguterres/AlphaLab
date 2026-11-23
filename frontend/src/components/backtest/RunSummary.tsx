@@ -22,6 +22,7 @@ export function RunSummary({ run, actions }: RunSummaryProps) {
   const curve = result.equity_curve;
   const benchmark = result.benchmark;
   const excess = benchmark ? result.total_return_pct - benchmark.total_return_pct : null;
+  const warnings = result.data_quality_warnings ?? [];
   const period = curve.length > 1 ? `${formatDate(curve[0].date)} – ${formatDate(curve[curve.length - 1].date)}` : null;
 
   return (
@@ -34,6 +35,13 @@ export function RunSummary({ run, actions }: RunSummaryProps) {
           <p className="num mt-1 text-2xs text-muted-foreground">
             {[period, `${formatCurrency(result.initial_capital)} start`].filter(Boolean).join(" · ")}
           </p>
+          {warnings.length > 0 && (
+            <ul className="mt-1 space-y-0.5 text-2xs text-warning" aria-label="Data warnings">
+              {warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          )}
         </div>
         {actions}
       </header>

@@ -19,12 +19,29 @@ export function formatNumber(value: number | undefined | null, decimals = 2): st
   return value.toFixed(decimals);
 }
 
+/**
+ * Parse a bar date (a calendar day) into a Date at UTC midnight of that day.
+ *
+ * The backend sends two shapes: RFC 1123 with GMT for equity-curve points
+ * ("Mon, 08 Jul 2024 00:00:00 GMT") and timezone-less ISO for order
+ * timestamps ("2024-07-08 00:00:00"). JS reads the latter as LOCAL time, so a
+ * single parse-then-format rule shifts one shape by a day in some timezones
+ * (UTC formatting showed Jul 8 fills as "Jul 7" east of UTC; local formatting
+ * showed Jan 1 as "Dec 31" west of UTC). Leading YYYY-MM-DD is taken
+ * literally; anything else is parsed and read in UTC.
+ */
+export function parseBarDate(dateStr: string | undefined | null): Date | null {
+  if (!dateStr) return null;
+  const ymd = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr);
+  if (ymd) return new Date(Date.UTC(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3])));
+  const parsed = new Date(dateStr);
+  if (isNaN(parsed.getTime())) return null;
+  return new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate()));
+}
+
 export function formatDate(dateStr: string | undefined | null): string {
-  if (!dateStr) return "-";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "-";
-  // Bar dates are calendar days stored as UTC midnight; formatting them in the
-  // viewer's zone showed "2020-01-01" as "Dec 31, 2019" west of UTC.
+  const date = parseBarDate(dateStr);
+  if (!date) return "-";
   return date.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
