@@ -105,6 +105,18 @@ _INTERVAL_TO_TIMEFRAME = {
 }
 
 
+def _export_timeframe(interval: str) -> str:
+    """AlphaLive timeframe for a backtest interval. Raises for an interval
+    AlphaLive cannot trade (e.g. 1mo) instead of defaulting to 1Day."""
+    try:
+        return _INTERVAL_TO_TIMEFRAME[interval]
+    except KeyError:
+        raise ValueError(
+            f"Interval {interval!r} has no AlphaLive timeframe "
+            f"(supported: {', '.join(sorted(_INTERVAL_TO_TIMEFRAME))})"
+        ) from None
+
+
 def _translate_params_for_export(strategy_name: str, params: dict) -> dict:
     """Translate AlphaLab's internal strategy parameter names to the
     AlphaLive export-contract names, and inject the strategy_type
@@ -216,7 +228,7 @@ def _build_export_json(
             "description": f"{strategy_name.replace('_', ' ').title()} strategy for {ticker}",
         },
         "ticker": ticker,
-        "timeframe": _INTERVAL_TO_TIMEFRAME.get(interval, "1Day"),
+        "timeframe": _export_timeframe(interval),
         "risk": risk,
         "execution": execution,
         "safety_limits": safety_limits,
