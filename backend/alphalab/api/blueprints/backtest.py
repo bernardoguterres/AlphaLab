@@ -11,7 +11,12 @@ import numpy as np
 from flask import Blueprint, Response, current_app, jsonify
 from pydantic import ValidationError
 
-from ..helpers import _build_export_json, _fetch_and_prepare, json_body
+from ..helpers import (
+    _INTERVAL_TO_TIMEFRAME,
+    _build_export_json,
+    _fetch_and_prepare,
+    json_body,
+)
 from ..validators import (
     BacktestRequest,
     BatchBacktestRequest,
@@ -567,6 +572,26 @@ def export_strategy():
             422,
         )
 
+    # AlphaLive trades daily and weekly bars only (bug B7: a monthly backtest
+    # used to be exported as timeframe 1Day, so live would re-evaluate a
+    # monthly strategy every day).
+    interval = req.get("interval", "1d")
+    if interval not in _INTERVAL_TO_TIMEFRAME:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": (
+                        f"This backtest ran on {interval} bars, which AlphaLive "
+                        "cannot trade (supported: "
+                        f"{', '.join(sorted(_INTERVAL_TO_TIMEFRAME))}). Re-run it "
+                        "on daily or weekly bars to export."
+                    ),
+                }
+            ),
+            422,
+        )
+
     # Effective halt threshold the backtest simulated (None = disabled). A
     # stored result without the key predates this record; treat it as halted.
     halt_pct = (results.get("drawdown_halt") or {}).get("threshold_pct", "unknown")
@@ -604,7 +629,7 @@ def export_strategy():
             results=results,
             config=config,
             risk_settings=req.get("risk_settings"),
-            interval=req.get("interval", "1d"),
+            interval=interval,
         )
 
         if StrategyExportSchema:
