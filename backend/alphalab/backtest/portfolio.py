@@ -315,6 +315,68 @@ class Portfolio:
 
         return None
 
+    def check_intrabar_exit(
+        self, ticker: str, bar_open: float, bar_high: float, bar_low: float
+    ) -> tuple[str, float] | None:
+        """Check stop-loss, take-profit and trailing stop against this bar's
+        price RANGE, the way AlphaLive watches live prices through the
+        session and closes as soon as a level is touched (bug X2: checking
+        only the close missed intraday breaches and let a gap run further).
+
+        Returns (reason, trigger_price) or None. trigger_price is the level
+        itself, or the open when the bar gaps through it. The levels come
+        from the entry price and the trailing peak of EARLIER bars (call
+        update_trailing_stops with this bar's high afterwards), so nothing
+        here looks ahead. When a stop and the take-profit are both inside
+        one bar, the order is unknown and the stop is assumed (conservative).
+        """
+        held = self.positions.get(ticker, 0)
+        if held <= 0:
+            return None
+        entry_price = self.avg_cost.get(ticker)
+        if not entry_price:
+            return None
+
+        stop_level, stop_reason = None, None
+        if self.stop_loss_pct is not None:
+            stop_level = entry_price * (1 - self.stop_loss_pct)
+            stop_reason = (
+                f"Stop-loss triggered ({self.stop_loss_pct*100:.1f}% below entry)"
+            )
+        trail = (
+            self.trailing_stops.get(ticker)
+            if self.trailing_stop_pct is not None
+            else None
+        )
+        if trail is not None and (stop_level is None or trail > stop_level):
+            stop_level = trail
+            stop_reason = (
+                f"Trailing stop triggered ({self.trailing_stop_pct*100:.1f}% "
+                f"below peak, stop={trail:.2f})"
+            )
+        target = (
+            entry_price * (1 + self.take_profit_pct)
+            if self.take_profit_pct is not None
+            else None
+        )
+        target_reason = (
+            f"Take-profit triggered ({self.take_profit_pct*100:.1f}% above entry)"
+            if target is not None
+            else None
+        )
+
+        # The open is the first price of the bar: a gap through a level fills
+        # at the open, not at the level.
+        if stop_level is not None and bar_open <= stop_level:
+            return stop_reason, float(bar_open)
+        if target is not None and bar_open >= target:
+            return target_reason, float(bar_open)
+        if stop_level is not None and bar_low <= stop_level:
+            return stop_reason, float(stop_level)
+        if target is not None and bar_high >= target:
+            return target_reason, float(target)
+        return None
+
     def update_trailing_stops(self, current_prices: dict[str, float]):
         """Ratchet each open position's trailing stop up toward the current price.
 
