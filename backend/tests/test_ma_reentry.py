@@ -65,15 +65,15 @@ def test_reentry_reopens_while_trend_intact():
     assert len(buys) >= 2
     assert buys[1]["reason"].startswith("Re-entry after protective exit")
 
-    # Timing: exit decided at close of bar t, sold at open t+1; re-entry
-    # decided at the close of the first bar i with i - t > wait (t+2), filled
-    # at the open of t+3 -> exactly 2 bars after the exit fill.
+    # Timing: the take-profit fills inside bar t (intrabar, like AlphaLive);
+    # re-entry is decided at the close of the first bar i with i - t > wait
+    # (t+2), filled at the open of t+3 -> exactly 3 bars after the exit fill.
     idx = pd.bdate_range("2021-01-04", periods=len(STEADY_RISE))
     pos = {str(d)[:10]: k for k, d in enumerate(idx)}
     first_sell = next(t for t in trades if t["side"] == "sell")
     assert (
         pos[str(buys[1]["timestamp"])[:10]] - pos[str(first_sell["timestamp"])[:10]]
-        == 2
+        == 3
     )
 
 
@@ -89,7 +89,7 @@ def test_wait_bars_shift_reentry(wait):
         t for t in trades if t["side"] == "buy" and t["reason"].startswith("Re-entry")
     )
     assert (
-        pos[str(rebuy["timestamp"])[:10]] - pos[str(sell["timestamp"])[:10]] == wait + 1
+        pos[str(rebuy["timestamp"])[:10]] - pos[str(sell["timestamp"])[:10]] == wait + 2
     )
 
 
@@ -143,9 +143,10 @@ def test_cooldown_gates_reentry_like_alphalive(cooldown):
     idx = pd.bdate_range("2021-01-04", periods=len(STEADY_RISE))
     pos = {str(d)[:10]: k for k, d in enumerate(idx)}
     entry_decision = pos[str(trades[0]["timestamp"])[:10]] - 1
-    exit_decision = (
-        pos[str(next(t for t in trades if t["side"] == "sell")["timestamp"])[:10]] - 1
-    )
+    # the protective exit fills inside its own bar (no next-open delay)
+    exit_decision = pos[
+        str(next(t for t in trades if t["side"] == "sell")["timestamp"])[:10]
+    ]
     rebuy = next(t for t in trades if t["reason"].startswith("Re-entry"))
     rebuy_decision = pos[str(rebuy["timestamp"])[:10]] - 1
     assert rebuy_decision == max(exit_decision + 2, entry_decision + cooldown)
