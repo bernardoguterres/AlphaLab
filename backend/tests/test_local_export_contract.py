@@ -275,7 +275,7 @@ class TestRejectedStrategiesStayRejected:
                     "trailing_stop_pct": 3.0,
                     "commission_per_trade": 0.0,
                 },
-                "interval": "1d",
+                "interval": "1wk" if strategy_name == "greenblatt_weekly" else "1d",
             },
         }
         return client.post(
