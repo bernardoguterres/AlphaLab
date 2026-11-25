@@ -34,7 +34,7 @@ export function BatchBacktest() {
   const [tickers, setTickers] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [running, setRunning] = useState(false);
-  const [batch, setBatch] = useState<BatchBacktestResponse["data"] | null>(null);
+  const [batch, setBatch] = useState<{ data: BatchBacktestResponse["data"]; strategy: StrategyType } | null>(null);
 
   const addTicker = (raw: string) => {
     const ticker = raw.trim().toUpperCase();
@@ -70,7 +70,7 @@ export function BatchBacktest() {
         drawdown_halt_enabled: drawdownHalt,
         max_drawdown_pct: drawdownHalt ? maxDrawdown : undefined,
       });
-      setBatch(response.data);
+      setBatch({ data: response.data, strategy });
     } catch (error) {
       toast.error(errorMessage(error, "Batch backtest failed"));
     } finally {
@@ -80,8 +80,8 @@ export function BatchBacktest() {
 
   const exportTopFive = () => {
     if (!batch) return;
-    const top = batch.results.slice(0, 5).map((row) => ({ ...row, strategy }));
-    downloadJson(top, `batch_top5_${strategy}_${isoDate()}.json`);
+    const top = batch.data.results.slice(0, 5).map((row) => ({ ...row, strategy: batch.strategy }));
+    downloadJson(top, `batch_top5_${batch.strategy}_${isoDate()}.json`);
   };
 
   return (
@@ -155,7 +155,7 @@ export function BatchBacktest() {
       </Button>
 
       {batch ? (
-        <BatchResults batch={batch} onExport={exportTopFive} />
+        <BatchResults batch={batch.data} onExport={exportTopFive} />
       ) : (
         !running && (
           <EmptyState title="No batch run yet" description="Add tickers and run the batch to rank them by Sharpe ratio using the default parameters." />
