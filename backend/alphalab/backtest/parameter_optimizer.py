@@ -1,8 +1,10 @@
 """Parameter optimization with walk-forward validation."""
 
+from functools import partial
+from itertools import product
+
 import numpy as np
 import pandas as pd
-from itertools import product
 
 from ..utils.logger import setup_logger
 
@@ -23,6 +25,8 @@ class ParameterOptimizer:
         optimization_target: str = "sharpe_ratio",
         walk_forward: bool = False,
         n_folds: int = 5,
+        *,
+        backtest_options: dict | None = None,
     ) -> dict:
         """Run parameter grid search.
 
@@ -36,6 +40,7 @@ class ParameterOptimizer:
             optimization_target: Metric to optimize (sharpe_ratio, total_return_pct, etc.)
             walk_forward: Use walk-forward validation
             n_folds: Number of folds for walk-forward
+            backtest_options: Sizing and risk settings shared by every run
 
         Returns:
             Dict with best_params, best_score, all_results, walk_forward_results (if enabled)
@@ -47,6 +52,10 @@ class ParameterOptimizer:
 
         logger.info("Testing %d parameter combinations", len(all_combinations))
 
+        run_backtest = partial(
+            engine.run_backtest, monte_carlo_runs=0, **(backtest_options or {})
+        )
+
         if walk_forward:
             return self._walk_forward_optimize(
                 strategy_class,
@@ -54,7 +63,7 @@ class ParameterOptimizer:
                 param_names,
                 all_combinations,
                 initial_capital,
-                engine,
+                run_backtest,
                 metrics_calc,
                 optimization_target,
                 n_folds,
@@ -66,7 +75,7 @@ class ParameterOptimizer:
                 param_names,
                 all_combinations,
                 initial_capital,
-                engine,
+                run_backtest,
                 metrics_calc,
                 optimization_target,
             )
@@ -78,7 +87,7 @@ class ParameterOptimizer:
         param_names: list[str],
         combinations: list[tuple],
         initial_capital: float,
-        engine,
+        run_backtest,
         metrics_calc,
         optimization_target: str,
     ) -> dict:
@@ -90,14 +99,10 @@ class ParameterOptimizer:
 
             try:
                 strategy = strategy_class(params)
-                backtest_result = engine.run_backtest(
+                backtest_result = run_backtest(
                     strategy=strategy,
                     data=data,
                     initial_capital=initial_capital,
-                    start_date=None,
-                    end_date=None,
-                    position_sizing="equal_weight",
-                    monte_carlo_runs=0,
                 )
 
                 metrics = metrics_calc.calculate_all(
@@ -116,7 +121,7 @@ class ParameterOptimizer:
                         "total_return_pct": backtest_result.total_return_pct,
                         "sharpe_ratio": metrics["risk"]["sharpe_ratio"],
                         "max_drawdown_pct": metrics["drawdown"]["max_drawdown_pct"],
-                        "total_trades": len(backtest_result.trades),
+                        "total_trades": metrics["trades"]["total_trades"],
                     }
                 )
 
@@ -154,7 +159,7 @@ class ParameterOptimizer:
         param_names: list[str],
         combinations: list[tuple],
         initial_capital: float,
-        engine,
+        run_backtest,
         metrics_calc,
         optimization_target: str,
     ) -> dict | None:
@@ -173,14 +178,10 @@ class ParameterOptimizer:
             params = dict(zip(param_names, combo))
             try:
                 strategy = strategy_class(params)
-                result = engine.run_backtest(
+                result = run_backtest(
                     strategy=strategy,
                     data=data,
                     initial_capital=initial_capital,
-                    start_date=None,
-                    end_date=None,
-                    position_sizing="equal_weight",
-                    monte_carlo_runs=0,
                 )
                 score = self._score_fold_result(
                     result, metrics_calc, optimization_target
@@ -203,7 +204,7 @@ class ParameterOptimizer:
         param_names: list[str],
         combinations: list[tuple],
         initial_capital: float,
-        engine,
+        run_backtest,
         metrics_calc,
         optimization_target: str,
         n_folds: int,
@@ -254,7 +255,7 @@ class ParameterOptimizer:
                 param_names,
                 combinations,
                 initial_capital,
-                engine,
+                run_backtest,
                 metrics_calc,
                 optimization_target,
             )
@@ -268,14 +269,10 @@ class ParameterOptimizer:
             oos_score = None
             try:
                 strategy = strategy_class(train_winner["params"])
-                test_result = engine.run_backtest(
+                test_result = run_backtest(
                     strategy=strategy,
                     data=test_data,
                     initial_capital=initial_capital,
-                    start_date=None,
-                    end_date=None,
-                    position_sizing="equal_weight",
-                    monte_carlo_runs=0,
                 )
                 oos_score = self._score_fold_result(
                     test_result, metrics_calc, optimization_target
@@ -321,7 +318,7 @@ class ParameterOptimizer:
             param_names,
             combinations,
             initial_capital,
-            engine,
+            run_backtest,
             metrics_calc,
             optimization_target,
         )
@@ -332,14 +329,10 @@ class ParameterOptimizer:
         best_params = full_data_winner["params"]
 
         strategy = strategy_class(best_params)
-        final_result = engine.run_backtest(
+        final_result = run_backtest(
             strategy=strategy,
             data=data,
             initial_capital=initial_capital,
-            start_date=None,
-            end_date=None,
-            position_sizing="equal_weight",
-            monte_carlo_runs=0,
         )
         final_metrics = metrics_calc.calculate_all(
             final_result.equity_curve, final_result.trades
@@ -431,6 +424,8 @@ class ParameterOptimizer:
         initial_capital: float,
         engine,
         metrics_calc,
+        *,
+        backtest_options: dict | None = None,
     ) -> dict:
         """Generate 2D heatmap data for parameter visualization.
 
@@ -445,10 +440,14 @@ class ParameterOptimizer:
             initial_capital: Starting capital
             engine: BacktestEngine
             metrics_calc: PerformanceMetrics
+            backtest_options: Sizing and risk settings shared by every cell
 
         Returns:
             Dict with heatmap data (2D array of Sharpe ratios)
         """
+        run_backtest = partial(
+            engine.run_backtest, monte_carlo_runs=0, **(backtest_options or {})
+        )
         heatmap_data = []
 
         for p2_val in param2_values:
@@ -458,14 +457,10 @@ class ParameterOptimizer:
 
                 try:
                     strategy = strategy_class(params)
-                    result = engine.run_backtest(
+                    result = run_backtest(
                         strategy=strategy,
                         data=data,
                         initial_capital=initial_capital,
-                        start_date=None,
-                        end_date=None,
-                        position_sizing="equal_weight",
-                        monte_carlo_runs=0,
                     )
 
                     metrics = metrics_calc.calculate_all(

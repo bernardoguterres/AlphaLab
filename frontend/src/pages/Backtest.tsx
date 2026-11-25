@@ -42,7 +42,7 @@ interface RunConfig {
   strategy: StrategyType;
   startDate: string;
   endDate: string;
-  interval: string;
+  interval?: string;
   initialCapital: number;
   sizing: PositionSizing;
   monteCarloRuns: number;
@@ -57,7 +57,6 @@ const INITIAL_CONFIG: RunConfig = {
   strategy: "ma_crossover",
   startDate: DEFAULT_START,
   endDate: DEFAULT_END,
-  interval: "1d",
   initialCapital: DEFAULT_CAPITAL,
   sizing: DEFAULT_SIZING,
   monteCarloRuns: 0,
@@ -66,17 +65,29 @@ const INITIAL_CONFIG: RunConfig = {
   params: DEFAULT_PARAMS,
 };
 
-/** A quality score is only evidence for the exact ticker and window it was fetched for. */
+/** A quality score belongs to the ticker, date range and interval fetched. */
 interface QualityScore {
   score: number;
+  interval: string;
   ticker: string;
   startDate: string;
   endDate: string;
 }
 
+function matchingQuality(quality: QualityScore | null, run: RunConfig | null) {
+  return quality && run &&
+    quality.ticker === run.ticker &&
+    quality.startDate === run.startDate &&
+    quality.endDate === run.endDate &&
+    quality.interval === run.interval
+    ? quality.score
+    : null;
+}
+
 export default function Backtest() {
   const { currentRun, setCurrentRun, addToHistory, history } = useBacktestStore();
   const [config, setConfig] = useState(INITIAL_CONFIG);
+  const interval = config.interval ?? (config.strategy === "greenblatt_weekly" ? "1wk" : "1d");
   const [submitted, setSubmitted] = useState<RunConfig | null>(null);
   const [quality, setQuality] = useState<QualityScore | null>(null);
   const [fetching, setFetching] = useState(false);
@@ -89,11 +100,11 @@ export default function Backtest() {
   const handleFetch = async () => {
     setFetching(true);
     try {
-      const { ticker, startDate, endDate, interval } = config;
+      const { ticker, startDate, endDate } = config;
       const response = await fetchData([ticker], startDate, endDate, interval);
       const fetched = response.data?.[ticker];
       if (fetched) {
-        setQuality({ score: fetched.quality_score, ticker, startDate, endDate });
+        setQuality({ score: fetched.quality_score, ticker, startDate, endDate, interval });
         toast.success(`Fetched ${fetched.records} bars for ${ticker}`);
       }
       if (response.errors?.length) toast.error(response.errors.map(formatFetchError).join(", "));
@@ -112,6 +123,7 @@ export default function Backtest() {
         strategy: config.strategy,
         start_date: config.startDate,
         end_date: config.endDate,
+        interval,
         initial_capital: config.initialCapital,
         params: config.params[config.strategy],
         position_sizing: config.sizing,
@@ -120,7 +132,7 @@ export default function Backtest() {
         drawdown_halt_enabled: config.drawdownHalt,
       });
       setCurrentRun(historyItem(result, config.ticker, config.strategy));
-      setSubmitted(config);
+      setSubmitted({ ...config, interval });
     } catch (error) {
       toast.error(errorMessage(error, "Backtest failed"));
     } finally {
@@ -129,11 +141,8 @@ export default function Backtest() {
   };
 
   const saved = currentRun !== null && history.some((h) => h.id === currentRun.id);
-  const qualityForRun =
-    quality && submitted && quality.ticker === submitted.ticker && quality.startDate === submitted.startDate && quality.endDate === submitted.endDate
-      ? quality.score
-      : null;
-  const freshQuality = quality && quality.ticker === config.ticker ? quality.score : null;
+  const qualityForRun = matchingQuality(quality, submitted);
+  const freshQuality = matchingQuality(quality, { ...config, interval });
 
   return (
     <Page title="Backtest">
@@ -178,7 +187,7 @@ export default function Backtest() {
               </Button>
               <DrawdownHaltField checked={config.drawdownHalt} onChange={(v) => set("drawdownHalt", v)} />
               <div className="flex items-center gap-2 text-[13px]">
-                <IntervalSelect value={config.interval} onChange={(v) => set("interval", v)} className="h-8 w-28" />
+                <IntervalSelect value={interval} onChange={(v) => set("interval", v)} className="h-8 w-28" />
                 <Button variant="link" onClick={handleFetch} disabled={fetching || !config.ticker}>
                   {fetching ? "Fetching…" : "Fetch and score data"}
                 </Button>
@@ -235,6 +244,12 @@ export default function Backtest() {
             startDate={config.startDate}
             endDate={config.endDate}
             initialCapital={config.initialCapital}
+            simulationSettings={{
+              interval,
+              position_sizing: config.sizing,
+              risk_settings: config.risk,
+              drawdown_halt_enabled: config.drawdownHalt,
+            }}
             onApplyParams={(best) =>
               setConfig((c) => ({ ...c, params: { ...c.params, [c.strategy]: { ...c.params[c.strategy], ...best } } }))
             }

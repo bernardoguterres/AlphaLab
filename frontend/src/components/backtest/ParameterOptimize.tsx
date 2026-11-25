@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import type { HeatmapResponse, ParameterOptimizeResponse, ParameterOptimizeResult, StrategyType, WalkForwardResult } from "@/types";
+import type { HeatmapResponse, ParameterOptimizeResponse, ParameterOptimizeResult, SimulationSettings, StrategyType, WalkForwardResult } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Table, Td, Th } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -52,10 +52,11 @@ interface ParameterOptimizeProps {
   startDate: string;
   endDate: string;
   initialCapital: number;
+  simulationSettings?: SimulationSettings;
   onApplyParams: (params: Record<string, number>) => void;
 }
 
-export default function ParameterOptimize({ ticker, strategy, startDate, endDate, initialCapital, onApplyParams }: ParameterOptimizeProps) {
+export default function ParameterOptimize({ ticker, strategy, startDate, endDate, initialCapital, simulationSettings, onApplyParams }: ParameterOptimizeProps) {
   const [target, setTarget] = useState<Target>("sharpe_ratio");
   const [walkForward, setWalkForward] = useState(false);
   const [folds, setFolds] = useState(5);
@@ -95,6 +96,7 @@ export default function ParameterOptimize({ ticker, strategy, startDate, endDate
         end_date: endDate,
         param_grid: Object.fromEntries(keys.map((k) => [k, gridValues(ranges[k])])),
         initial_capital: initialCapital,
+        ...simulationSettings,
         optimization_target: target,
         walk_forward: walkForward,
         n_folds: folds,
@@ -132,6 +134,7 @@ export default function ParameterOptimize({ ticker, strategy, startDate, endDate
         // Parameters off the two axes are held at the bottom of their range.
         fixed_params: Object.fromEntries(keys.filter((k) => k !== x && k !== y).map((k) => [k, ranges[k].min])),
         initial_capital: initialCapital,
+        ...simulationSettings,
       });
       setHeatmap(response.data);
     } catch (error) {
