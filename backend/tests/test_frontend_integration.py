@@ -961,3 +961,39 @@ def test_research_matches_single_backtest_settings(client, mock_yfinance, mode, 
     assert round(actual["total_return_pct"], 2) == expected["total_return_pct"]
     if mode != "walk_forward":
         assert actual["total_trades"] == expected["total_trades"]
+
+
+def test_short_window_is_not_reported_as_a_total_loss(client):
+    from unittest.mock import Mock
+
+    dates = pd.bdate_range("2025-02-03", periods=8)
+    bars = pd.DataFrame(
+        {"Open": 100.0, "High": 101.0, "Low": 99.0, "Close": 100.0, "Volume": 1000},
+        index=dates,
+    )
+    fetcher = Mock()
+    fetcher.fetch.return_value = {"data": bars, "metadata": {"from_cache": True}}
+    client.application.extensions["fetcher"] = fetcher
+    body = {
+        "ticker": "AAPL",
+        "strategy": "ma_crossover",
+        "start_date": "2025-02-03",
+        "end_date": "2025-02-12",
+        "param_grid": {"short_window": [10], "long_window": [30]},
+    }
+    single = client.post("/api/strategies/backtest", json=body)
+    batch = client.post(
+        "/api/strategies/batch-backtest", json={**body, "tickers": ["AAPL"]}
+    )
+    compare = client.post(
+        "/api/compare", json={**body, "strategies": ["ma_crossover", "rsi_simple"]}
+    )
+    optimize = client.post("/api/strategies/optimize", json=body)
+
+    assert single.status_code == 422
+    assert "8 bars" in single.json["message"]
+    assert client.application.extensions["results_store"] == {}
+    assert batch.json["data"]["results"] == []
+    assert "8 bars" in batch.json["data"]["errors"][0]["error"]
+    assert "8 bars" in compare.json["data"]["ma_crossover"]["error"]
+    assert optimize.status_code == 400

@@ -138,6 +138,9 @@ def run_backtest():
         **body.engine_options(),
     )
 
+    if results.failure_reason:
+        return jsonify({"status": "error", "message": results.failure_reason}), 422
+
     metrics_calc = PerformanceMetrics()
     metrics = metrics_calc.calculate_all(
         results.equity_curve,
@@ -341,6 +344,9 @@ def compare_strategies():
             end_date=body.end_date,
             **engine_options,
         )
+        if results.failure_reason:
+            comparison[strat_name] = {"error": results.failure_reason}
+            continue
         metrics = metrics_calc.calculate_all(
             results.equity_curve,
             results.trades,
@@ -417,6 +423,11 @@ def batch_backtest():
                 monte_carlo_runs=0,
                 **engine_options,
             )
+            if backtest_result.failure_reason:
+                errors.append(
+                    {"ticker": ticker, "error": backtest_result.failure_reason}
+                )
+                continue
             metrics = metrics_calc.calculate_all(
                 backtest_result.equity_curve,
                 backtest_result.trades,
