@@ -587,6 +587,19 @@ def export_strategy():
     # used to be exported as timeframe 1Day, so live would re-evaluate a
     # monthly strategy every day).
     interval = req.get("interval", "1d")
+    if req["strategy"] == "greenblatt_weekly" and interval != "1wk":
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": (
+                        "Greenblatt Weekly requires weekly bars for AlphaLive export. "
+                        "Re-run on weekly bars so the minimum hold uses the same units."
+                    ),
+                }
+            ),
+            422,
+        )
     if interval not in _INTERVAL_TO_TIMEFRAME:
         return (
             jsonify(
