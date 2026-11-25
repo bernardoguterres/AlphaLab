@@ -119,17 +119,10 @@ class RiskSettings(BaseModel):
         return v
 
 
-class BacktestRequest(BaseModel):
-    ticker: str
-    strategy: str
-    start_date: str
-    end_date: str
-    initial_capital: float = 100_000
-    params: Optional[dict] = None
+class SimulationSettings(BaseModel):
+    """Settings shared by backtests and parameter research."""
+
     position_sizing: Literal["equal_weight", "volatility_weighted"] = "equal_weight"
-    monte_carlo_runs: int = 0
-    monte_carlo_seed: Optional[int] = None
-    monte_carlo_block_length: Optional[int] = Field(default=None, ge=1, le=250)
     risk_settings: Optional[RiskSettings] = None
     interval: Optional[str] = None
     max_drawdown_pct: Optional[float] = None
@@ -167,6 +160,35 @@ class BacktestRequest(BaseModel):
             raise ValueError("max_drawdown_pct must be between 1.0 and 100.0")
         return v
 
+    @field_validator("interval")
+    @classmethod
+    def validate_interval(cls, v):
+        if v is not None and v not in ("1d", "1wk", "1mo"):
+            raise ValueError("Interval must be one of: 1d, 1wk, 1mo")
+        return v
+
+    def engine_options(self) -> dict:
+        return self.model_dump(
+            include={
+                "position_sizing",
+                "risk_settings",
+                "max_drawdown_pct",
+                "drawdown_halt_enabled",
+            }
+        )
+
+
+class BacktestRequest(SimulationSettings):
+    ticker: str
+    strategy: str
+    start_date: str
+    end_date: str
+    initial_capital: float = 100_000
+    params: Optional[dict] = None
+    monte_carlo_runs: int = 0
+    monte_carlo_seed: Optional[int] = None
+    monte_carlo_block_length: Optional[int] = Field(default=None, ge=1, le=250)
+
     @field_validator("strategy")
     @classmethod
     def validate_strategy(cls, v):
@@ -199,15 +221,8 @@ class BacktestRequest(BaseModel):
             raise ValueError("Invalid position sizing method")
         return v
 
-    @field_validator("interval")
-    @classmethod
-    def validate_interval(cls, v):
-        if v is not None and v not in ("1d", "1wk", "1mo"):
-            raise ValueError("Interval must be one of: 1d, 1wk, 1mo")
-        return v
 
-
-class OptimizeRequest(BaseModel):
+class OptimizeRequest(SimulationSettings):
     ticker: str
     strategy: str
     start_date: str
@@ -254,7 +269,7 @@ class OptimizeRequest(BaseModel):
         return v
 
 
-class HeatmapRequest(BaseModel):
+class HeatmapRequest(SimulationSettings):
     """Request for parameter heatmap visualization."""
 
     ticker: str
@@ -291,18 +306,12 @@ class HeatmapRequest(BaseModel):
         return v
 
 
-class CompareRequest(BaseModel):
+class CompareRequest(SimulationSettings):
     ticker: str
     strategies: list[str]
     start_date: str
     end_date: str
     initial_capital: float = 100_000
-    # The same run settings as BacktestRequest, applied to every strategy in
-    # the comparison. Omitted, they fall back to the engine's own defaults,
-    # exactly as before these fields existed.
-    position_sizing: Literal["equal_weight", "volatility_weighted"] = "equal_weight"
-    risk_settings: Optional[RiskSettings] = None
-    drawdown_halt_enabled: bool = True
 
     @field_validator("strategies")
     @classmethod
@@ -318,7 +327,7 @@ class ExportStrategyRequest(BaseModel):
     backtest_id: str
 
 
-class BatchBacktestRequest(BaseModel):
+class BatchBacktestRequest(SimulationSettings):
     """Request to run batch backtests across multiple tickers."""
 
     tickers: list[str]
@@ -327,9 +336,6 @@ class BatchBacktestRequest(BaseModel):
     end_date: str
     initial_capital: float = 100_000
     params: Optional[dict] = None
-    position_sizing: Literal["equal_weight", "volatility_weighted"] = "equal_weight"
-    risk_settings: Optional[RiskSettings] = None
-    interval: Optional[str] = None
 
     @field_validator("tickers")
     @classmethod
@@ -372,13 +378,6 @@ class BatchBacktestRequest(BaseModel):
     def validate_sizing(cls, v):
         if v not in ("equal_weight", "risk_parity", "volatility_weighted"):
             raise ValueError("Invalid position sizing method")
-        return v
-
-    @field_validator("interval")
-    @classmethod
-    def validate_interval(cls, v):
-        if v is not None and v not in ("1d", "1wk", "1mo"):
-            raise ValueError("Interval must be one of: 1d, 1wk, 1mo")
         return v
 
 

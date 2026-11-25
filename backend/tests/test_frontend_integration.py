@@ -855,3 +855,109 @@ class TestDrawdownHaltExport:
             client, drawdown_halt_enabled=False, max_drawdown_pct=20.0
         )
         assert bt.status_code in (400, 422)
+
+
+@pytest.mark.parametrize("interval", [None, "1mo"])
+@pytest.mark.parametrize(
+    "endpoint", ["compare", "strategies/optimize", "strategies/optimize/heatmap"]
+)
+def test_research_uses_requested_or_strategy_interval(
+    client, mock_yfinance, endpoint, interval
+):
+    body = {
+        "ticker": "AAPL",
+        "start_date": "2020-01-01",
+        "end_date": "2023-10-31",
+    }
+    if interval is not None:
+        body["interval"] = interval
+    if endpoint == "compare":
+        body["strategies"] = ["ma_crossover", "greenblatt_weekly", "rsi_simple"]
+    else:
+        body.update(strategy="greenblatt_weekly", param_grid={"fast_sma": [10]})
+        for axis, name, value in [(1, "fast_sma", 10), (2, "slow_sma", 50)]:
+            body.update(
+                {
+                    f"param{axis}_name": name,
+                    f"param{axis}_min": value,
+                    f"param{axis}_max": value,
+                    f"param{axis}_step": 1,
+                }
+            )
+    fetcher = client.application.extensions["fetcher"]
+    with patch.object(fetcher, "fetch", wraps=fetcher.fetch) as fetch:
+        response = client.post(f"/api/{endpoint}", json=body)
+    assert response.status_code == 200
+    expected = ["1d", "1wk"] if endpoint == "compare" else ["1wk"]
+    if interval is not None:
+        expected = [interval]
+    assert [call.args[3] for call in fetch.call_args_list] == expected
+
+
+@pytest.mark.parametrize("mode", ["batch", "grid", "walk_forward", "heatmap"])
+@pytest.mark.parametrize(
+    "halt", [{"max_drawdown_pct": 1}, {"drawdown_halt_enabled": False}]
+)
+def test_research_matches_single_backtest_settings(client, mock_yfinance, mode, halt):
+    params = {"short_window": 10, "long_window": 30}
+    body = {
+        "ticker": "AAPL",
+        "strategy": "ma_crossover",
+        "start_date": "2020-01-01",
+        "end_date": "2023-10-31",
+        "risk_settings": {"max_position_size_pct": 90, "stop_loss_pct": 3},
+        **halt,
+    }
+    single = client.post("/api/strategies/backtest", json={**body, "params": params})
+    assert single.status_code == 200
+    expected = single.json["data"]
+    assert expected["total_trades"] > 0
+    assert expected["drawdown_halt"]["halted"] == ("max_drawdown_pct" in halt)
+
+    if mode == "batch":
+        response = client.post(
+            "/api/strategies/batch-backtest",
+            json={**body, "tickers": ["AAPL"], "params": params},
+        )
+    elif mode == "heatmap":
+        response = client.post(
+            "/api/strategies/optimize/heatmap",
+            json={
+                **body,
+                "param1_name": "short_window",
+                "param1_min": 10,
+                "param1_max": 10,
+                "param1_step": 1,
+                "param2_name": "long_window",
+                "param2_min": 30,
+                "param2_max": 30,
+                "param2_step": 1,
+            },
+        )
+    else:
+        response = client.post(
+            "/api/strategies/optimize",
+            json={
+                **body,
+                "param_grid": {key: [value] for key, value in params.items()},
+                "walk_forward": mode == "walk_forward",
+                "n_folds": 2,
+            },
+        )
+    assert response.status_code == 200
+    data = response.json["data"]
+    if mode == "heatmap":
+        assert data["heatmap_data"][0][0] == pytest.approx(
+            expected["metrics"]["risk"]["sharpe_ratio"]
+        )
+        return
+    if mode == "batch":
+        actual = data["results"][0]
+    elif mode == "grid":
+        actual = data["all_results"][0]
+    else:
+        actual = data["final_backtest"]
+    # The single-backtest response serializes returns to two decimal places.
+    assert round(actual["total_return_pct"], 2) == expected["total_return_pct"]
+    if mode != "walk_forward":
+        assert actual["total_trades"] == expected["total_trades"]

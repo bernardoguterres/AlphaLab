@@ -13,8 +13,7 @@ class VWAPReversion(BaseStrategy):
     """Generate signals when price deviates significantly from VWAP.
 
     BUY: Price < VWAP - (deviation_threshold × std) AND RSI < oversold
-    SELL: Price > VWAP + (deviation_threshold × std) AND RSI > overbought
-    EXIT: Price returns to VWAP
+    SELL: An open long returns to VWAP
 
     Uses rolling VWAP calculation and RSI confirmation to filter false signals.
     """
@@ -27,6 +26,7 @@ class VWAPReversion(BaseStrategy):
         p.setdefault("deviation_threshold", 2.0)
         p.setdefault("rsi_period", 14)
         p.setdefault("oversold", 30)
+        # Kept for compatibility with saved parameter sets.
         p.setdefault("overbought", 70)
         p.setdefault("cooldown_days", 3)
 
@@ -65,7 +65,6 @@ class VWAPReversion(BaseStrategy):
         period = p["vwap_period"]
         deviation = p["deviation_threshold"]
         oversold = p["oversold"]
-        overbought = p["overbought"]
         cooldown = p["cooldown_days"]
 
         signals = self._init_signals_frame(data)
@@ -80,15 +79,13 @@ class VWAPReversion(BaseStrategy):
         price_diff = data["Close"] - vwap
         vwap_std = price_diff.rolling(period).std()
 
-        # Upper and lower deviation bands
-        upper_band = vwap + (deviation * vwap_std)
+        # Lower deviation band for long entries
         lower_band = vwap - (deviation * vwap_std)
 
         # Get RSI
         rsi = rsi_ewm(data["Close"], p["rsi_period"])
 
-        # Track position state: 0 = no position, 1 = long, -1 = short
-        position = 0
+        in_position = False
         last_signal_idx = -cooldown - 1
 
         for i in range(period, len(data)):
@@ -97,10 +94,9 @@ class VWAPReversion(BaseStrategy):
             current_vwap = vwap.iloc[i]
             current_rsi = rsi.iloc[i]
             lower = lower_band.iloc[i]
-            upper = upper_band.iloc[i]
 
             # Skip if any values are NaN
-            if pd.isna([current_vwap, lower, upper, current_rsi]).any():
+            if pd.isna([current_vwap, lower, current_rsi]).any():
                 continue
 
             # Enforce cooldown
@@ -108,7 +104,7 @@ class VWAPReversion(BaseStrategy):
                 continue
 
             # No position: look for entry
-            if position == 0:
+            if not in_position:
                 # BUY: Price below lower band AND RSI oversold
                 if close < lower and current_rsi < oversold:
                     signals.loc[idx, "signal"] = 1
@@ -118,41 +114,17 @@ class VWAPReversion(BaseStrategy):
                     signals.loc[idx, "reason"] = (
                         f"Price {close:.2f} < VWAP lower {lower:.2f}, RSI {current_rsi:.1f}"
                     )
-                    position = 1
-                    last_signal_idx = i
-
-                # SELL: Price above upper band AND RSI overbought
-                elif close > upper and current_rsi > overbought:
-                    signals.loc[idx, "signal"] = -1
-                    signals.loc[idx, "confidence"] = min(
-                        1.0, (close - upper) / upper * 10
-                    )
-                    signals.loc[idx, "reason"] = (
-                        f"Price {close:.2f} > VWAP upper {upper:.2f}, RSI {current_rsi:.1f}"
-                    )
-                    position = -1
+                    in_position = True
                     last_signal_idx = i
 
             # Long position: exit when price returns to VWAP
-            elif position == 1:
-                if close >= current_vwap:
-                    signals.loc[idx, "signal"] = -1
-                    signals.loc[idx, "confidence"] = 0.8
-                    signals.loc[idx, "reason"] = (
-                        f"Exit long: price {close:.2f} returned to VWAP {current_vwap:.2f}"
-                    )
-                    position = 0
-                    last_signal_idx = i
-
-            # Short position: exit when price returns to VWAP
-            elif position == -1:
-                if close <= current_vwap:
-                    signals.loc[idx, "signal"] = 1
-                    signals.loc[idx, "confidence"] = 0.8
-                    signals.loc[idx, "reason"] = (
-                        f"Exit short: price {close:.2f} returned to VWAP {current_vwap:.2f}"
-                    )
-                    position = 0
-                    last_signal_idx = i
+            elif close >= current_vwap:
+                signals.loc[idx, "signal"] = -1
+                signals.loc[idx, "confidence"] = 0.8
+                signals.loc[idx, "reason"] = (
+                    f"Exit long: price {close:.2f} returned to VWAP {current_vwap:.2f}"
+                )
+                in_position = False
+                last_signal_idx = i
 
         return signals

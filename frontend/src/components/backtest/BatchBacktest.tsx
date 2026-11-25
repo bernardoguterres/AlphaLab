@@ -4,6 +4,7 @@ import type { BatchBacktestResponse, StrategyType } from "@/types";
 import { DEFAULT_RISK_SETTINGS } from "@/types";
 import { DateRangeFields, StrategyField } from "@/components/forms/RunFields";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, Td, Th } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field } from "@/components/ui/field";
@@ -14,7 +15,7 @@ import { Stat, StatGrid } from "@/components/ui/stat";
 import { Tag } from "@/components/ui/tag";
 import { errorMessage, runBatchBacktest } from "@/services/api";
 import { useBacktestStore } from "@/stores/backtestStore";
-import { DEFAULT_CAPITAL, DEFAULT_END, DEFAULT_START } from "@/utils/defaults";
+import { DEFAULT_CAPITAL, DEFAULT_DRAWDOWN_HALT, DEFAULT_END, DEFAULT_START } from "@/utils/defaults";
 import { downloadJson, isoDate } from "@/utils/download";
 import { formatNumber, formatPercent, pnlColor } from "@/utils/formatters";
 import { DEFAULT_PARAMS } from "@/utils/strategies";
@@ -28,6 +29,8 @@ export function BatchBacktest() {
   const [strategy, setStrategy] = useState<StrategyType>("ma_crossover");
   const [startDate, setStartDate] = useState(DEFAULT_START);
   const [endDate, setEndDate] = useState(DEFAULT_END);
+  const [drawdownHalt, setDrawdownHalt] = useState(DEFAULT_DRAWDOWN_HALT);
+  const [maxDrawdown, setMaxDrawdown] = useState(10);
   const [tickers, setTickers] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [running, setRunning] = useState(false);
@@ -48,6 +51,10 @@ export function BatchBacktest() {
       toast.error(`A batch can include at most ${MAX_TICKERS} tickers`);
       return;
     }
+    if (drawdownHalt && !(maxDrawdown >= 1 && maxDrawdown <= 100)) {
+      toast.error("Drawdown halt threshold must be between 1% and 100%");
+      return;
+    }
     setRunning(true);
     setBatch(null);
     try {
@@ -60,6 +67,8 @@ export function BatchBacktest() {
         params: DEFAULT_PARAMS[strategy],
         position_sizing: "equal_weight",
         risk_settings: DEFAULT_RISK_SETTINGS,
+        drawdown_halt_enabled: drawdownHalt,
+        max_drawdown_pct: drawdownHalt ? maxDrawdown : undefined,
       });
       setBatch(response.data);
     } catch (error) {
@@ -82,6 +91,28 @@ export function BatchBacktest() {
           <StrategyField value={strategy} onChange={setStrategy} />
         </div>
         <DateRangeFields start={startDate} end={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="batch-drawdown-halt"
+            checked={drawdownHalt}
+            onCheckedChange={(checked) => setDrawdownHalt(checked === true)}
+          />
+          <label htmlFor="batch-drawdown-halt" className="text-[13px]">
+            Halt new entries on drawdown
+          </label>
+        </div>
+        {drawdownHalt && (
+          <Field label="Drawdown halt threshold (%)" htmlFor="batch-halt-threshold">
+            <Input
+              id="batch-halt-threshold"
+              type="number"
+              min={1}
+              max={100}
+              value={maxDrawdown}
+              onChange={(event) => setMaxDrawdown(Number(event.target.value))}
+            />
+          </Field>
+        )}
         <div className="col-span-2">
           <Field label={`Tickers (${tickers.length}/${MAX_TICKERS})`} htmlFor="batch-ticker">
             <div className="flex gap-2">

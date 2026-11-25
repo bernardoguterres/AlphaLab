@@ -17,7 +17,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Swatch } from "@/components/ui/swatch";
 import { Tag } from "@/components/ui/tag";
-import { compareStrategies, errorMessage, fetchData } from "@/services/api";
+import { compareStrategies, errorMessage } from "@/services/api";
 import { historyItem, useBacktestStore } from "@/stores/backtestStore";
 import { DEFAULT_CAPITAL, DEFAULT_DRAWDOWN_HALT, DEFAULT_END, DEFAULT_SIZING, DEFAULT_START, DEFAULT_TICKER } from "@/utils/defaults";
 import { formatNumber, formatPercent, pnlColor } from "@/utils/formatters";
@@ -78,7 +78,6 @@ export default function Compare() {
   const handleRun = async () => {
     setRunning(true);
     try {
-      await fetchData([ticker], startDate, endDate, "1d");
       const response = await compareStrategies({
         ticker,
         strategies: selected,
