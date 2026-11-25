@@ -45,7 +45,7 @@ class DataFetcher:
             cache_dir=cache_dir or config.data.cache_dir,
             expiry_hours=cache_expiry_hours,
         )
-        self._validated_tickers: dict[str, bool] = {}
+        self._validated_tickers: set[str] = set()
 
     # ------------------------------------------------------------------
     # Public API
@@ -78,7 +78,13 @@ class DataFetcher:
         if cached is not None:
             logger.info("Returning cached data for %s (%d rows)", ticker, len(cached))
             return self._build_result(
-                ticker, cached, start_date, end_date, from_cache=True
+                ticker,
+                cached,
+                start_date,
+                end_date,
+                from_cache=True,
+                quality_score=self._quality_check(cached, ticker)["score"],
+                splits_detected=self._detect_splits(cached),
             )
 
         # Validate ticker
@@ -183,19 +189,17 @@ class DataFetcher:
     def _validate_ticker(self, ticker: str):
         """Check that the ticker actually exists on Yahoo Finance."""
         if ticker in self._validated_tickers:
-            if not self._validated_tickers[ticker]:
-                raise InvalidTickerError(f"Ticker '{ticker}' is invalid")
             return
 
         try:
             info = yf.Ticker(ticker).info
             valid = info is not None and info.get("regularMarketPrice") is not None
-        except Exception:
-            valid = False
+        except Exception as exc:
+            raise DataFetchError(f"Could not validate ticker '{ticker}'") from exc
 
-        self._validated_tickers[ticker] = valid
         if not valid:
             raise InvalidTickerError(f"Ticker '{ticker}' not found or delisted")
+        self._validated_tickers.add(ticker)
 
     def _download_with_retry(
         self, ticker: str, start: str, end: str, interval: str

@@ -155,3 +155,52 @@ class TestDataFetcher:
         info = fetcher.fetch_company_info("AAPL")
         assert info["name"] == "Apple Inc."
         assert info["sector"] == "Technology"
+
+    @patch("alphalab.data.fetcher.yf.download", return_value=_mock_download())
+    @patch("alphalab.data.fetcher.yf.Ticker")
+    def test_lookup_failure_does_not_blacklist_ticker(
+        self, mock_ticker, mock_download, tmp_path
+    ):
+        good = MagicMock()
+        good.info = {"regularMarketPrice": 150}
+        mock_ticker.side_effect = [TimeoutError("temporary outage"), good]
+        fetcher = DataFetcher(cache_dir=str(tmp_path))
+        with pytest.raises(DataFetchError):
+            fetcher.fetch("AAPL", "2023-01-01", "2023-12-31")
+        assert (
+            fetcher.fetch("AAPL", "2023-01-01", "2023-12-31")["metadata"]["records"]
+            == 200
+        )
+        mock_download.assert_called_once()
+
+    @patch("alphalab.data.fetcher.yf.download")
+    @patch("alphalab.data.fetcher.yf.Ticker")
+    def test_cache_preserves_quality_score(self, mock_ticker, mock_download, tmp_path):
+        mock_ticker.return_value.info = {"regularMarketPrice": 150}
+        bars = _mock_download()
+        bars.iloc[0, bars.columns.get_loc("High")] = 0
+        mock_download.return_value = bars
+        fetcher = DataFetcher(cache_dir=str(tmp_path))
+        original = fetcher.fetch("AAPL", "2023-01-01", "2023-12-31")["metadata"]
+        assert original["quality_score"] < 1
+        cached = fetcher.fetch("AAPL", "2023-01-01", "2023-12-31")["metadata"]
+        assert cached == {**original, "from_cache": True}
+        mock_download.assert_called_once()
+
+    @patch("alphalab.data.fetcher.yf.download", return_value=_mock_download())
+    @patch("alphalab.data.fetcher.yf.Ticker")
+    def test_empty_lookup_does_not_blacklist_ticker(
+        self, mock_ticker, mock_download, tmp_path
+    ):
+        empty, good = MagicMock(), MagicMock()
+        empty.info = {}
+        good.info = {"regularMarketPrice": 150}
+        mock_ticker.side_effect = [empty, good]
+        fetcher = DataFetcher(cache_dir=str(tmp_path))
+        with pytest.raises(InvalidTickerError):
+            fetcher.fetch("AAPL", "2023-01-01", "2023-12-31")
+        assert (
+            fetcher.fetch("AAPL", "2023-01-01", "2023-12-31")["metadata"]["records"]
+            == 200
+        )
+        mock_download.assert_called_once()
