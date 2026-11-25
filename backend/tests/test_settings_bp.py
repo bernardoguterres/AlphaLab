@@ -66,6 +66,16 @@ class TestNotificationSettingsPost:
         get_resp = client.get("/api/settings/notifications")
         assert get_resp.get_json()["data"]["telegram"]["enabled"] is True
 
+    def test_save_requires_json_content_type(self, client):
+        before = client.get("/api/settings/notifications").get_json()
+        response = client.post(
+            "/api/settings/notifications",
+            data=json.dumps({"telegram": {"enabled": True}, "alpaca": {}}),
+            content_type="text/plain",
+        )
+        assert response.status_code == 415
+        assert client.get("/api/settings/notifications").get_json() == before
+
     def test_save_rejects_api_key_in_body(self, client):
         payload = {
             "telegram": {"enabled": True, "bot_token": "123:ABC"},
