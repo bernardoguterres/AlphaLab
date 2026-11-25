@@ -483,8 +483,14 @@ class TestPortfolioOptimizeFlow:
 class TestSettingsFlow:
     """Test settings management workflow."""
 
-    def test_settings_flow(self, client, monkeypatch):
+    def test_settings_flow(self, client, monkeypatch, tmp_path):
         """Test settings flow: save → load → verify persistence."""
+        from alphalab.utils.settings_manager import SettingsManager
+
+        manager = SettingsManager(tmp_path / "app_settings.json")
+        monkeypatch.setattr(
+            "alphalab.api.blueprints.settings_bp.SettingsManager", lambda: manager
+        )
 
         # Set environment variables for API key configured flags
         monkeypatch.setenv("ALPACA_API_KEY", "test_key")
