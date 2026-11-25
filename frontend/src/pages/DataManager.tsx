@@ -32,6 +32,9 @@ const SORTS: Record<SortKey, (a: CachedTicker, b: CachedTicker) => number> = {
 const intervalLabel = (value: string) => INTERVALS.find((i) => i.value === value)?.label ?? value;
 const parseTickers = (text: string) => [...new Set(text.split(",").map((t) => t.trim().toUpperCase()).filter(Boolean))];
 
+const qualityKey = (ticker: string, start: string, end: string, interval: string) =>
+  JSON.stringify([ticker, start, end, interval]);
+
 export default function DataManager() {
   const { cachedTickers, refreshCachedTickers } = useBacktestStore();
   // Quality scores only come back from a fetch; the cache listing doesn't carry them.
@@ -41,16 +44,16 @@ export default function DataManager() {
     refreshCachedTickers();
   }, [refreshCachedTickers]);
 
-  const recordQuality = (data: Record<string, { quality_score: number }>) =>
-    setQuality((q) => ({ ...q, ...Object.fromEntries(Object.entries(data).map(([t, d]) => [t, d.quality_score])) }));
-
   /** Fetches and caches, reports per-ticker errors, then reloads the listing. */
   const fetchAndCache = async (tickers: string[], start: string, end: string, interval: string) => {
     try {
       const response = await fetchData(tickers, start, end, interval);
       const fetched = Object.keys(response.data ?? {});
       if (fetched.length) {
-        recordQuality(response.data);
+        const updated = Object.fromEntries(
+          Object.entries(response.data).map(([ticker, data]) => [qualityKey(ticker, start, end, interval), data.quality_score]),
+        );
+        setQuality((previous) => ({ ...previous, ...updated }));
         toast.success(`Cached ${fetched.join(", ")}`);
       }
       response.errors?.forEach((e) => toast.error(formatFetchError(e)));
@@ -217,7 +220,7 @@ function DatasetTable({ items, quality, onRefresh }: DatasetTableProps) {
           <tbody>
             {visible.map((c) => {
               const age = cacheAgeMs(c);
-              const score = quality[c.ticker];
+              const score = quality[qualityKey(c.ticker, c.start_date, c.end_date, c.interval)];
               return (
                 <tr key={c.key}>
                   <Td num>{c.ticker}</Td>
