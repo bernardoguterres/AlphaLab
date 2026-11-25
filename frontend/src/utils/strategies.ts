@@ -129,13 +129,12 @@ export const STRATEGIES: Record<StrategyType, StrategySpec> = {
   vwap_reversion: {
     name: "VWAP Reversion",
     category: "Mean reversion",
-    description: "Trades deviations from the volume-weighted average price.",
+    description: "Buys below the volume-weighted average price and exits on a return to VWAP.",
     params: [
       num("vwap_period", "VWAP period", 20, range(5, 50), range(10, 30, 10)),
       num("deviation_threshold", "Deviation (σ)", 2, range(0.5, 5, 0.1), range(1, 3, 0.5)),
       num("rsi_period", "RSI period", 14, range(5, 30), range(10, 20, 5)),
       num("oversold", "Oversold", 30, range(10, 40)),
-      num("overbought", "Overbought", 70, range(60, 90)),
       num("cooldown_days", "Cooldown days", 3, range(0, 10)),
     ],
     exportBlock: {

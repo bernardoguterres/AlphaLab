@@ -296,7 +296,15 @@ export const DEFAULT_RISK_SETTINGS: RiskSettings = {
 
 export type PositionSizing = "equal_weight" | "volatility_weighted";
 
-export interface BacktestRequest {
+export interface SimulationSettings {
+  interval?: string;
+  position_sizing?: PositionSizing;
+  risk_settings?: RiskSettings;
+  max_drawdown_pct?: number;
+  drawdown_halt_enabled?: boolean;
+}
+
+export interface BacktestRequest extends SimulationSettings {
   ticker: string;
   strategy: StrategyType;
   start_date: string;
@@ -305,11 +313,9 @@ export interface BacktestRequest {
   params: StrategyParams;
   position_sizing: PositionSizing;
   monte_carlo_runs: number;
-  risk_settings?: RiskSettings;
-  drawdown_halt_enabled?: boolean;
 }
 
-export interface CompareRequest {
+export interface CompareRequest extends SimulationSettings {
   ticker: string;
   strategies: StrategyType[];
   start_date: string;
@@ -320,7 +326,7 @@ export interface CompareRequest {
   drawdown_halt_enabled: boolean;
 }
 
-export interface BatchBacktestRequest {
+export interface BatchBacktestRequest extends SimulationSettings {
   tickers: string[];
   strategy: StrategyType;
   start_date: string;
@@ -328,7 +334,6 @@ export interface BatchBacktestRequest {
   initial_capital: number;
   params: StrategyParams;
   position_sizing: PositionSizing;
-  risk_settings?: RiskSettings;
 }
 
 export interface BatchBacktestResult {
@@ -372,7 +377,7 @@ export interface CompareResponse {
   message?: string;
 }
 
-export interface ParameterOptimizeRequest {
+export interface ParameterOptimizeRequest extends SimulationSettings {
   ticker: string;
   strategy: StrategyType;
   start_date: string;
@@ -428,7 +433,7 @@ export interface ParameterOptimizeResponse {
   message?: string;
 }
 
-export interface HeatmapRequest {
+export interface HeatmapRequest extends SimulationSettings {
   ticker: string;
   strategy: StrategyType;
   start_date: string;
