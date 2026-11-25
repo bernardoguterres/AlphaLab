@@ -22,6 +22,7 @@ vi.mock("@/components/forms/RunFields", async (importOriginal) => ({
 it("runs with the selected interval and hides scores from a different interval", async () => {
   vi.mocked(api.fetchData).mockImplementation(async ([ticker]) => ({
     status: "ok",
+    errors: [],
     data: { [ticker]: { records: 100, quality_score: 0.95 } },
   }));
   vi.mocked(api.runBacktest).mockRejectedValue(new Error("Stop after capturing the request"));
