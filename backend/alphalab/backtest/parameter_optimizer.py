@@ -11,6 +11,13 @@ from ..utils.logger import setup_logger
 logger = setup_logger("alphalab.param_optimizer")
 
 
+def _run_candidate(engine, **kwargs):
+    result = engine.run_backtest(**kwargs)
+    if result.failure_reason:
+        raise ValueError(result.failure_reason)
+    return result
+
+
 class ParameterOptimizer:
     """Optimize strategy parameters using grid search with optional walk-forward."""
 
@@ -53,7 +60,7 @@ class ParameterOptimizer:
         logger.info("Testing %d parameter combinations", len(all_combinations))
 
         run_backtest = partial(
-            engine.run_backtest, monte_carlo_runs=0, **(backtest_options or {})
+            _run_candidate, engine, monte_carlo_runs=0, **(backtest_options or {})
         )
 
         if walk_forward:
@@ -446,7 +453,7 @@ class ParameterOptimizer:
             Dict with heatmap data (2D array of Sharpe ratios)
         """
         run_backtest = partial(
-            engine.run_backtest, monte_carlo_runs=0, **(backtest_options or {})
+            _run_candidate, engine, monte_carlo_runs=0, **(backtest_options or {})
         )
         heatmap_data = []
 
