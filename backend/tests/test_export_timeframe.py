@@ -18,7 +18,15 @@ def client():
         yield c
 
 
-def _store(client, interval):
+def _store(client, interval, strategy="ma_crossover"):
+    if strategy == "greenblatt_weekly":
+        from alphalab.strategies.implementations.greenblatt_weekly import (
+            GreenblattWeekly,
+        )
+
+        params = GreenblattWeekly().params
+    else:
+        params = MovingAverageCrossover().params
     client.application.extensions["results_store"][f"bt_{interval}"] = {
         "results": {
             "total_return_pct": 10.0,
@@ -32,11 +40,11 @@ def _store(client, interval):
         },
         "request": {
             "ticker": "AAPL",
-            "strategy": "ma_crossover",
+            "strategy": strategy,
             "start_date": "2020-01-01",
             "end_date": "2024-12-31",
             "initial_capital": 100_000,
-            "params": MovingAverageCrossover().params,
+            "params": params,
             "risk_settings": {
                 "stop_loss_pct": 2.0,
                 "take_profit_pct": 5.0,
@@ -69,3 +77,14 @@ def test_daily_and_weekly_export_their_timeframe(client, interval, timeframe):
 def test_mapping_never_defaults_to_daily():
     with pytest.raises(ValueError):
         _export_timeframe("1mo")
+
+
+@pytest.mark.parametrize("interval,expected", [("1d", 422), ("1wk", 200)])
+def test_greenblatt_export_requires_weekly_bars(client, interval, expected):
+    response = _store(client, interval, "greenblatt_weekly")
+    assert response.status_code == expected
+    if expected == 200:
+        assert response.json["timeframe"] == "1Week"
+        assert response.json["strategy"]["parameters"]["min_hold_bars"] == 52
+    else:
+        assert "weekly bars" in response.json["message"]
