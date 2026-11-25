@@ -300,3 +300,19 @@ class TestVWAPReversion:
         assert "Close" in cols
         assert "Volume" in cols
         assert "RSI" in cols
+
+    def test_overbought_spike_and_return_to_vwap_stay_flat(self):
+        close = [100.0] * 10 + [120.0, 100.0] + [100.0] * 8
+        data = pd.DataFrame(
+            {"Close": close, "High": close, "Low": close, "Volume": 100}
+        )
+        strategy = VWAPReversion(
+            {
+                "vwap_period": 5,
+                "rsi_period": 5,
+                "deviation_threshold": 1,
+                "cooldown_days": 0,
+            }
+        )
+
+        assert strategy.generate_signals(data)["signal"].eq(0).all()

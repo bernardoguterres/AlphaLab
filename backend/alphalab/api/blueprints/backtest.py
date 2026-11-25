@@ -132,13 +132,10 @@ def run_backtest():
         initial_capital=body.initial_capital,
         start_date=body.start_date,
         end_date=body.end_date,
-        position_sizing=body.position_sizing,
         monte_carlo_runs=body.monte_carlo_runs,
         monte_carlo_seed=body.monte_carlo_seed,
         monte_carlo_block_length=body.monte_carlo_block_length,
-        max_drawdown_pct=body.max_drawdown_pct,
-        drawdown_halt_enabled=body.drawdown_halt_enabled,
-        risk_settings=(body.risk_settings.model_dump() if body.risk_settings else None),
+        **body.engine_options(),
     )
 
     metrics_calc = PerformanceMetrics()
@@ -184,8 +181,9 @@ def optimize_strategy():
     fetcher = current_app.extensions["fetcher"]
     body = OptimizeRequest(**json_body())
 
-    featured, report, err = _fetch_and_prepare(
-        fetcher, body.ticker, body.start_date, body.end_date
+    interval = _resolve_interval(body.strategy, body.interval)
+    featured, _, err = _fetch_and_prepare(
+        fetcher, body.ticker, body.start_date, body.end_date, interval
     )
     if err:
         return err
@@ -206,6 +204,7 @@ def optimize_strategy():
             initial_capital=body.initial_capital,
             engine=engine,
             metrics_calc=metrics_calc,
+            backtest_options=body.engine_options(),
             optimization_target=body.optimization_target,
             walk_forward=body.walk_forward,
             n_folds=body.n_folds,
@@ -224,8 +223,9 @@ def parameter_heatmap():
     fetcher = current_app.extensions["fetcher"]
     body = HeatmapRequest(**json_body())
 
-    featured, report, err = _fetch_and_prepare(
-        fetcher, body.ticker, body.start_date, body.end_date
+    interval = _resolve_interval(body.strategy, body.interval)
+    featured, _, err = _fetch_and_prepare(
+        fetcher, body.ticker, body.start_date, body.end_date, interval
     )
     if err:
         return err
@@ -287,6 +287,7 @@ def parameter_heatmap():
             initial_capital=body.initial_capital,
             engine=engine,
             metrics_calc=metrics_calc,
+            backtest_options=body.engine_options(),
         )
         return jsonify({"status": "ok", "data": result})
     except ValueError as e:
@@ -310,15 +311,11 @@ def compare_strategies():
     fetcher = current_app.extensions["fetcher"]
     body = CompareRequest(**json_body())
 
-    featured, report, err = _fetch_and_prepare(
-        fetcher, body.ticker, body.start_date, body.end_date
-    )
-    if err:
-        return err
-
     engine = BacktestEngine()
     metrics_calc = PerformanceMetrics()
     comparison = {}
+    data_by_interval = {}
+    engine_options = body.engine_options()
 
     for strat_name in body.strategies:
         cls = STRATEGY_MAP.get(strat_name)
@@ -326,18 +323,23 @@ def compare_strategies():
             comparison[strat_name] = {"error": f"Unknown strategy: {strat_name}"}
             continue
 
+        interval = _resolve_interval(strat_name, body.interval)
+        if interval not in data_by_interval:
+            featured, _, err = _fetch_and_prepare(
+                fetcher, body.ticker, body.start_date, body.end_date, interval
+            )
+            if err:
+                return err
+            data_by_interval[interval] = featured
+
         strategy = cls()
         results = engine.run_backtest(
             strategy=strategy,
-            data=featured,
+            data=data_by_interval[interval],
             initial_capital=body.initial_capital,
             start_date=body.start_date,
             end_date=body.end_date,
-            position_sizing=body.position_sizing,
-            risk_settings=(
-                body.risk_settings.model_dump() if body.risk_settings else None
-            ),
-            drawdown_halt_enabled=body.drawdown_halt_enabled,
+            **engine_options,
         )
         metrics = metrics_calc.calculate_all(
             results.equity_curve,
@@ -383,6 +385,7 @@ def batch_backtest():
 
     results = []
     errors = []
+    engine_options = body.engine_options()
 
     for ticker in body.tickers:
         try:
@@ -411,11 +414,8 @@ def batch_backtest():
                 initial_capital=body.initial_capital,
                 start_date=body.start_date,
                 end_date=body.end_date,
-                position_sizing=body.position_sizing,
                 monte_carlo_runs=0,
-                risk_settings=(
-                    body.risk_settings.model_dump() if body.risk_settings else None
-                ),
+                **engine_options,
             )
             metrics = metrics_calc.calculate_all(
                 backtest_result.equity_curve,
@@ -434,7 +434,7 @@ def batch_backtest():
                     "sharpe_ratio": metrics["risk"]["sharpe_ratio"],
                     "max_drawdown_pct": metrics["drawdown"]["max_drawdown_pct"],
                     "win_rate": metrics["trades"]["win_rate"],
-                    "total_trades": len(backtest_result.trades),
+                    "total_trades": metrics["trades"]["total_trades"],
                     "final_value": backtest_result.final_value,
                     "metrics": metrics,
                 }
