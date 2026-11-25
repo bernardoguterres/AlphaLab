@@ -33,6 +33,7 @@ class BacktestResults:
     monte_carlo: dict | None = None
     benchmark: dict | None = None
     drawdown_halt: dict | None = None
+    failure_reason: str | None = None
 
     @property
     def total_return_pct(self) -> float:
@@ -140,11 +141,19 @@ class BacktestEngine:
 
         if len(df) < 10:
             logger.error("Insufficient data for backtest (%d rows)", len(df))
-            return BacktestResults(strategy_name=strategy.name, initial_capital=capital)
+            return BacktestResults(
+                strategy_name=strategy.name,
+                initial_capital=capital,
+                failure_reason=f"Insufficient data: {len(df)} bars available, at least 10 required",
+            )
 
         if not strategy.backtest_ready_check(df):
             logger.error("Data missing required columns for %s", strategy.name)
-            return BacktestResults(strategy_name=strategy.name, initial_capital=capital)
+            return BacktestResults(
+                strategy_name=strategy.name,
+                initial_capital=capital,
+                failure_reason=f"Missing required data for {strategy.name}",
+            )
 
         # Generate signals
         signals = strategy.generate_signals(df)
