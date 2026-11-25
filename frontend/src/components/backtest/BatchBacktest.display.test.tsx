@@ -75,3 +75,41 @@ describe("BatchBacktest percentage display (bug 3.10)", () => {
     expect(screen.getByText("100.00%")).toBeInTheDocument();
   });
 });
+
+vi.mock("@/utils/download", () => ({
+  downloadJson: vi.fn(),
+  isoDate: () => "2026-11-25",
+}));
+
+vi.mock("@/components/forms/RunFields", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/components/forms/RunFields")>(),
+  StrategyField: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
+    <select aria-label="Strategy" value={value} onChange={(event) => onChange(event.target.value)}>
+      <option value="ma_crossover">MA Crossover</option>
+      <option value="rsi_simple">RSI Simple</option>
+    </select>
+  ),
+}));
+
+it("exports the strategy submitted for the completed batch", async () => {
+  const { downloadJson } = await import("@/utils/download");
+  vi.mocked(api.runBatchBacktest).mockResolvedValue({
+    status: "ok",
+    data: {
+      results: [{ ticker: "AAPL", total_return_pct: 12.5, sharpe_ratio: 1.2, max_drawdown_pct: -8.3, win_rate: 0.6, total_trades: 10 }],
+      batch_summary: { profitable_count: 1, profitable_pct: 100, avg_return_pct: 12.5, best_ticker: "AAPL", worst_ticker: "AAPL" },
+      errors: [],
+    },
+  } as never);
+  render(<BatchBacktest />);
+  fireEvent.change(screen.getByPlaceholderText(/enter ticker/i), { target: { value: "AAPL" } });
+  fireEvent.keyDown(screen.getByPlaceholderText(/enter ticker/i), { key: "Enter" });
+  fireEvent.click(screen.getByRole("button", { name: /run batch backtest/i }));
+  const exportButton = await screen.findByRole("button", { name: /export top 5/i });
+  fireEvent.change(screen.getByRole("combobox", { name: "Strategy" }), { target: { value: "rsi_simple" } });
+  fireEvent.click(exportButton);
+  expect(downloadJson).toHaveBeenCalledWith(
+    [expect.objectContaining({ ticker: "AAPL", strategy: "ma_crossover" })],
+    "batch_top5_ma_crossover_2026-11-25.json",
+  );
+});
