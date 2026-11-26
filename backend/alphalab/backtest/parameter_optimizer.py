@@ -489,6 +489,9 @@ class ParameterOptimizer:
 
             heatmap_data.append(row)
 
+        if all(cell is None for row in heatmap_data for cell in row):
+            raise ValueError("No valid parameter combinations found for the heatmap")
+
         return {
             "param1_name": param1_name,
             "param1_values": param1_values,

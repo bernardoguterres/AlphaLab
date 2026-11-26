@@ -340,7 +340,8 @@ def test_buy_order_slippage_and_commission_accounting():
     assert p.cash == pytest.approx(10_000.0 - 1025.05, abs=1e-4)
 
 
-def test_sell_order_slippage_and_commission_accounting():
+@pytest.mark.parametrize("requested_shares", [10, 15])
+def test_sell_order_slippage_and_commission_accounting(requested_shares):
     """SELL order: exec_price = price * (1 - slippage), net proceeds = notional - commission."""
     p = Portfolio(
         initial_capital=10_000.0,
@@ -355,12 +356,13 @@ def test_sell_order_slippage_and_commission_accounting():
     p.avg_cost["TEST"] = 100.0
     p.cash = 0.0
 
-    order = Order(ticker="TEST", side=OrderSide.SELL, shares=10)
+    order = Order(ticker="TEST", side=OrderSide.SELL, shares=requested_shares)
     res = p.execute_order(order, {"TEST": 100.0})
 
     assert res.status == OrderStatus.FILLED
     # exec_price = 100 * (1 - 0.01) = 99.0
     assert res.filled_price == 99.0
+    assert res.shares == 10
     # slippage = 10 * 1.0 = 10.0
     assert res.slippage == 10.0
     # commission = 99.0 * 10 * 0.005 + 10.0 = 4.95 + 10.0 = 14.95

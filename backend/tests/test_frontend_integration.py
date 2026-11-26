@@ -1061,3 +1061,32 @@ def test_heatmap_rejects_invalid_grid_before_fetch(client, limits, message):
     assert response.status_code == 400
     assert message in response.json["message"]
     fetcher.fetch.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        ({"param2_name": "short_window"}, "different parameters"),
+        ({"param1_min": 30, "param1_max": 35}, "No valid parameter combinations"),
+    ],
+)
+def test_heatmap_reports_unusable_parameter_grids(
+    client, mock_yfinance, changes, message
+):
+    body = {
+        "ticker": "AAPL",
+        "strategy": "ma_crossover",
+        "start_date": "2020-01-01",
+        "end_date": "2023-10-31",
+        "param1_name": "short_window",
+        "param1_min": 10,
+        "param1_max": 15,
+        "param1_step": 5,
+        "param2_name": "long_window",
+        "param2_min": 20,
+        "param2_max": 25,
+        "param2_step": 5,
+    }
+    response = client.post("/api/strategies/optimize/heatmap", json={**body, **changes})
+    assert response.status_code == 400
+    assert message in response.json["message"]
