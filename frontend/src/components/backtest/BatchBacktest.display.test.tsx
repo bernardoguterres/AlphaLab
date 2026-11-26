@@ -36,6 +36,7 @@ describe("BatchBacktest percentage display (bug 3.10)", () => {
             max_drawdown_pct: -8.3, // already a percentage point
             win_rate: 0.6, // a 0-1 fraction (backend convention)
             total_trades: 10,
+            data_quality_warnings: ["Data ends 2021-02-23, before the requested end"],
           },
         ],
         batch_summary: {
@@ -73,6 +74,7 @@ describe("BatchBacktest percentage display (bug 3.10)", () => {
     expect(screen.getByText("60.00%")).toBeInTheDocument();
     // profitable_pct=100 must render as "100.00%", not "1.00%".
     expect(screen.getByText("100.00%")).toBeInTheDocument();
+    expect(screen.getByText(/Data ends 2021-02-23/)).toBeInTheDocument();
   });
 });
 

@@ -1003,3 +1003,61 @@ def test_short_window_is_not_reported_as_a_total_loss(client):
     assert "8 bars" in batch.json["data"]["errors"][0]["error"]
     assert "8 bars" in compare.json["data"]["ma_crossover"]["error"]
     assert optimize.status_code == 400
+
+
+def test_heatmap_honors_decimal_endpoints_without_overshooting(client, mock_yfinance):
+    response = client.post(
+        "/api/strategies/optimize/heatmap",
+        json={
+            "ticker": "AAPL",
+            "strategy": "bollinger_breakout",
+            "start_date": "2020-01-01",
+            "end_date": "2023-10-31",
+            "param1_name": "bb_period",
+            "param1_min": 10,
+            "param1_max": 19,
+            "param1_step": 5,
+            "param2_name": "bb_std_dev",
+            "param2_min": 1.1,
+            "param2_max": 1.3,
+            "param2_step": 0.1,
+        },
+    )
+    assert response.status_code == 200
+    result = response.json["data"]
+    assert result["param1_values"] == [10, 15]
+    assert result["param2_values"] == [1.1, 1.2, 1.3]
+    assert all(len(row) == 2 for row in result["heatmap_data"])
+    assert len(result["heatmap_data"]) == 3
+    assert all(cell is not None for row in result["heatmap_data"] for cell in row)
+
+
+@pytest.mark.parametrize(
+    ("limits", "message"),
+    [
+        ({"param1_step": 0}, "positive step"),
+        ({"param1_max": 9}, "max >= min"),
+        ({"param1_max": 110}, "max 400 cells"),
+    ],
+)
+def test_heatmap_rejects_invalid_grid_before_fetch(client, limits, message):
+    fetcher = MagicMock()
+    client.application.extensions["fetcher"] = fetcher
+    body = {
+        "ticker": "AAPL",
+        "strategy": "ma_crossover",
+        "start_date": "2020-01-01",
+        "end_date": "2023-10-31",
+        "param1_name": "short_window",
+        "param1_min": 10,
+        "param1_max": 20,
+        "param1_step": 1,
+        "param2_name": "long_window",
+        "param2_min": 200,
+        "param2_max": 204,
+        "param2_step": 1,
+    }
+    response = client.post("/api/strategies/optimize/heatmap", json={**body, **limits})
+    assert response.status_code == 400
+    assert message in response.json["message"]
+    fetcher.fetch.assert_not_called()

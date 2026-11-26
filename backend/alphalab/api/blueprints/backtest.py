@@ -6,14 +6,15 @@ import sys
 import time
 import uuid
 from datetime import datetime
+from fractions import Fraction
 
-import numpy as np
 from flask import Blueprint, Response, current_app, jsonify
 from pydantic import ValidationError
 
 from ..helpers import (
     _INTERVAL_TO_TIMEFRAME,
     _build_export_json,
+    _coverage_warnings,
     _fetch_and_prepare,
     json_body,
 )
@@ -220,12 +221,44 @@ def optimize_strategy():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+def _heatmap_axis(minimum, maximum, step):
+    # Fraction preserves decimal step boundaries and exact integer params.
+    start, stop, increment = (
+        Fraction(str(value)) for value in (minimum, maximum, step)
+    )
+    if increment <= 0 or stop < start:
+        raise ValueError("Heatmap axes require a positive step and max >= min")
+    return start, increment, (stop - start) // increment + 1
+
+
+def _heatmap_values(axis):
+    start, step, count = axis
+    values = (start + i * step for i in range(count))
+    return [int(value) if value.denominator == 1 else float(value) for value in values]
+
+
 @backtest_bp.route("/api/strategies/optimize/heatmap", methods=["POST"])
 def parameter_heatmap():
     """Generate 2D parameter heatmap for visualization."""
-    fetcher = current_app.extensions["fetcher"]
     body = HeatmapRequest(**json_body())
+    try:
+        axis1 = _heatmap_axis(body.param1_min, body.param1_max, body.param1_step)
+        axis2 = _heatmap_axis(body.param2_min, body.param2_max, body.param2_step)
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
 
+    if axis1[2] * axis2[2] > 400:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Heatmap grid too large (max 400 cells). Use larger step sizes.",
+                }
+            ),
+            400,
+        )
+
+    fetcher = current_app.extensions["fetcher"]
     interval = _resolve_interval(body.strategy, body.interval)
     featured, _, err = _fetch_and_prepare(
         fetcher, body.ticker, body.start_date, body.end_date, interval
@@ -237,43 +270,6 @@ def parameter_heatmap():
     if err:
         return err
 
-    # np.arange always yields numpy.float64, even for whole-number ranges.
-    # Strategy params like short_window/long_window get passed straight
-    # into pandas .rolling(window, min_periods=window), which raises
-    # "min_periods must be an integer" for a float64 - every single cell
-    # then fails that check, gets swallowed by generate_heatmap's per-cell
-    # except/logger.debug, and the whole grid renders as blank "-" cells
-    # with no visible error. Cast whole-number values back to int so
-    # integer-typed params (window sizes, periods) work the same way they
-    # already do through the grid_search endpoint, which receives plain
-    # JSON numbers from the frontend rather than np.arange output.
-    def _native(v: float) -> float | int:
-        return int(v) if float(v).is_integer() else float(v)
-
-    param1_values = [
-        _native(v)
-        for v in np.arange(
-            body.param1_min, body.param1_max + body.param1_step, body.param1_step
-        )
-    ]
-    param2_values = [
-        _native(v)
-        for v in np.arange(
-            body.param2_min, body.param2_max + body.param2_step, body.param2_step
-        )
-    ]
-
-    if len(param1_values) * len(param2_values) > 400:
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Heatmap grid too large (max 400 cells). Use larger step sizes.",
-                }
-            ),
-            400,
-        )
-
     param_optimizer = ParameterOptimizer()
     engine = BacktestEngine()
     metrics_calc = PerformanceMetrics()
@@ -283,9 +279,9 @@ def parameter_heatmap():
             strategy_class=strategy_cls,
             data=featured,
             param1_name=body.param1_name,
-            param1_values=param1_values,
+            param1_values=_heatmap_values(axis1),
             param2_name=body.param2_name,
-            param2_values=param2_values,
+            param2_values=_heatmap_values(axis2),
             fixed_params=body.fixed_params or {},
             initial_capital=body.initial_capital,
             engine=engine,
@@ -447,6 +443,12 @@ def batch_backtest():
                     "win_rate": metrics["trades"]["win_rate"],
                     "total_trades": metrics["trades"]["total_trades"],
                     "final_value": backtest_result.final_value,
+                    "data_quality_warnings": [
+                        *report.warnings,
+                        *_coverage_warnings(
+                            cleaned.index, body.start_date, body.end_date, interval
+                        ),
+                    ],
                     "metrics": metrics,
                 }
             )

@@ -167,6 +167,7 @@ export function BatchBacktest() {
 
 function BatchResults({ batch, onExport }: { batch: BatchBacktestResponse["data"]; onExport: () => void }) {
   const { batch_summary: summary, results, errors } = batch;
+  const warningRows = results.filter((row) => row.data_quality_warnings?.length);
 
   return (
     <div className="space-y-8">
@@ -187,6 +188,19 @@ function BatchResults({ batch, onExport }: { batch: BatchBacktestResponse["data"
           <Stat label="Runtime" value={`${summary.runtime_seconds}s`} />
         </StatGrid>
       </Section>
+
+      {warningRows.length > 0 && (
+        <Notice tone="warning" title="Data warnings">
+          <ul className="space-y-0.5">
+            {warningRows.map((row) => (
+              <li key={row.ticker}>
+                <span className="num text-foreground">{row.ticker}</span>{" "}
+                {row.data_quality_warnings?.join(" · ")}
+              </li>
+            ))}
+          </ul>
+        </Notice>
+      )}
 
       <Section title="Results by Sharpe ratio">
         <Table>
