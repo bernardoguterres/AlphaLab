@@ -260,7 +260,14 @@ export default function ParameterOptimize({ ticker, strategy, startDate, endDate
           <div className="mb-5 flex flex-wrap items-end gap-4">
             {(["Columns", "Rows"] as const).map((axis, i) => (
               <Field key={axis} label={axis} htmlFor={`axis-${i}`} className="w-48">
-                <Select value={axes[i]} onValueChange={(v) => setAxes(i === 0 ? [v, axes[1]] : [axes[0], v])}>
+                <Select value={axes[i]} onValueChange={(value) => {
+                  const other = axes[1 - i];
+                  if (value === other) {
+                    setAxes([axes[1], axes[0]]);
+                  } else {
+                    setAxes(i === 0 ? [value, other] : [other, value]);
+                  }
+                }}>
                   <SelectTrigger id={`axis-${i}`}>
                     <SelectValue />
                   </SelectTrigger>
