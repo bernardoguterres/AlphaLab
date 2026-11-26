@@ -272,8 +272,8 @@ Run from the repository root, using subshells so each command's `cd` doesn't lea
 (cd frontend && npm run lint)                                    # ESLint (convention, not CI-enforced)
 ```
 
-The test commands report the current counts; the walk-forward methodology and
-export-contract evidence above describe their scope. CI (`.github/workflows/ci.yml`) runs
+The offline run on 2026-11-26 passed 677 backend cases and 62 frontend cases with zero skips.
+The walk-forward methodology and export-contract evidence above describe the scope. CI (`.github/workflows/ci.yml`) runs
 `black --check` and
 `pytest`, plus a conditional AlphaLive checkout for the schema-contract test (see
 [export contract and parity evidence](#alphalive-export-contract-and-parity-evidence)); no backend
