@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from ..helpers import (
     _INTERVAL_TO_TIMEFRAME,
     _build_export_json,
+    _coverage_warnings,
     _fetch_and_prepare,
     json_body,
 )
@@ -447,6 +448,12 @@ def batch_backtest():
                     "win_rate": metrics["trades"]["win_rate"],
                     "total_trades": metrics["trades"]["total_trades"],
                     "final_value": backtest_result.final_value,
+                    "data_quality_warnings": [
+                        *report.warnings,
+                        *_coverage_warnings(
+                            cleaned.index, body.start_date, body.end_date, interval
+                        ),
+                    ],
                     "metrics": metrics,
                 }
             )
