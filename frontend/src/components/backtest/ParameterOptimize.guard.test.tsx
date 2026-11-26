@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ParameterOptimize from "./ParameterOptimize";
 import * as api from "@/services/api";
 
@@ -50,4 +50,59 @@ describe("ParameterOptimize step validation (bug 3.11)", () => {
       expect(api.optimizeParameters).not.toHaveBeenCalled();
     });
   });
+});
+
+it("includes an exact decimal endpoint in the optimizer request", async () => {
+  vi.mocked(api.optimizeParameters).mockClear();
+  render(
+    <ParameterOptimize
+      ticker="SPY"
+      strategy="bollinger_breakout"
+      startDate="2020-01-01"
+      endDate="2024-12-31"
+      initialCapital={100000}
+      onApplyParams={() => {}}
+    />
+  );
+  for (const [field, value] of [["min", "1.1"], ["max", "1.3"], ["step", "0.1"]]) {
+    fireEvent.change(screen.getByRole("spinbutton", { name: new RegExp(`Band width.* ${field}$`) }), {
+      target: { value },
+    });
+  }
+  fireEvent.click(screen.getByRole("button", { name: /run optimization/i }));
+  await waitFor(() => {
+    expect(api.optimizeParameters).toHaveBeenCalledWith(expect.objectContaining({
+      param_grid: expect.objectContaining({ bb_std_dev: [1.1, 1.2, 1.3] }),
+    }));
+  });
+});
+
+it("discards an optimization response after the ticker changes", async () => {
+  let complete: (response: Awaited<ReturnType<typeof api.optimizeParameters>>) => void;
+  vi.mocked(api.optimizeParameters).mockImplementationOnce(() => new Promise((resolve) => {
+    complete = resolve;
+  }));
+  const props = {
+    strategy: "ma_crossover" as const,
+    startDate: "2020-01-01",
+    endDate: "2024-12-31",
+    initialCapital: 100000,
+    onApplyParams: vi.fn(),
+  };
+  const { rerender } = render(<ParameterOptimize {...props} ticker="AAPL" />);
+  fireEvent.click(screen.getByRole("button", { name: /run optimization/i }));
+  rerender(<ParameterOptimize {...props} ticker="MSFT" />);
+  await act(async () => {
+    complete({
+      status: "ok",
+      data: {
+        best_params: { short_window: 20, long_window: 100 },
+        best_score: 1,
+        all_results: [],
+        optimization_target: "sharpe_ratio",
+        walk_forward: false,
+      },
+    });
+  });
+  expect(screen.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
 });
