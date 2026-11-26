@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import type { HeatmapResponse, ParameterOptimizeResponse, ParameterOptimizeResult, SimulationSettings, StrategyType, WalkForwardResult } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -28,11 +28,34 @@ const TARGETS: { value: Target; label: string }[] = [
   { value: "win_rate", label: "Win rate" },
 ];
 
-/** Every value from min to max in `step` increments; callers check step > 0 first. */
+const MAX_OPTIMIZER_COMBINATIONS = 10_000;
+const GRID_LIMIT_MESSAGE = "Optimization supports up to 10,000 combinations. Narrow the ranges or use larger steps.";
+
+/** Convert a finite Number's decimal representation to an integer and a power of ten. */
+function decimalParts(value: number) {
+  const [mantissa, scientificExponent = "0"] = String(value).split("e");
+  const [whole, fraction = ""] = mantissa.split(".");
+  return {
+    coefficient: BigInt(whole + fraction),
+    exponent: Number(scientificExponent) - fraction.length,
+  };
+}
+
 function gridValues({ min, max, step }: Range): number[] {
-  const values: number[] = [];
-  for (let v = min; v <= max; v += step) values.push(v);
-  return values;
+  if (![min, max, step].every(Number.isFinite) || min > max || step <= 0) {
+    throw new Error("Enter finite bounds with minimum ≤ maximum and a positive step.");
+  }
+  const parts = [min, max, step].map(decimalParts);
+  const exponent = Math.min(...parts.map((part) => part.exponent));
+  const [start, stop, increment] = parts.map(
+    (part) => part.coefficient * 10n ** BigInt(part.exponent - exponent)
+  );
+  const count = (stop - start) / increment + 1n;
+  if (count > BigInt(MAX_OPTIMIZER_COMBINATIONS)) throw new Error(GRID_LIMIT_MESSAGE);
+  // Use decimal arithmetic for the endpoint test and convert each value only once.
+  return Array.from({ length: Number(count) }, (_, i) =>
+    Number(`${start + BigInt(i) * increment}e${exponent}`)
+  );
 }
 
 /** The heatmap starts on the first two swept parameters. */
@@ -56,7 +79,13 @@ interface ParameterOptimizeProps {
   onApplyParams: (params: Record<string, number>) => void;
 }
 
-export default function ParameterOptimize({ ticker, strategy, startDate, endDate, initialCapital, simulationSettings, onApplyParams }: ParameterOptimizeProps) {
+export default function ParameterOptimize(props: ParameterOptimizeProps) {
+  const { ticker, strategy, startDate, endDate, initialCapital, simulationSettings } = props;
+  const context = JSON.stringify([ticker, strategy, startDate, endDate, initialCapital, simulationSettings]);
+  return <ParameterSweep key={context} {...props} />;
+}
+
+function ParameterSweep({ ticker, strategy, startDate, endDate, initialCapital, simulationSettings, onApplyParams }: ParameterOptimizeProps) {
   const [target, setTarget] = useState<Target>("sharpe_ratio");
   const [walkForward, setWalkForward] = useState(false);
   const [folds, setFolds] = useState(5);
@@ -66,15 +95,6 @@ export default function ParameterOptimize({ ticker, strategy, startDate, endDate
   const [mapping, setMapping] = useState(false);
   const [result, setResult] = useState<OptimizeData | null>(null);
   const [heatmap, setHeatmap] = useState<HeatmapResponse["data"] | null>(null);
-
-  // Each strategy sweeps different parameters, so start over when it changes.
-  useEffect(() => {
-    const next = optimizeRanges(strategy);
-    setRanges(next);
-    setAxes(defaultAxes(next));
-    setResult(null);
-    setHeatmap(null);
-  }, [strategy]);
 
   const keys = Object.keys(ranges);
   const label = (key: string) => paramLabel(strategy, key);
@@ -89,12 +109,15 @@ export default function ParameterOptimize({ ticker, strategy, startDate, endDate
     }
     setOptimizing(true);
     try {
+      const param_grid = Object.fromEntries(keys.map((k) => [k, gridValues(ranges[k])]));
+      const combinations = Object.values(param_grid).reduce((total, values) => total * values.length, 1);
+      if (combinations > MAX_OPTIMIZER_COMBINATIONS) throw new Error(GRID_LIMIT_MESSAGE);
       const response = await optimizeParameters({
         ticker,
         strategy,
         start_date: startDate,
         end_date: endDate,
-        param_grid: Object.fromEntries(keys.map((k) => [k, gridValues(ranges[k])])),
+        param_grid,
         initial_capital: initialCapital,
         ...simulationSettings,
         optimization_target: target,
