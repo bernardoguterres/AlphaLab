@@ -241,6 +241,16 @@ def _heatmap_values(axis):
 def parameter_heatmap():
     """Generate 2D parameter heatmap for visualization."""
     body = HeatmapRequest(**json_body())
+    if body.param1_name == body.param2_name:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Choose different parameters for the heatmap axes",
+                }
+            ),
+            400,
+        )
     try:
         axis1 = _heatmap_axis(body.param1_min, body.param1_max, body.param1_step)
         axis2 = _heatmap_axis(body.param2_min, body.param2_max, body.param2_step)

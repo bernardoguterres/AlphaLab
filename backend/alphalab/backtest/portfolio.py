@@ -134,9 +134,18 @@ class Portfolio:
             slippage = exec_price * self.slippage_pct
             exec_price -= slippage
 
+        shares = order.shares
+        held = self.get_position(order.ticker)
+        if order.side == OrderSide.SELL:
+            if held <= 0:
+                order.status = OrderStatus.REJECTED
+                order.reason = f"No position in {order.ticker}"
+                self._log_trade(order, timestamp)
+                return order
+            shares = min(shares, held)
+
         commission = (
-            abs(exec_price * order.shares * self.commission_rate)
-            + self.commission_per_trade
+            abs(exec_price * shares * self.commission_rate) + self.commission_per_trade
         )
 
         # Risk checks
@@ -184,22 +193,14 @@ class Portfolio:
                 )
 
         else:  # SELL
-            held = self.positions.get(order.ticker, 0)
-            if held <= 0:
-                order.status = OrderStatus.REJECTED
-                order.reason = f"No position in {order.ticker}"
-                self._log_trade(order, timestamp)
-                return order
-
-            sell_shares = min(order.shares, held)
-            proceeds = exec_price * sell_shares - commission
+            proceeds = exec_price * shares - commission
             self.cash += proceeds
-            self.positions[order.ticker] = held - sell_shares
+            self.positions[order.ticker] = held - shares
             if self.positions[order.ticker] == 0:
                 del self.positions[order.ticker]
                 self.avg_cost.pop(order.ticker, None)
                 self.trailing_stops.pop(order.ticker, None)
-            order.shares = sell_shares
+            order.shares = shares
 
         order.status = OrderStatus.FILLED
         order.filled_price = round(exec_price, 4)
