@@ -299,3 +299,25 @@ class TestBatchBacktest:
         # Both are negative numbers - a tight stop-loss must produce a
         # shallower (less negative / closer to zero) max drawdown.
         assert drawdown_with > drawdown_without
+
+
+def test_batch_preserves_single_backtest_coverage_warning():
+    with patch("alphalab.api.routes.DataFetcher") as fetcher:
+        sample = _mock_crash_fetch_response("AAPL")
+        sample["metadata"]["from_cache"] = True
+        fetcher.return_value.fetch.return_value = sample
+        client = create_app().test_client()
+
+    settings = {
+        "strategy": "ma_crossover",
+        "start_date": "2020-01-01",
+        "end_date": "2021-12-31",
+    }
+    single = client.post("/api/strategies/backtest", json=dict(settings, ticker="AAPL"))
+    batch = client.post(
+        "/api/strategies/batch-backtest", json=dict(settings, tickers=["AAPL"])
+    )
+    assert single.status_code == batch.status_code == 200
+    warnings = single.get_json()["data"]["data_quality_warnings"]
+    assert any("before the requested end" in warning for warning in warnings)
+    assert batch.get_json()["data"]["results"][0]["data_quality_warnings"] == warnings

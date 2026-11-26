@@ -344,6 +344,7 @@ export interface BatchBacktestResult {
   win_rate: number;
   total_trades: number;
   final_value: number;
+  data_quality_warnings?: string[];
   metrics: BacktestMetrics;
 }
 
