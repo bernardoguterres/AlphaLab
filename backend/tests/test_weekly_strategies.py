@@ -1,9 +1,11 @@
 """Tests for GreenblattWeekly strategy."""
 
 import unittest
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from alphalab.strategies.implementations.greenblatt_weekly import GreenblattWeekly
 
@@ -154,6 +156,33 @@ class TestGreenblattWeekly(unittest.TestCase):
         rsi_exits = signals[signals["reason"].str.contains("overbought", na=False)]
         self.assertGreater(len(rsi_exits), 0, "RSI exit should fire when enabled")
 
+    def test_weekly_hold_preserves_calendar_labels_and_trailing_stop_priority(self):
+        index = pd.to_datetime(
+            ["2024-01-01", "2024-01-08", "2024-01-16", "2024-01-29"], utc=True
+        )
+        data = pd.DataFrame(
+            {
+                "Close": [100, 100, 105, 105],
+                "SMA_10": [100] * 4,
+                "SMA_50": [100] * 4,
+                "RSI": [50, 25, 80, 80],
+            },
+            index=index,
+        )
+        params = {"min_hold_bars": 2, "exit_rsi_overbought": True}
+
+        signals = self._run(data, params=params)
+        # A UTC-midnight label still belongs to its own date. Treating it
+        # as an instant in ET would move Monday Jan 8 into the prior week.
+        self.assertEqual(signals["signal"].tolist(), [0, 1, 0, -1])
+
+        data.loc[index[2], "Close"] = 75
+        stop_signals = self._run(data, params=params)
+        self.assertEqual(stop_signals.loc[index[2], "signal"], -1)
+        self.assertTrue(
+            stop_signals.loc[index[2], "reason"].startswith("Trailing stop:")
+        )
+
     def test_default_min_hold_is_52(self):
         strat = GreenblattWeekly(params={})
         self.assertEqual(strat.params["min_hold_bars"], 52)
@@ -190,3 +219,67 @@ class TestGreenblattWeekly(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "interval", "round_trips"),
+    [
+        ("backtest", "1wk", 1),
+        ("batch-backtest", "1wk", 1),
+        ("backtest", "1d", 0),
+        ("backtest", "1mo", 0),
+    ],
+)
+def test_greenblatt_optional_exit_counts_elapsed_weeks_only_on_weekly_runs(
+    endpoint, interval, round_trips
+):
+    from alphalab.api.routes import create_app
+
+    warmup = pd.date_range(end="2023-12-29", periods=55, freq="W-FRI")
+    index = warmup.append(
+        pd.DatetimeIndex(["2024-01-05", "2024-01-12", "2024-01-26", "2024-02-02"])
+    )
+    close = np.array([100.0] * len(warmup) + [90.0, 91.0, 130.0, 130.0])
+    bars = pd.DataFrame(
+        {
+            "Open": close,
+            "High": close + 0.5,
+            "Low": close - 0.5,
+            "Close": close,
+            "Volume": 1_000_000,
+        },
+        index=index,
+    )
+    fetcher = Mock()
+    fetcher.fetch.return_value = {"data": bars, "metadata": {"from_cache": True}}
+    with patch("alphalab.api.routes.DataFetcher", return_value=fetcher):
+        client = create_app().test_client()
+
+    payload = {
+        "strategy": "greenblatt_weekly",
+        "start_date": index[0].date().isoformat(),
+        "end_date": index[-1].date().isoformat(),
+        "interval": interval,
+        "params": {
+            "min_hold_bars": 3,
+            "exit_rsi_overbought": True,
+            "exit_sma_cross": False,
+        },
+        "risk_settings": {"stop_loss_pct": 25.0, "take_profit_pct": 100.0},
+        "drawdown_halt_enabled": False,
+    }
+    if endpoint == "backtest":
+        payload["ticker"] = "AAPL"
+    else:
+        payload["tickers"] = ["AAPL"]
+    response = client.post(f"/api/strategies/{endpoint}", json=payload)
+    assert response.status_code == 200, response.get_json()
+    result = response.get_json()["data"]
+    if endpoint == "batch-backtest":
+        result = result["results"][0]
+    else:
+        fills = [order for order in result["trades"] if order["status"] == "filled"]
+        assert [order["side"] for order in fills] == ["buy"] + ["sell"] * round_trips
+        if round_trips:
+            assert pd.Timestamp(fills[-1]["filled_timestamp"]) == index[-1]
+    assert result["total_trades"] == round_trips

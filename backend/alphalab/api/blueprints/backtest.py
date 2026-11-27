@@ -418,6 +418,7 @@ def batch_backtest():
 
             featured = processor.process(cleaned)
             featured.attrs["ticker"] = ticker
+            featured.attrs["interval"] = interval
 
             strategy = strategy_cls(body.params or {})
             backtest_result = engine.run_backtest(
