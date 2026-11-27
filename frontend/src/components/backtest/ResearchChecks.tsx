@@ -18,7 +18,7 @@ interface ResearchChecksProps {
   hasResult: boolean;
   /** Quality score fetched for exactly the submitted ticker and window, else null. */
   qualityScore: number | null;
-  riskSettings: RiskSettings;
+  riskSettings: RiskSettings | null;
 }
 
 export function ResearchChecks({ hasResult, qualityScore, riskSettings }: ResearchChecksProps) {
@@ -34,8 +34,10 @@ export function ResearchChecks({ hasResult, qualityScore, riskSettings }: Resear
     },
     {
       title: "Transaction costs",
-      detail: `$${riskSettings.commission_per_trade.toFixed(2)} commission per side, plus the backend's default slippage.`,
-      status: structural,
+      detail: riskSettings
+        ? `$${riskSettings.commission_per_trade.toFixed(2)} commission per side, plus the backend's default slippage.`
+        : "Commission settings are unavailable for this run.",
+      status: riskSettings ? structural : "open",
     },
     {
       title: "Data quality",
@@ -47,8 +49,10 @@ export function ResearchChecks({ hasResult, qualityScore, riskSettings }: Resear
     },
     {
       title: "Position limits",
-      detail: `At most ${riskSettings.max_position_size_pct}% per position and ${riskSettings.max_open_positions} open at once.`,
-      status: structural,
+      detail: riskSettings
+        ? `Position sizing is capped at ${riskSettings.max_position_size_pct}% per position.`
+        : "Position limit settings are unavailable for this run.",
+      status: riskSettings ? structural : "open",
     },
     {
       title: "Walk-forward validation",

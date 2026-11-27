@@ -74,7 +74,7 @@ interface QualityScore {
   endDate: string;
 }
 
-function matchingQuality(quality: QualityScore | null, run: RunConfig | null) {
+function matchingQuality(quality: QualityScore | null, run: Pick<RunConfig, "ticker" | "startDate" | "endDate" | "interval"> | null) {
   return quality && run &&
     quality.ticker === run.ticker &&
     quality.startDate === run.startDate &&
@@ -88,7 +88,6 @@ export default function Backtest() {
   const { currentRun, setCurrentRun, addToHistory, history } = useBacktestStore();
   const [config, setConfig] = useState(INITIAL_CONFIG);
   const interval = config.interval ?? (config.strategy === "greenblatt_weekly" ? "1wk" : "1d");
-  const [submitted, setSubmitted] = useState<RunConfig | null>(null);
   const [quality, setQuality] = useState<QualityScore | null>(null);
   const [fetching, setFetching] = useState(false);
   const [running, setRunning] = useState(false);
@@ -131,8 +130,16 @@ export default function Backtest() {
         risk_settings: config.risk,
         drawdown_halt_enabled: config.drawdownHalt,
       });
-      setCurrentRun(historyItem(result, config.ticker, config.strategy));
-      setSubmitted({ ...config, interval });
+      setCurrentRun({
+        ...historyItem(result, config.ticker, config.strategy),
+        research: {
+          startDate: config.startDate,
+          endDate: config.endDate,
+          interval,
+          riskSettings: config.risk,
+          qualityScore: matchingQuality(quality, { ...config, interval }),
+        },
+      });
     } catch (error) {
       toast.error(errorMessage(error, "Backtest failed"));
     } finally {
@@ -141,7 +148,10 @@ export default function Backtest() {
   };
 
   const saved = currentRun !== null && history.some((h) => h.id === currentRun.id);
-  const qualityForRun = matchingQuality(quality, submitted);
+  const research = currentRun?.research;
+  const qualityForRun = research
+    ? matchingQuality(quality, { ...research, ticker: currentRun.ticker }) ?? research.qualityScore
+    : null;
   const freshQuality = matchingQuality(quality, { ...config, interval });
 
   return (
@@ -227,7 +237,7 @@ export default function Backtest() {
             </div>
 
             <aside className="space-y-8">
-              <ResearchChecks hasResult={!!currentRun} qualityScore={qualityForRun} riskSettings={(submitted ?? config).risk} />
+              <ResearchChecks hasResult={!!currentRun} qualityScore={qualityForRun} riskSettings={research?.riskSettings ?? null} />
               <ExportPanel result={currentRun?.result ?? null} ticker={currentRun?.ticker ?? ""} strategy={currentRun?.strategy ?? ""} />
             </aside>
           </div>
