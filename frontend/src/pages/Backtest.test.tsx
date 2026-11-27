@@ -3,6 +3,10 @@ import { expect, it, vi } from "vitest";
 import Backtest from "./Backtest";
 import * as api from "@/services/api";
 
+vi.mock("@/components/backtest/RunSummary", () => ({ RunSummary: () => null }));
+vi.mock("@/components/metrics/MetricsBreakdown", () => ({ MetricsBreakdown: () => null }));
+vi.mock("@/components/charts/DrawdownChart", () => ({ DrawdownChart: () => null }));
+
 vi.mock("@/services/api", async () => ({
   ...await vi.importActual<typeof api>("@/services/api"),
   fetchData: vi.fn(),
@@ -35,4 +39,31 @@ it("runs with the selected interval and hides scores from a different interval",
 
   await waitFor(() => expect(api.runBacktest).toHaveBeenCalledWith(expect.objectContaining({ interval: "1wk" })));
   expect(screen.queryByText("95% quality")).not.toBeInTheDocument();
+});
+
+it("keeps the completed run's research evidence when revisiting the page", async () => {
+  vi.mocked(api.fetchData).mockImplementation(async ([ticker]) => ({
+    status: "ok",
+    errors: [],
+    data: { [ticker]: { records: 100, quality_score: 0.91 } },
+  }));
+  vi.mocked(api.runBacktest).mockResolvedValue({
+    backtest_id: "revisit",
+    equity_curve: [],
+    trades: [],
+    metrics: { risk: { sharpe_ratio: 1 }, drawdown: { max_drawdown_pct: -2 } },
+  } as Awaited<ReturnType<typeof api.runBacktest>>);
+
+  const page = render(<Backtest />);
+  fireEvent.click(screen.getByText("Risk settings"));
+  fireEvent.change(screen.getByLabelText("Commission per trade ($)"), { target: { value: "7" } });
+  fireEvent.click(screen.getByRole("button", { name: "Fetch and score data" }));
+  await screen.findByText("91% quality");
+  fireEvent.click(screen.getByRole("button", { name: "Run backtest" }));
+  await screen.findByText("91% quality score for the fetched window.");
+  page.unmount();
+
+  render(<Backtest />);
+  expect(screen.getByText("91% quality score for the fetched window.")).toBeInTheDocument();
+  expect(screen.getByText(/\$7\.00 commission per side/)).toBeInTheDocument();
 });
