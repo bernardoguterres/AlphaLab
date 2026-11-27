@@ -60,6 +60,7 @@ def _fetch_and_prepare(
     )
     featured = FeatureEngineer().process(cleaned)
     featured.attrs["ticker"] = ticker
+    featured.attrs["interval"] = interval
     return featured, report, None
 
 

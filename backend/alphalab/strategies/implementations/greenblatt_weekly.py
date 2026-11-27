@@ -15,6 +15,10 @@ Exit - in priority order:
   3. SMA death-cross (optional, off by default): close after min_hold_bars
      if exit_sma_cross=True.
 
+On weekly bars, the optional hold counts elapsed Monday–Sunday calendar
+weeks, including weeks missing from the data. Nonweekly research runs
+count observed bars.
+
 Default behaviour: hold for at least 52 weeks (~1 year), only exit on a
 20% trailing drawdown from peak. This mirrors how Greenblatt's published
 results actually work - let quality businesses compound, cut the losers.
@@ -86,6 +90,17 @@ class GreenblattWeekly(BaseStrategy):
         fast_sma = data[fast_col]
         slow_sma = data[slow_col]
 
+        # Date labels identify the bar's calendar week. Preserve their
+        # civil dates even when a weekly source attaches a timezone.
+        if data.attrs.get("interval", "1wk") == "1wk" and isinstance(
+            data.index, pd.DatetimeIndex
+        ):
+            hold_periods = data.index.tz_localize(None).to_period("W-SUN").asi8
+            hold_unit = "w"
+        else:
+            hold_periods = range(len(data))
+            hold_unit = " bars"
+
         in_position = False
         entry_bar = 0
         peak_price = 0.0
@@ -97,8 +112,6 @@ class GreenblattWeekly(BaseStrategy):
                 continue
 
             price = close.iloc[i]
-            bars_held = i - entry_bar if in_position else 0
-
             # --- EXIT logic ---
             if in_position:
                 # Track peak for trailing stop
@@ -118,7 +131,8 @@ class GreenblattWeekly(BaseStrategy):
                     in_position = False
                     continue
 
-                min_hold_met = bars_held >= p["min_hold_bars"]
+                periods_held = hold_periods[i] - hold_periods[entry_bar]
+                min_hold_met = periods_held >= p["min_hold_bars"]
 
                 if (
                     min_hold_met
@@ -128,7 +142,7 @@ class GreenblattWeekly(BaseStrategy):
                     signals.at[data.index[i], "signal"] = -1
                     signals.at[data.index[i], "confidence"] = 0.75
                     signals.at[data.index[i], "reason"] = (
-                        f"RSI overbought after {bars_held}w hold "
+                        f"RSI overbought after {periods_held}{hold_unit} hold "
                         f"({rsi.iloc[i]:.1f} > {p['rsi_overbought']})"
                     )
                     in_position = False
@@ -142,7 +156,7 @@ class GreenblattWeekly(BaseStrategy):
                     signals.at[data.index[i], "signal"] = -1
                     signals.at[data.index[i], "confidence"] = 0.70
                     signals.at[data.index[i], "reason"] = (
-                        f"SMA death-cross after {bars_held}w hold: "
+                        f"SMA death-cross after {periods_held}{hold_unit} hold: "
                         f"SMA{p['fast_sma']}={fast_sma.iloc[i]:.2f} < SMA{p['slow_sma']}={slow_sma.iloc[i]:.2f}"
                     )
                     in_position = False
