@@ -9,6 +9,7 @@ from scipy.optimize import minimize
 from ..utils.logger import setup_logger
 
 logger = setup_logger("alphalab.portfolio_optimizer")
+WEIGHT_TOLERANCE = 1e-8
 
 
 class PortfolioOptimizer:
@@ -30,7 +31,7 @@ class PortfolioOptimizer:
     def optimize(
         self,
         method: str,
-        max_weight: float = 0.4,
+        max_weight: float | None = None,
         min_weight: float = 0.05,
         target_return: float | None = None,
     ) -> dict:
@@ -38,13 +39,15 @@ class PortfolioOptimizer:
 
         Args:
             method: Optimization method (max_sharpe, min_variance, equal_weight, risk_parity)
-            max_weight: Maximum weight per strategy (0-1)
+            max_weight: Maximum weight per strategy (0-1). If omitted,
+                defaults to 40% or the equal share, whichever is larger.
             min_weight: Minimum weight per strategy (0-1)
             target_return: Target annual return (only used for min_variance with target)
 
         Returns:
             Dict with optimal_weights, expected_return, expected_risk, sharpe_ratio
         """
+        max_weight = self._resolve_weight_bounds(min_weight, max_weight)
         if method == "equal_weight":
             weights = self._equal_weight()
         elif method == "max_sharpe":
@@ -75,7 +78,7 @@ class PortfolioOptimizer:
     def efficient_frontier(
         self,
         n_points: int = 20,
-        max_weight: float = 0.4,
+        max_weight: float | None = None,
         min_weight: float = 0.05,
     ) -> list[dict]:
         """Calculate efficient frontier points.
@@ -88,9 +91,13 @@ class PortfolioOptimizer:
         Returns:
             List of dicts with return, risk, sharpe_ratio for each point
         """
-        min_return = self.mean_returns.min()
-        max_return = self.mean_returns.max()
-        target_returns = np.linspace(min_return, max_return, n_points)
+        max_weight = self._resolve_weight_bounds(min_weight, max_weight)
+        min_return, max_return = self._return_bounds(min_weight, max_weight)
+        if np.isclose(min_return, max_return, atol=WEIGHT_TOLERANCE, rtol=0):
+            # Fixed weights or identical returns give just one possible return.
+            target_returns = [min_return]
+        else:
+            target_returns = np.linspace(min_return, max_return, n_points)
 
         frontier_points = []
         for target_return in target_returns:
@@ -113,11 +120,41 @@ class PortfolioOptimizer:
                         "sharpe_ratio": float(sharpe),
                     }
                 )
-            except Exception as e:
+            except ValueError as e:
                 logger.debug(f"Skipping frontier point at return {target_return}: {e}")
                 continue
 
         return frontier_points
+
+    def _resolve_weight_bounds(
+        self, min_weight: float, max_weight: float | None
+    ) -> float:
+        if not self.n_strategies:
+            raise ValueError("At least one strategy is required")
+        equal_share = 1 / self.n_strategies
+        if max_weight is None:
+            max_weight = max(0.4, equal_share)
+        if not 0 <= min_weight <= equal_share <= max_weight <= 1:
+            raise ValueError(
+                "Strategy weight bounds cannot produce a fully invested portfolio "
+                f"with {self.n_strategies} strategies"
+            )
+        return max_weight
+
+    def _return_bounds(
+        self, min_weight: float, max_weight: float
+    ) -> tuple[float, float]:
+        # Start each strategy at the floor, then assign the remaining weight
+        # to strategies in order of return until their caps are reached.
+        remaining = max(0.0, 1 - self.n_strategies * min_weight)
+        excess = np.clip(
+            remaining - np.arange(self.n_strategies) * (max_weight - min_weight),
+            0,
+            max_weight - min_weight,
+        )
+        weights = min_weight + excess
+        returns = np.sort(self.mean_returns)
+        return float(weights @ returns), float(weights @ returns[::-1])
 
     def _equal_weight(self) -> np.ndarray:
         """Equal weight allocation (1/N)."""
@@ -149,13 +186,22 @@ class PortfolioOptimizer:
 
         constraints = []
         if target_return is not None:
-            # Add return constraint
-            constraints.append(
-                {
-                    "type": "eq",
-                    "fun": lambda w: np.dot(w, self.mean_returns) - target_return,
-                }
-            )
+            min_return, max_return = self._return_bounds(min_weight, max_weight)
+            if (
+                not min_return - WEIGHT_TOLERANCE
+                <= target_return
+                <= max_return + WEIGHT_TOLERANCE
+            ):
+                raise ValueError(
+                    "Target return is outside the feasible range for these bounds"
+                )
+            if max_return - min_return > WEIGHT_TOLERANCE:
+                constraints.append(
+                    {
+                        "type": "eq",
+                        "fun": lambda w: np.dot(w, self.mean_returns) - target_return,
+                    }
+                )
 
         return self._optimize_weights(
             portfolio_variance, max_weight, min_weight, constraints
@@ -191,6 +237,8 @@ class PortfolioOptimizer:
         """Generic weight optimization with constraints."""
         # Initial guess: equal weights
         x0 = np.ones(self.n_strategies) / self.n_strategies
+        if min_weight == x0[0] or max_weight == x0[0]:
+            return x0  # The bounds leave no other feasible weight vector.
 
         # Constraints
         constraints = [
@@ -214,10 +262,22 @@ class PortfolioOptimizer:
 
         if not result.success:
             logger.warning(f"Optimization did not converge: {result.message}")
-            # Return equal weights as fallback
-            return self._equal_weight()
+            raise ValueError("Portfolio optimizer did not converge")
 
-        return result.x
+        weights = result.x
+        if (
+            not np.isfinite(weights).all()
+            or np.any(weights < min_weight - WEIGHT_TOLERANCE)
+            or np.any(weights > max_weight + WEIGHT_TOLERANCE)
+            or any(
+                not np.isclose(
+                    constraint["fun"](weights), 0, atol=WEIGHT_TOLERANCE, rtol=0
+                )
+                for constraint in constraints
+            )
+        ):
+            raise ValueError("Portfolio optimizer returned an infeasible allocation")
+        return weights
 
 
 def extract_daily_returns(equity_curve: list[dict[str, Any]]) -> pd.Series:
@@ -252,8 +312,11 @@ def build_returns_matrix(
     Returns:
         Tuple of (returns_matrix DataFrame, strategy_labels list)
     """
+    backtest_ids = [strategy["backtest_id"] for strategy in strategies]
+    if len(set(backtest_ids)) != len(backtest_ids):
+        raise ValueError("Each backtest can appear only once in a portfolio")
+
     returns_dict = {}
-    labels = []
 
     for strat_info in strategies:
         backtest_id = strat_info["backtest_id"]
@@ -274,9 +337,13 @@ def build_returns_matrix(
         # Extract daily returns
         returns = extract_daily_returns(equity_curve)
 
-        label = f"{ticker}_{strategy_name}"
+        base_label = f"{ticker}_{strategy_name}"
+        label = base_label
+        suffix = 2
+        while label in returns_dict:
+            label = f"{base_label} ({suffix})"
+            suffix += 1
         returns_dict[label] = returns
-        labels.append(label)
 
     if not returns_dict:
         raise ValueError("No valid backtest results found")
@@ -289,4 +356,4 @@ def build_returns_matrix(
         {k: v.reindex(idx).ffill() for k, v in returns_dict.items()}
     )
 
-    return returns_df, labels
+    return returns_df, list(returns_dict)
