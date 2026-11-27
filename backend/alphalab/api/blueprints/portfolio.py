@@ -22,7 +22,11 @@ def optimize_portfolio():
 
     strategies = [s.model_dump() for s in body.strategies]
     constraints = body.constraints or PortfolioConstraints()
-    max_weight = constraints.max_weight_per_strategy
+    max_weight = (
+        constraints.max_weight_per_strategy
+        if "max_weight_per_strategy" in constraints.model_fields_set
+        else None
+    )
     min_weight = constraints.min_weight_per_strategy
     target_return = constraints.target_return
 
