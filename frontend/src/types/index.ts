@@ -159,6 +159,13 @@ export interface BacktestHistoryItem {
   max_drawdown: number;
   total_trades: number;
   result: BacktestResult;
+  research?: {
+    startDate: string;
+    endDate: string;
+    interval: string;
+    riskSettings: RiskSettings;
+    qualityScore: number | null;
+  };
 }
 
 export type StrategyType = "ma_crossover" | "rsi_mean_reversion" | "rsi_simple" | "momentum_breakout" | "bollinger_breakout" | "vwap_reversion" | "bollinger_rsi_combo" | "trend_adaptive_rsi" | "greenblatt_weekly";
