@@ -74,21 +74,24 @@ class GreenblattWeekly(BaseStrategy):
         )
 
     def required_columns(self) -> list[str]:
-        fast = self.params.get("fast_sma", 10)
-        slow = self.params.get("slow_sma", 50)
-        return ["Close", "RSI", f"SMA_{fast}", f"SMA_{slow}"]
+        return ["Close"]
+
+    @staticmethod
+    def _sma(data: pd.DataFrame, window: int) -> pd.Series:
+        column = f"SMA_{window}"
+        if column in data:
+            return data[column]
+        return data["Close"].rolling(window, min_periods=window).mean()
 
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         p = self.params
-        fast_col = f"SMA_{p['fast_sma']}"
-        slow_col = f"SMA_{p['slow_sma']}"
 
         signals = self._init_signals_frame(data)
 
         close = data["Close"]
-        rsi = rsi_ewm(data["Close"], p["rsi_period"])
-        fast_sma = data[fast_col]
-        slow_sma = data[slow_col]
+        rsi = rsi_ewm(close, p["rsi_period"])
+        fast_sma = self._sma(data, p["fast_sma"])
+        slow_sma = self._sma(data, p["slow_sma"])
 
         # Date labels identify the bar's calendar week. Preserve their
         # civil dates even when a weekly source attaches a timezone.

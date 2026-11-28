@@ -208,13 +208,9 @@ class TestGreenblattWeekly(unittest.TestCase):
         signals = self._run(data)
         self.assertTrue((signals["signal"] == 0).all())
 
-    def test_required_columns_no_atr(self):
+    def test_only_close_is_required_for_indicators(self):
         strat = GreenblattWeekly(params={"fast_sma": 10, "slow_sma": 50})
-        cols = strat.required_columns()
-        self.assertIn("SMA_10", cols)
-        self.assertIn("SMA_50", cols)
-        self.assertIn("RSI", cols)
-        self.assertNotIn("ATR", cols)  # ATR no longer needed
+        self.assertEqual(strat.required_columns(), ["Close"])
 
 
 if __name__ == "__main__":
@@ -283,3 +279,80 @@ def test_greenblatt_optional_exit_counts_elapsed_weeks_only_on_weekly_runs(
         if round_trips:
             assert pd.Timestamp(fills[-1]["filled_timestamp"]) == index[-1]
     assert result["total_trades"] == round_trips
+
+
+@pytest.mark.parametrize("endpoint", ["backtest", "optimize", "optimize/heatmap"])
+def test_greenblatt_supports_custom_sma_windows(endpoint):
+    from alphalab.api.routes import create_app
+
+    dates = pd.date_range("2023-01-06", periods=60, freq="W-FRI")
+    close = np.array([100.0] * 55 + [90.0, 95.0, 130.0, 126.0, 125.0])
+    bars = pd.DataFrame(
+        {
+            "Open": close,
+            "High": close + 0.5,
+            "Low": close - 0.5,
+            "Close": close,
+            "Volume": 1_000_000,
+        },
+        index=dates,
+    )
+    fetcher = Mock()
+    fetcher.fetch.return_value = {"data": bars}
+    with patch("alphalab.api.routes.DataFetcher", return_value=fetcher):
+        client = create_app().test_client()
+
+    payload = {
+        "ticker": "AAPL",
+        "strategy": "greenblatt_weekly",
+        "start_date": dates[0].date().isoformat(),
+        "end_date": dates[-1].date().isoformat(),
+        "interval": "1wk",
+        "risk_settings": {"stop_loss_pct": 25.0, "take_profit_pct": 100.0},
+        "drawdown_halt_enabled": False,
+    }
+    if endpoint == "backtest":
+        payload["params"] = {"fast_sma": 7, "slow_sma": 30}
+    elif endpoint == "optimize":
+        payload["param_grid"] = {"fast_sma": [7, 10], "slow_sma": [30, 50]}
+    else:
+        payload.update(
+            {
+                "param1_name": "fast_sma",
+                "param1_min": 7,
+                "param1_max": 10,
+                "param1_step": 3,
+                "param2_name": "slow_sma",
+                "param2_min": 30,
+                "param2_max": 50,
+                "param2_step": 20,
+            }
+        )
+
+    response = client.post(f"/api/strategies/{endpoint}", json=payload)
+    assert response.status_code == 200, response.get_json()
+    result = response.json["data"]
+    if endpoint == "backtest":
+        assert any(
+            order["side"] == "buy" and order["status"] == "filled"
+            for order in result["trades"]
+        )
+        export = client.post(
+            "/api/strategies/export", json={"backtest_id": result["backtest_id"]}
+        )
+        assert export.status_code == 200, export.get_json()
+        assert export.json["timeframe"] == "1Week"
+        params = export.json["strategy"]["parameters"]
+        assert (params["fast_sma"], params["slow_sma"]) == (7, 30)
+    elif endpoint == "optimize":
+        candidates = {
+            (candidate["params"]["fast_sma"], candidate["params"]["slow_sma"])
+            for candidate in result["all_results"]
+        }
+        assert candidates == {(7, 30), (7, 50), (10, 30), (10, 50)}
+    else:
+        assert result["param1_values"] == [7, 10]
+        assert result["param2_values"] == [30, 50]
+        heatmap = np.asarray(result["heatmap_data"], dtype=float)
+        assert heatmap.shape == (2, 2)
+        assert np.isfinite(heatmap).all()
