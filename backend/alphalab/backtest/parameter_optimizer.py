@@ -280,6 +280,7 @@ class ParameterOptimizer:
                     strategy=strategy,
                     data=test_data,
                     initial_capital=initial_capital,
+                    indicator_history=train_data,
                 )
                 oos_score = self._score_fold_result(
                     test_result, metrics_calc, optimization_target

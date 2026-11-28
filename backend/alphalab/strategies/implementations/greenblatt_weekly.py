@@ -84,9 +84,21 @@ class GreenblattWeekly(BaseStrategy):
         return data["Close"].rolling(window, min_periods=window).mean()
 
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
+        return self._generate_signals(data, first_bar=0)
+
+    def generate_signals_with_history(
+        self, data: pd.DataFrame, history: pd.DataFrame
+    ) -> pd.DataFrame:
+        # Use the preceding bars for indicators and crossover comparisons only.
+        # Position tracking starts flat on the first bar of the scored window.
+        bars = pd.concat([history, data])
+        bars.attrs = data.attrs.copy()
+        return self._generate_signals(bars, first_bar=len(history))
+
+    def _generate_signals(self, data: pd.DataFrame, first_bar: int) -> pd.DataFrame:
         p = self.params
 
-        signals = self._init_signals_frame(data)
+        signals = self._init_signals_frame(data.iloc[first_bar:])
 
         close = data["Close"]
         rsi = rsi_ewm(close, p["rsi_period"])
@@ -108,7 +120,7 @@ class GreenblattWeekly(BaseStrategy):
         entry_bar = 0
         peak_price = 0.0
 
-        for i in range(1, len(data)):
+        for i in range(max(1, first_bar), len(data)):
             if pd.isna(fast_sma.iloc[i]) or pd.isna(slow_sma.iloc[i]):
                 continue
             if pd.isna(rsi.iloc[i]):
