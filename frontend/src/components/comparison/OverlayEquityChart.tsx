@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import type { BacktestResult } from "@/types";
+import type { BacktestResult, EquityCurvePoint } from "@/types";
 import { drawdownSeries } from "@/utils/series";
 import { strategyName } from "@/utils/strategies";
 import {
@@ -16,22 +16,21 @@ import {
 
 export type OverlayView = "equity" | "drawdown" | "rollingSharpe";
 
-// Trading days in the rolling Sharpe window, about one quarter: long enough
-// to be meaningful on multi-year runs, short enough to still move.
-const ROLLING_WINDOW = 63;
+const DAILY_PERIODS_PER_YEAR = 252;
 
-function rollingSharpeSeries(values: number[]): (number | undefined)[] {
+function rollingSharpeSeries(values: number[], periodsPerYear: number): (number | undefined)[] {
+  const windowSize = Math.max(2, Math.round(periodsPerYear / 4));
   const returns = values.slice(1).map((v, i) => (values[i] === 0 ? 0 : (v - values[i]) / values[i]));
   return values.map((_, i) => {
-    if (i < ROLLING_WINDOW) return undefined;
-    const window = returns.slice(i - ROLLING_WINDOW, i);
+    if (i < windowSize) return undefined;
+    const window = returns.slice(i - windowSize, i);
     const mean = window.reduce((a, b) => a + b, 0) / window.length;
     const std = Math.sqrt(window.reduce((a, b) => a + (b - mean) ** 2, 0) / window.length);
-    return std === 0 ? 0 : (mean / std) * Math.sqrt(252);
+    return std === 0 ? 0 : (mean / std) * Math.sqrt(periodsPerYear);
   });
 }
 
-const VIEW: Record<OverlayView, { series: (values: number[]) => (number | undefined)[]; format: (v: number) => string; axis: (v: number) => string }> = {
+const VIEW: Record<OverlayView, { series: (values: number[], periodsPerYear: number) => (number | undefined)[]; format: (v: number) => string; axis: (v: number) => string }> = {
   equity: { series: (v) => v, format: (v) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, axis: thousands },
   drawdown: { series: drawdownSeries, format: (v) => `${v.toFixed(2)}%`, axis: (v) => `${v.toFixed(0)}%` },
   rollingSharpe: { series: rollingSharpeSeries, format: (v) => v.toFixed(2), axis: (v) => v.toFixed(1) },
@@ -42,15 +41,29 @@ export function OverlayEquityChart({ results, view }: { results: Record<string, 
 
   const { rows, names, hasBenchmark } = useMemo(() => {
     const entries = Object.entries(results);
-    const benchmark = entries[0]?.[1].benchmark?.equity_curve;
-    const perStrategy = entries.map(([, r]) => series(r.equity_curve.map((p) => p.value)));
-    const benchSeries = benchmark ? series(benchmark.map((p) => p.value)) : null;
-    const rows = (entries[0]?.[1].equity_curve ?? []).map((point, idx) => ({
-      date: point.date,
-      benchmark: benchSeries?.[idx],
-      ...Object.fromEntries(entries.map(([name], s) => [name, perStrategy[s][idx]])),
-    }));
-    return { rows, names: entries.map(([name]) => name), hasBenchmark: !!benchSeries };
+    const benchmarkSource = entries[0]?.[1];
+    const benchmark = benchmarkSource?.benchmark?.equity_curve;
+    const rowsByTime = new Map<number, Record<string, string | number | undefined>>();
+    const addSeries = (name: string, curve: EquityCurvePoint[], source: BacktestResult) => {
+      const points = Array.from(new Map(curve.map((point) => [Date.parse(point.date), point])))
+        .sort(([left], [right]) => left - right);
+      const periodsPerYear = source.metrics.assumptions?.periods_per_year ?? DAILY_PERIODS_PER_YEAR;
+      const values = series(points.map(([, point]) => point.value), periodsPerYear);
+      points.forEach(([time, point], index) => {
+        const row = rowsByTime.get(time) ?? { date: point.date };
+        row[name] = values[index];
+        rowsByTime.set(time, row);
+      });
+    };
+
+    for (const [name, result] of entries) {
+      addSeries(name, result.equity_curve, result);
+    }
+    if (benchmark && benchmarkSource) {
+      addSeries("benchmark", benchmark, benchmarkSource);
+    }
+    const rows = Array.from(rowsByTime).sort(([left], [right]) => left - right).map(([, row]) => row);
+    return { rows, names: entries.map(([name]) => name), hasBenchmark: !!benchmark };
   }, [results, series]);
 
   return (
