@@ -1,6 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { Component, type PropsWithChildren } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import App from "@/App";
+import { useBacktestStore } from "@/stores/backtestStore";
 import type { EquityCurvePoint } from "@/types";
 
 const { request, plot } = vi.hoisted(() => ({ request: vi.fn(), plot: vi.fn() }));
@@ -52,9 +54,23 @@ afterEach(() => {
   Element.prototype.scrollIntoView = originalScrollIntoView;
   request.mockReset();
   plot.mockReset();
+  useBacktestStore.setState({ history: [] });
+  window.localStorage.removeItem("alphalab_history");
 });
 
-async function runComparison(data: Record<string, ReturnType<typeof result>>) {
+class TestErrorBoundary extends Component<PropsWithChildren, { crashed: boolean }> {
+  state = { crashed: false };
+
+  static getDerivedStateFromError() {
+    return { crashed: true };
+  }
+
+  render() {
+    return this.state.crashed ? <p>Compare crashed</p> : this.props.children;
+  }
+}
+
+async function runComparison(data: Record<string, ReturnType<typeof result> | { error: string }>, showChart = true) {
   request.mockImplementation(async (config) => ({
     config,
     status: 200,
@@ -64,11 +80,11 @@ async function runComparison(data: Record<string, ReturnType<typeof result>>) {
   }));
   Element.prototype.scrollIntoView = vi.fn();
   window.history.replaceState({}, "", "/compare");
-  render(<App />);
+  render(<TestErrorBoundary><App /></TestErrorBoundary>);
   fireEvent.keyDown(screen.getByRole("combobox", { name: "Add a strategy" }), { key: "Enter" });
   fireEvent.click(await screen.findByRole("option", { name: /Greenblatt/ }));
   fireEvent.click(screen.getByRole("button", { name: "Run comparison" }));
-  await screen.findByTestId("chart");
+  if (showChart) await screen.findByTestId("chart");
   expect(request).toHaveBeenCalledWith(expect.objectContaining({
     url: "/compare",
     data: expect.stringContaining('"greenblatt_weekly"'),
@@ -111,6 +127,53 @@ it("plots sparse comparison and benchmark observations on their actual dates", a
 
   fireEvent.click(screen.getByRole("button", { name: "Drawdown" }));
   expect(observations()[2]).toEqual(["2024-01-09", 0, -1, null, null]);
+});
+
+it("plots, ranks and saves successful strategies when another run fails", async () => {
+  const curve = [point("2024-01-05", 100_000), point("2024-01-09", 101_000)];
+  await runComparison({
+    greenblatt_weekly: { error: "Insufficient data: 6 bars available, need 10" },
+    ma_crossover: result(curve),
+    rsi_mean_reversion: result(curve),
+  });
+
+  expect(screen.getByText("Insufficient data: 6 bars available, need 10", { exact: false })).toBeInTheDocument();
+  expect(chartRows().at(-1)).toMatchObject({ ma_crossover: 101_000, rsi_mean_reversion: 101_000 });
+  expect(chartRows().at(-1)?.greenblatt_weekly).toBeUndefined();
+  expect(screen.getByRole("heading", { name: "Metrics" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Save to history" }));
+  expect(useBacktestStore.getState().history.map(({ strategy }) => strategy)).toEqual(["ma_crossover", "rsi_mean_reversion"]);
+});
+
+it("shows strategy failures and disables saving when no comparison run succeeds", async () => {
+  await runComparison({
+    ma_crossover: { error: "Daily history unavailable" },
+    rsi_mean_reversion: { error: "Daily simulation failed" },
+    greenblatt_weekly: { error: "Weekly history unavailable" },
+  }, false);
+
+  expect(await screen.findByText("No strategies completed")).toBeInTheDocument();
+  for (const message of ["Daily history unavailable", "Daily simulation failed", "Weekly history unavailable"]) {
+    expect(screen.getByText(message, { exact: false })).toBeInTheDocument();
+  }
+  expect(screen.queryByTestId("chart")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Save to history" })).toBeDisabled();
+});
+
+it("counts wins against each strategy's own benchmark and names the chart's benchmark source", async () => {
+  const curve = [point("2024-01-05", 100_000), point("2024-01-09", 101_000)];
+  const weekly = result(curve, curve, 52);
+  const daily = result(curve);
+  await runComparison({
+    greenblatt_weekly: { ...weekly, total_return_pct: 2, benchmark: { ...weekly.benchmark, total_return_pct: -5 } },
+    ma_crossover: { ...daily, total_return_pct: 3, benchmark: { ...daily.benchmark, total_return_pct: 10 } },
+    rsi_mean_reversion: { ...daily, total_return_pct: 4, benchmark: { ...daily.benchmark, total_return_pct: 10 } },
+  });
+
+  const summary = screen.getByRole("row", { name: /Beat buy & hold/ });
+  expect(within(summary).getByText("1 of 3")).toBeInTheDocument();
+  expect(within(summary).queryByText(/-5/)).not.toBeInTheDocument();
+  expect(screen.getByText("Buy & hold (Greenblatt Weekly)")).toBeInTheDocument();
 });
 
 it("uses a quarter of weekly returns and the weekly annualization for rolling Sharpe", async () => {
