@@ -20,6 +20,7 @@ def portfolio_request(assets, constraints, method="max_sharpe", backtest_ids=Non
                     ]
                 }
             }
+        store["empty"] = {"results": {"equity_curve": []}}
         return client.post(
             "/api/portfolio/optimize",
             json={
@@ -51,6 +52,7 @@ def test_portfolio_defaults_remain_feasible_for_small_portfolios(assets):
     assert response.status_code == 200, response.json
     data = response.json["data"]
     assert data["optimal_weights"] == [1 / len(assets)] * len(assets)
+    assert data["strategy_labels"] == [f"{asset}_ma_crossover" for asset in assets]
     assert len(data["efficient_frontier"]) == 1
 
 
@@ -74,6 +76,15 @@ def test_portfolio_rejects_repeated_backtest_ids():
     )
     assert response.status_code == 400, response.json
     assert "only once" in response.json["message"]
+
+
+@pytest.mark.parametrize("unusable_id", ["missing", "empty"])
+def test_portfolio_rejects_a_missing_or_empty_component(unusable_id):
+    response = portfolio_request(
+        ["SPY", "QQQ"], None, method="equal_weight", backtest_ids=["0", unusable_id]
+    )
+    assert response.status_code == 400, response.json
+    assert unusable_id in response.json["message"]
 
 
 def test_portfolio_rejects_unreachable_target():
