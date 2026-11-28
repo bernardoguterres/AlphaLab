@@ -38,6 +38,12 @@ class BaseStrategy(ABC):
     def required_columns(self) -> list[str]:
         """Return list of DataFrame columns this strategy needs."""
 
+    def generate_signals_with_history(
+        self, data: pd.DataFrame, history: pd.DataFrame
+    ) -> pd.DataFrame:
+        """Generate signals for data with optional past bars for indicator warmup."""
+        return self.generate_signals(data)
+
     # ------------------------------------------------------------------
     # Shared helpers
     # ------------------------------------------------------------------

@@ -92,6 +92,8 @@ class BacktestEngine:
         monte_carlo_seed: int | None = None,
         drawdown_halt_enabled: bool = True,
         monte_carlo_block_length: int | None = None,
+        *,
+        indicator_history: pd.DataFrame | None = None,
     ) -> BacktestResults:
         """Run a full backtest simulation.
 
@@ -100,6 +102,8 @@ class BacktestEngine:
             data: OHLCV DataFrame with features already computed.
             initial_capital: Starting cash.
             start_date / end_date: Optional date filters (YYYY-MM-DD).
+            indicator_history: Earlier bars for strategies with indicator
+                warmup support. Only the simulation window can trade or score.
             position_sizing: "equal_weight" (cash up to the cumulative
                 max_position_pct cap) or "volatility_weighted" (2xATR-stop
                 risk sizing within the same cap). Anything else raises.
@@ -156,7 +160,11 @@ class BacktestEngine:
             )
 
         # Generate signals
-        signals = strategy.generate_signals(df)
+        signals = (
+            strategy.generate_signals(df)
+            if indicator_history is None
+            else strategy.generate_signals_with_history(df, indicator_history)
+        )
 
         # Run core simulation
         portfolio, trades = self._simulate(
