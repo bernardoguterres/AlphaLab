@@ -29,8 +29,12 @@ def client():
 
 @pytest.fixture
 def mock_yfinance():
-    """Mock yfinance data fetching."""
-    with patch("alphalab.data.fetcher.yf.download") as mock_download:
+    """Mock yfinance ticker validation and price downloads."""
+    with (
+        patch("alphalab.data.fetcher.yf.Ticker") as mock_ticker,
+        patch("alphalab.data.fetcher.yf.download") as mock_download,
+    ):
+        mock_ticker.return_value.info = {"regularMarketPrice": 100.0}
         # Create synthetic price data
         dates = pd.bdate_range("2020-01-01", periods=1000)
         np.random.seed(42)
@@ -57,18 +61,16 @@ def mock_yfinance():
 
 
 def test_portfolio_labels_use_the_backtest_request(client, mock_yfinance):
-    with patch("alphalab.data.fetcher.yf.Ticker") as ticker:
-        ticker.return_value.info = {"regularMarketPrice": 100.0}
-        backtest = client.post(
-            "/api/strategies/backtest",
-            json={
-                "ticker": "AAPL",
-                "strategy": "ma_crossover",
-                "start_date": "2020-01-01",
-                "end_date": "2023-10-31",
-                "monte_carlo_runs": 0,
-            },
-        )
+    backtest = client.post(
+        "/api/strategies/backtest",
+        json={
+            "ticker": "AAPL",
+            "strategy": "ma_crossover",
+            "start_date": "2020-01-01",
+            "end_date": "2023-10-31",
+            "monte_carlo_runs": 0,
+        },
+    )
     assert backtest.status_code == 200, backtest.json
 
     portfolio = client.post(

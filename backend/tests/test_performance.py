@@ -359,7 +359,7 @@ def test_batch_backtest_10_tickers_under_3_minutes():
         assert len(results) >= 8, f"Only {len(results)}/10 tickers succeeded"
 
 
-def test_data_fetch_and_cache_1_ticker_under_2_seconds():
+def test_data_fetch_and_cache_1_ticker_under_2_seconds(tmp_path):
     """
     Regression test: Fetching 1 year of data (or loading from cache)
     should take <2s. Verifies DataManager caching works.
@@ -372,7 +372,11 @@ def test_data_fetch_and_cache_1_ticker_under_2_seconds():
     - Verify cache_manager is using pyarrow engine
     - Check if cache expiry logic is too aggressive
     """
-    with patch("alphalab.data.fetcher.yf.download") as mock_download:
+    with (
+        patch("alphalab.data.fetcher.yf.Ticker") as mock_ticker,
+        patch("alphalab.data.fetcher.yf.download") as mock_download,
+    ):
+        mock_ticker.return_value.info = {"regularMarketPrice": 150.0}
         # Mock yfinance response
         np.random.seed(42)
         dates = pd.bdate_range("2024-01-01", periods=252)
@@ -396,17 +400,17 @@ def test_data_fetch_and_cache_1_ticker_under_2_seconds():
 
         mock_download.return_value = mock_df
 
-        fetcher = DataFetcher()
+        fetcher = DataFetcher(cache_dir=str(tmp_path / "price_cache"))
 
-        # First call - may hit API
+        # First call - may use the mocked provider
         start = time.time()
         data1 = fetcher.fetch("AAPL", "2024-01-01", "2024-12-31", interval="1d")
         elapsed1 = time.time() - start
 
-        # Should complete reasonably fast even with API call
+        # Include provider validation, download and the initial cache write.
         assert elapsed1 < 5.0, (
             f"First fetch took {elapsed1:.3f}s (limit: 5.0s). "
-            "Even with API call, this should be fast."
+            "Fetching and caching mocked data should be fast."
         )
 
         # Second call - MUST hit cache
@@ -424,6 +428,8 @@ def test_data_fetch_and_cache_1_ticker_under_2_seconds():
         # Sanity check - both fetches return same data
         assert data1["ticker"] == data2["ticker"] == "AAPL"
         assert len(data1["data"]) == len(data2["data"])
+        mock_ticker.assert_called_once_with("AAPL")
+        mock_download.assert_called_once()
 
 
 @pytest.mark.slow
