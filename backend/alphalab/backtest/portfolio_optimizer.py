@@ -330,27 +330,24 @@ def build_returns_matrix(
 
     for strat_info in strategies:
         backtest_id = strat_info["backtest_id"]
-        ticker = strat_info.get("ticker", "Unknown")
-        strategy_name = strat_info.get("strategy", "Unknown")
 
         if backtest_id not in backtest_results:
-            logger.warning(f"Backtest {backtest_id} not found, skipping")
-            continue
+            raise ValueError(f"Backtest {backtest_id} not found")
 
         saved = backtest_results[backtest_id]
         result = saved.get("results", saved)
         equity_curve = result.get("equity_curve", [])
 
         if not equity_curve:
-            logger.warning(f"No equity curve for {backtest_id}, skipping")
-            continue
+            raise ValueError(f"Backtest {backtest_id} has no equity curve")
 
         equity = _equity_levels(equity_curve)
         index = pd.DatetimeIndex(equity.index).tz_localize(None).normalize()
         if index.hasnans:
             raise ValueError(f"Backtest {backtest_id} has invalid equity dates")
 
-        interval = (saved.get("request") or {}).get("interval")
+        saved_request = saved.get("request") or {}
+        interval = saved_request.get("interval")
         if interval is None:
             periods = PerformanceMetrics._infer_periods_per_year(index)
         elif interval in _PERIODS_PER_YEAR:
@@ -364,6 +361,10 @@ def build_returns_matrix(
         if not equity.index.is_unique:
             raise ValueError(f"Backtest {backtest_id} has duplicate equity periods")
 
+        ticker = saved_request.get("ticker") or strat_info.get("ticker", "Unknown")
+        strategy_name = saved_request.get("strategy") or strat_info.get(
+            "strategy", "Unknown"
+        )
         base_label = f"{ticker}_{strategy_name}"
         label = base_label
         suffix = 2

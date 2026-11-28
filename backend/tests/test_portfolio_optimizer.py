@@ -243,20 +243,9 @@ class TestPortfolioOptimizer:
             }
         }
 
-        # Should only include valid backtests
-        returns_df, labels = build_returns_matrix(strategies, backtest_results)
-
-        assert returns_df.shape[1] == 1
-        assert len(labels) == 1
-        assert "AAPL_ma_crossover" in labels
-
-    def test_build_returns_matrix_no_valid_backtests(self):
-        """Test error when no valid backtests found."""
-        strategies = [
-            {"backtest_id": "bt_missing", "ticker": "AAPL", "strategy": "ma_crossover"},
-        ]
-
-        backtest_results = {}
-
-        with pytest.raises(ValueError, match="No valid backtest results found"):
+        with pytest.raises(ValueError, match="Backtest bt_missing not found"):
             build_returns_matrix(strategies, backtest_results)
+
+    def test_build_returns_matrix_no_backtests(self):
+        with pytest.raises(ValueError, match="No valid backtest results found"):
+            build_returns_matrix([], {})
