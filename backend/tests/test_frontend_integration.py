@@ -56,6 +56,38 @@ def mock_yfinance():
         yield mock_download
 
 
+def test_portfolio_labels_use_the_backtest_request(client, mock_yfinance):
+    with patch("alphalab.data.fetcher.yf.Ticker") as ticker:
+        ticker.return_value.info = {"regularMarketPrice": 100.0}
+        backtest = client.post(
+            "/api/strategies/backtest",
+            json={
+                "ticker": "AAPL",
+                "strategy": "ma_crossover",
+                "start_date": "2020-01-01",
+                "end_date": "2023-10-31",
+                "monte_carlo_runs": 0,
+            },
+        )
+    assert backtest.status_code == 200, backtest.json
+
+    portfolio = client.post(
+        "/api/portfolio/optimize",
+        json={
+            "method": "equal_weight",
+            "strategies": [
+                {
+                    "backtest_id": backtest.json["data"]["backtest_id"],
+                    "ticker": "MSFT",
+                    "strategy": "rsi_mean_reversion",
+                }
+            ],
+        },
+    )
+    assert portfolio.status_code == 200, portfolio.json
+    assert portfolio.json["data"]["strategy_labels"] == ["AAPL_ma_crossover"]
+
+
 class TestFullBacktestFlow:
     """Test complete backtest workflow from data fetch to export."""
 
