@@ -71,6 +71,7 @@ export default function Compare() {
     ticker: string;
     settings: RunSettings;
     byStrategy: Record<string, BacktestResult>;
+    failures: [string, string][];
   } | null>(null);
 
   const setSetting = <K extends keyof RunSettings>(key: K, value: RunSettings[K]) => setSettings((s) => ({ ...s, [key]: value }));
@@ -88,7 +89,13 @@ export default function Compare() {
         risk_settings: settings.risk,
         drawdown_halt_enabled: settings.drawdownHalt,
       });
-      setResults({ ticker, settings, byStrategy: response.data });
+      const byStrategy: Record<string, BacktestResult> = {};
+      const failures: [string, string][] = [];
+      for (const [strategy, outcome] of Object.entries(response.data)) {
+        if ("error" in outcome) failures.push([strategy, outcome.error]);
+        else byStrategy[strategy] = outcome;
+      }
+      setResults({ ticker, settings, byStrategy, failures });
     } catch (error) {
       toast.error(errorMessage(error, "Comparison failed"));
     } finally {
@@ -97,19 +104,23 @@ export default function Compare() {
   };
 
   const handleSave = () => {
-    if (!results) return;
-    addToHistory(Object.entries(results.byStrategy).map(([strategy, r]) => historyItem(r, results.ticker, strategy)));
-    toast.success("Saved every strategy in this comparison to the Overview");
+    if (!results || entries.length === 0) return;
+    addToHistory(entries.map(([strategy, r]) => historyItem(r, results.ticker, strategy)));
+    toast.success("Saved completed comparison runs to the Overview");
   };
 
   const unselected = STRATEGY_TYPES.filter((s) => !selected.includes(s));
   const entries = results ? Object.entries(results.byStrategy) : [];
+  const benchmarkSource = entries[0];
+  const benchmarkLabel = benchmarkSource?.[1].benchmark?.equity_curve?.length
+    ? `Buy & hold (${strategyName(benchmarkSource[0])})`
+    : undefined;
 
   return (
     <Page
       title="Compare"
       actions={
-        <Button variant="outline" onClick={handleSave} disabled={!results}>
+        <Button variant="outline" onClick={handleSave} disabled={entries.length === 0}>
           Save to history
         </Button>
       }
@@ -170,25 +181,40 @@ export default function Compare() {
           <p className="num text-2xs text-muted-foreground">
             Simulated with: {runSettingsSummary(results.settings.risk, results.settings.sizing, results.settings.drawdownHalt)}
           </p>
-          <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_340px]">
-            <Section title={`${results.ticker}, ${entries.length} strategies`} aside={<Segmented label="Chart" options={VIEWS} value={view} onChange={setView} />}>
-              <OverlayEquityChart results={results.byStrategy} view={view} />
-              <p className="mt-2 flex flex-wrap gap-4 text-2xs text-muted-foreground">
-                {entries.map(([name], i) => (
-                  <span key={name}>
-                    <Swatch color={SERIES_COLORS[i]} />
-                    {strategyName(name)}
-                  </span>
+          {results.failures.length > 0 && (
+            <Section title="Strategy failures">
+              <ul className="space-y-1 text-[13px] text-muted-foreground">
+                {results.failures.map(([name, message]) => (
+                  <li key={name}><span className="text-foreground">{strategyName(name)}</span> — {message}</li>
                 ))}
-                <span>
-                  <Swatch color={BENCHMARK_COLOR} />
-                  Buy & hold
-                </span>
-              </p>
+              </ul>
             </Section>
-            <Leaders entries={entries} benchmarkReturn={entries[0][1].benchmark?.total_return_pct ?? null} />
-          </div>
-          <ResultsTable entries={entries} />
+          )}
+          {entries.length > 0 ? (
+            <>
+              <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_340px]">
+                <Section title={`${results.ticker}, ${entries.length} ${entries.length === 1 ? "strategy" : "strategies"}`} aside={<Segmented label="Chart" options={VIEWS} value={view} onChange={setView} />}>
+                  <OverlayEquityChart results={results.byStrategy} view={view} benchmarkLabel={benchmarkLabel} />
+                  <p className="mt-2 flex flex-wrap gap-4 text-2xs text-muted-foreground">
+                    {entries.map(([name], i) => (
+                      <span key={name}>
+                        <Swatch color={SERIES_COLORS[i]} />
+                        {strategyName(name)}
+                      </span>
+                    ))}
+                    {benchmarkLabel && (
+                      <span>
+                        <Swatch color={BENCHMARK_COLOR} />
+                        {benchmarkLabel}
+                      </span>
+                    )}
+                  </p>
+                </Section>
+                <Leaders entries={entries} />
+              </div>
+              <ResultsTable entries={entries} />
+            </>
+          ) : <EmptyState title="No strategies completed" />}
         </>
       ) : (
         <EmptyState title="No comparison yet" description="Pick two or three strategies and run them on the same data, costs and window." />
@@ -197,8 +223,14 @@ export default function Compare() {
   );
 }
 
-function Leaders({ entries, benchmarkReturn }: { entries: [string, BacktestResult][]; benchmarkReturn: number | null }) {
-  const beat = benchmarkReturn === null ? null : entries.filter(([, r]) => r.total_return_pct > benchmarkReturn).length;
+function Leaders({ entries }: { entries: [string, BacktestResult][] }) {
+  const compared = entries.flatMap(([, result]) => {
+    const benchmarkReturn = result.benchmark?.total_return_pct;
+    return benchmarkReturn == null ? [] : [{ benchmarkReturn, beat: result.total_return_pct > benchmarkReturn }];
+  });
+  const firstReturn = compared[0]?.benchmarkReturn;
+  const sharedReturn = firstReturn !== undefined && compared.length === entries.length
+    && compared.every((comparison) => comparison.benchmarkReturn === firstReturn) ? firstReturn : undefined;
 
   return (
     <Section title="Leaders">
@@ -216,14 +248,14 @@ function Leaders({ entries, benchmarkReturn }: { entries: [string, BacktestResul
               </tr>
             );
           })}
-          {benchmarkReturn !== null && (
+          {compared.length > 0 && (
             <tr>
               <Td className="text-muted-foreground">Beat buy & hold</Td>
               <Td>
-                {beat} of {entries.length}
+                {compared.filter(({ beat }) => beat).length} of {compared.length}
               </Td>
               <Td num align="right">
-                {formatPercent(benchmarkReturn)}
+                {sharedReturn !== undefined && formatPercent(sharedReturn)}
               </Td>
             </tr>
           )}

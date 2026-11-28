@@ -36,7 +36,7 @@ const VIEW: Record<OverlayView, { series: (values: number[], periodsPerYear: num
   rollingSharpe: { series: rollingSharpeSeries, format: (v) => v.toFixed(2), axis: (v) => v.toFixed(1) },
 };
 
-export function OverlayEquityChart({ results, view }: { results: Record<string, BacktestResult>; view: OverlayView }) {
+export function OverlayEquityChart({ results, view, benchmarkLabel }: { results: Record<string, BacktestResult>; view: OverlayView; benchmarkLabel?: string }) {
   const { series, format, axis } = VIEW[view];
 
   const { rows, names, hasBenchmark } = useMemo(() => {
@@ -63,7 +63,7 @@ export function OverlayEquityChart({ results, view }: { results: Record<string, 
       addSeries("benchmark", benchmark, benchmarkSource);
     }
     const rows = Array.from(rowsByTime).sort(([left], [right]) => left - right).map(([, row]) => row);
-    return { rows, names: entries.map(([name]) => name), hasBenchmark: !!benchmark };
+    return { rows, names: entries.map(([name]) => name), hasBenchmark: !!benchmark?.length };
   }, [results, series]);
 
   return (
@@ -74,7 +74,7 @@ export function OverlayEquityChart({ results, view }: { results: Record<string, 
         <YAxis {...yAxisProps} tickFormatter={axis} />
         <Tooltip
           {...tooltipProps}
-          formatter={(value: number, key: string) => [value == null ? "-" : format(value), key === "benchmark" ? "Buy & hold" : strategyName(key)]}
+          formatter={(value: number, key: string) => [value == null ? "-" : format(value), key === "benchmark" ? benchmarkLabel ?? "Buy & hold" : strategyName(key)]}
         />
         {hasBenchmark && <Line {...lineProps} dataKey="benchmark" stroke={BENCHMARK_COLOR} strokeWidth={1} connectNulls />}
         {names.map((name, i) => (
