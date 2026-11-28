@@ -381,7 +381,7 @@ export interface BatchBacktestResponse {
 
 export interface CompareResponse {
   status: "ok" | "error";
-  data: Record<string, BacktestResult>;
+  data: Record<string, BacktestResult | { error: string }>;
   message?: string;
 }
 
