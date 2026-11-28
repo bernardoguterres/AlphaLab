@@ -7,9 +7,12 @@ import pandas as pd
 from scipy.optimize import minimize
 
 from ..utils.logger import setup_logger
+from .metrics import PerformanceMetrics, TRADING_DAYS
 
 logger = setup_logger("alphalab.portfolio_optimizer")
 WEIGHT_TOLERANCE = 1e-8
+_PERIODS_PER_YEAR = {"1d": TRADING_DAYS, "1wk": 52, "1mo": 12}
+_PERIOD_CALENDARS = {52: "W-SUN", 12: "M"}
 
 
 class PortfolioOptimizer:
@@ -19,12 +22,18 @@ class PortfolioOptimizer:
         """Initialize optimizer.
 
         Args:
-            returns_matrix: DataFrame with daily returns for each strategy (columns = strategies)
+            returns_matrix: Aligned period returns for each strategy. Daily
+                annualization applies if the matrix has no cadence metadata.
             risk_free_rate: Annual risk-free rate (default 4%)
         """
+        if len(returns_matrix) < 2:
+            raise ValueError(
+                "Portfolio optimization requires at least two shared returns"
+            )
+        periods_per_year = returns_matrix.attrs.get("periods_per_year", TRADING_DAYS)
         self.returns = returns_matrix
-        self.mean_returns = returns_matrix.mean() * 252  # Annualized
-        self.cov_matrix = returns_matrix.cov() * 252  # Annualized
+        self.mean_returns = returns_matrix.mean() * periods_per_year
+        self.cov_matrix = returns_matrix.cov() * periods_per_year
         self.risk_free_rate = risk_free_rate
         self.n_strategies = len(returns_matrix.columns)
 
@@ -289,14 +298,13 @@ def extract_daily_returns(equity_curve: list[dict[str, Any]]) -> pd.Series:
     Returns:
         Series of daily returns (percentage)
     """
+    return _equity_levels(equity_curve).pct_change(fill_method=None).dropna()
+
+
+def _equity_levels(equity_curve: list[dict[str, Any]]) -> pd.Series:
     df = pd.DataFrame(equity_curve)
     df["date"] = pd.to_datetime(df["date"])
-    df = df.set_index("date")
-    df = df.sort_index()
-
-    # Calculate daily returns
-    returns = df["value"].pct_change(fill_method=None).dropna()
-    return returns
+    return df.set_index("date")["value"].sort_index()
 
 
 def build_returns_matrix(
@@ -307,16 +315,18 @@ def build_returns_matrix(
 
     Args:
         strategies: List of dicts with backtest_id, ticker, strategy
-        backtest_results: Dict mapping backtest_id to backtest result dict
+        backtest_results: Backtest IDs mapped to saved results, with optional
+            request details for newer runs.
 
     Returns:
-        Tuple of (returns_matrix DataFrame, strategy_labels list)
+        Aligned returns with annualization metadata, and strategy labels.
     """
     backtest_ids = [strategy["backtest_id"] for strategy in strategies]
     if len(set(backtest_ids)) != len(backtest_ids):
         raise ValueError("Each backtest can appear only once in a portfolio")
 
-    returns_dict = {}
+    equity_by_label = {}
+    frequencies = set()
 
     for strat_info in strategies:
         backtest_id = strat_info["backtest_id"]
@@ -327,33 +337,69 @@ def build_returns_matrix(
             logger.warning(f"Backtest {backtest_id} not found, skipping")
             continue
 
-        result = backtest_results[backtest_id]
+        saved = backtest_results[backtest_id]
+        result = saved.get("results", saved)
         equity_curve = result.get("equity_curve", [])
 
         if not equity_curve:
             logger.warning(f"No equity curve for {backtest_id}, skipping")
             continue
 
-        # Extract daily returns
-        returns = extract_daily_returns(equity_curve)
+        equity = _equity_levels(equity_curve)
+        index = pd.DatetimeIndex(equity.index).tz_localize(None).normalize()
+        if index.hasnans:
+            raise ValueError(f"Backtest {backtest_id} has invalid equity dates")
+
+        interval = (saved.get("request") or {}).get("interval")
+        if interval is None:
+            periods = PerformanceMetrics._infer_periods_per_year(index)
+        elif interval in _PERIODS_PER_YEAR:
+            periods = _PERIODS_PER_YEAR[interval]
+        else:
+            raise ValueError(f"Backtest {backtest_id} has an unsupported interval")
+        frequencies.add(periods)
+
+        calendar = _PERIOD_CALENDARS.get(periods)
+        equity.index = index.to_period(calendar) if calendar else index
+        if not equity.index.is_unique:
+            raise ValueError(f"Backtest {backtest_id} has duplicate equity periods")
 
         base_label = f"{ticker}_{strategy_name}"
         label = base_label
         suffix = 2
-        while label in returns_dict:
+        while label in equity_by_label:
             label = f"{base_label} ({suffix})"
             suffix += 1
-        returns_dict[label] = returns
+        equity_by_label[label] = equity
 
-    if not returns_dict:
+    if not equity_by_label:
         raise ValueError("No valid backtest results found")
+    if len(frequencies) != 1:
+        raise ValueError("Portfolio backtests must use the same bar frequency")
+    (periods_per_year,) = frequencies
 
-    # Combine into DataFrame (align dates with forward-fill to avoid injecting
-    # zero returns on trading holidays or gaps, which distorts correlation)
-    all_dates = sorted(set().union(*[v.index for v in returns_dict.values()]))
-    idx = pd.DatetimeIndex(all_dates)
-    returns_df = pd.DataFrame(
-        {k: v.reindex(idx).ffill() for k, v in returns_dict.items()}
-    )
+    start = max(equity.index[0] for equity in equity_by_label.values())
+    end = min(equity.index[-1] for equity in equity_by_label.values())
+    if start >= end:
+        raise ValueError(
+            "Portfolio backtests have insufficient overlapping equity dates"
+        )
 
-    return returns_df, list(returns_dict)
+    # Carry the last known equity mark within the shared window. A missing bar
+    # is flat until a new mark arrives; it never repeats the previous return.
+    # Forward-fill before slicing so a mark predating the common start is
+    # available as a baseline, but its earlier return is not sampled.
+    marks = pd.concat(equity_by_label, axis=1).sort_index()
+    if isinstance(marks.index, pd.PeriodIndex):
+        # Different date labels for the same week/month are one period. Keep
+        # the period grid regular even if every strategy missed the same bar.
+        periods = pd.period_range(
+            marks.index[0], marks.index[-1], freq=marks.index.freq
+        )
+        marks = marks.reindex(periods)
+    marks = marks.ffill().loc[start:end]
+    returns = marks.pct_change(fill_method=None).iloc[1:]
+    if not np.isfinite(returns.to_numpy()).all():
+        raise ValueError("Portfolio equity curves produced invalid returns")
+    returns.attrs["periods_per_year"] = periods_per_year
+    return returns, list(equity_by_label)
