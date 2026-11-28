@@ -31,15 +31,7 @@ def optimize_portfolio():
     target_return = constraints.target_return
 
     try:
-        backtest_results = {}
-        for strat in strategies:
-            bt_id = strat["backtest_id"]
-            if bt_id in results_store:
-                backtest_results[bt_id] = results_store[bt_id].get(
-                    "results", results_store[bt_id]
-                )
-
-        returns_matrix, labels = build_returns_matrix(strategies, backtest_results)
+        returns_matrix, labels = build_returns_matrix(strategies, results_store)
 
         config = load_config()
         optimizer = PortfolioOptimizer(returns_matrix, config.backtest.risk_free_rate)
